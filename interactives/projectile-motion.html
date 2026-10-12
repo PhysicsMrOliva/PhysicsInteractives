@@ -56,6 +56,9 @@ header p { margin: 0; color: var(--muted); max-width: 72ch; }
 .field input[type=range] { width: 100%; margin: 6px 0 0; accent-color: var(--ink); }
 .comp { font-size: 0.95rem; border-left: 3px solid var(--vel); padding: 2px 0 2px 10px; margin: 0 0 14px; font-variant-numeric: tabular-nums; }
 .comp b { color: var(--vel); }
+.comp .h { display: block; font-weight: 700; color: var(--ink); margin-top: 6px; }
+.comp .h:first-child { margin-top: 0; }
+.comp .ang { color: var(--turn); }
 .note { font-size: 0.92rem; color: var(--muted); border-left: 3px solid var(--acc); padding: 2px 0 2px 10px; margin: 0 0 14px; }
 select { font: inherit; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line);
   background: var(--panel); color: var(--ink); margin-bottom: 16px; }
@@ -214,7 +217,15 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
   }
   function sync() {
     for (const k in pairs) for (const id of pairs[k]) $(id).value = r2(S[k]);
-    $("comp").innerHTML = `v₀ₓ = v₀ cos θ = <b>${fmt(vx0())} m/s</b><br>v₀ᵧ = v₀ sin θ = <b>${fmt(vy0())} m/s</b>`;
+    const T = landTime(), vfx = vx0(), vfy = VY(T), vf = Math.hypot(vfx, vfy);
+    const ang = Math.atan2(-vfy, vfx) * 180 / Math.PI;
+    $("comp").innerHTML =
+      `<span class="h">Launch</span>` +
+      `v₀ₓ = v₀ cos θ = <b>${fmt(vx0())} m/s</b><br>v₀ᵧ = v₀ sin θ = <b>${fmt(vy0())} m/s</b>` +
+      `<span class="h">Landing (t = ${T.toFixed(2)} s)</span>` +
+      `vₓ = <b>${fmt(vfx)} m/s</b><br>vᵧ = <b>${fmt(vfy)} m/s</b><br>` +
+      `|v| = √(vₓ² + vᵧ²) = <b>${fmt(vf)} m/s</b><br>` +
+      `angle = tan⁻¹(|vᵧ| / vₓ) = <b class="ang">${ang.toFixed(1)}°</b> below the horizontal`;
   }
   function changed() {
     S.th = Math.max(minAngle(), Math.min(90, S.th));
@@ -311,7 +322,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
       ground: css("--ground"), fill: css("--fill"), ball: css("--ball"), turn: css("--turn") };
     let ymax = S.y0; const tp = peakTime(); if (tp) ymax = Math.max(ymax, Y(tp));
     const xmax = Math.max(X(S.T), 1);
-    const padL = 64, padR = 30, padT = 70, padB = 50;
+    const padL = 64, padR = 175, padT = 70, padB = 95;
     const Wd = w - padL - padR, Hd = h - padT - padB;
     const k = Math.min(Wd / (xmax * 1.04), Hd / Math.max(ymax, 0.5));   // equal scale: true path shape
     const ox = padL, oy = h - padB;
@@ -369,6 +380,16 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
       arrow(ctx, bp[0], bp[1], bp[0], bp[1] - vy * kv, C.vel);
     }
     if (S.total) arrow(ctx, bp[0], bp[1], bp[0] + vx * kv, bp[1] - vy * kv, C.vel, 2, [5, 4]);
+    // landing angle, shown once the ball has landed
+    if (S.t >= S.T - 1e-9 && S.t > 0) {
+      const ang = Math.atan2(-vy, vx);                       // canvas angle, clockwise from +x
+      ctx.strokeStyle = C.turn; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(bp[0], bp[1]); ctx.lineTo(bp[0] + 75, bp[1]); ctx.stroke();
+      ctx.setLineDash([]); ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(bp[0], bp[1], 40, 0, ang, ang < 0); ctx.stroke();
+      ctx.fillStyle = C.turn; ctx.textAlign = "left"; ctx.font = "bold 13px 'Atkinson Hyperlegible', system-ui, sans-serif";
+      ctx.fillText(`${(ang * 180 / Math.PI).toFixed(1)}°`, bp[0] + 50 * Math.cos(ang / 2) + 4, bp[1] + 50 * Math.sin(ang / 2) + 8);
+    }
     arrow(ctx, bp[0] + 14, bp[1] + 10, bp[0] + 14, bp[1] + 60, C.acc);
     // legend + time
     ctx.font = "bold 13px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.textAlign = "right";
