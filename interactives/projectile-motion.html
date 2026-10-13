@@ -322,7 +322,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
       ground: css("--ground"), fill: css("--fill"), ball: css("--ball"), turn: css("--turn") };
     let ymax = S.y0; const tp = peakTime(); if (tp) ymax = Math.max(ymax, Y(tp));
     const xmax = Math.max(X(S.T), 1);
-    const padL = 64, padR = 175, padT = 70, padB = 95;
+    const padL = 84, padR = 175, padT = 70, padB = 95;
     const Wd = w - padL - padR, Hd = h - padT - padB;
     const k = Math.min(Wd / (xmax * 1.04), Hd / Math.max(ymax, 0.5));   // equal scale: true path shape
     const ox = padL, oy = h - padB;
@@ -343,7 +343,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
     ctx.textAlign = "right";
     for (const yv of ticks(0, (oy - padT + 30) / k, 5)) {
       const p = P(0, yv); ctx.beginPath(); ctx.moveTo(ox - 5, p[1]); ctx.lineTo(ox, p[1]); ctx.stroke();
-      ctx.fillText(tl(yv), ox - 26, p[1] + 4);
+      ctx.fillText(tl(yv), ox - 42, p[1] + 4);
     }
     ctx.save(); ctx.translate(14, oy - Hd / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center";
     ctx.fillText("y (m)", 0, 0); ctx.restore();
@@ -361,13 +361,20 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
       if (S.shadow) {
         ctx.globalAlpha = 0.5;
         ctx.beginPath(); ctx.arc(p[0], oy + 15, 3.5, 0, 7); ctx.fill();          // x shadow below ground
-        ctx.beginPath(); ctx.arc(ox - 14, p[1], 3.5, 0, 7); ctx.fill();          // y shadow beside axis
+        // y shadow beside the axis: rising dots in the left column, falling dots in the right
+        const up = VY(t) > 1e-9 || (Math.abs(VY(t)) <= 1e-9 && vy0() > 0);
+        ctx.beginPath(); ctx.arc(up ? ox - 30 : ox - 15, p[1], 3.5, 0, 7); ctx.fill();
       }
     }
     ctx.globalAlpha = 1;
     if (S.shadow) {
       ctx.fillStyle = C.pos; ctx.textAlign = "left"; ctx.font = "11px 'Atkinson Hyperlegible', system-ui, sans-serif";
       ctx.fillText("x shadow", 4, oy + 19);
+      ctx.textAlign = "center"; ctx.font = "bold 13px 'Atkinson Hyperlegible', system-ui, sans-serif";
+      const yTop = P(0, ymax)[1] - 10;
+      ctx.fillText("↑", ox - 30, yTop); ctx.fillText("↓", ox - 15, yTop);
+      ctx.font = "11px 'Atkinson Hyperlegible', system-ui, sans-serif";
+      ctx.fillText("up down", ox - 22, yTop - 14);
     }
     // ball
     const bp = P(X(S.t), Y(S.t));
