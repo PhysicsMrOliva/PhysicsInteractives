@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Two-part motion lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  --bg: #eaf1ee; --grid: #d3e0da; --panel: #ffffff; --ink: #15232b; --muted: #56666e; --line: #c4d3cc;
+  --pos: #23913a; --vel: #d22b2b; --acc: #1f6fb4; --p1: #7a3fe0; --p2: #e07b00; --warn: #b42318;
+  --track: #8a4b1c; --fill: #e8dcc8; --obj: #4d555a; --sky: #f5f9fb;
+  --btn: #15232b; --btn-ink: #ffffff; --focus: #1f6fb4;
+  font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42;
+    --pos: #4cc76a; --vel: #ff6b6b; --acc: #5aa9ff; --p1: #b28cff; --p2: #ffa53d; --warn: #ff8a80;
+    --track: #c98a55; --fill: #2f2a22; --obj: #b8c1c6; --sky: #131d22;
+    --btn: #e5eef0; --btn-ink: #0f171b; --focus: #5aa9ff;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42;
+  --pos: #4cc76a; --vel: #ff6b6b; --acc: #5aa9ff; --p1: #b28cff; --p2: #ffa53d; --warn: #ff8a80;
+  --track: #c98a55; --fill: #2f2a22; --obj: #b8c1c6; --sky: #131d22;
+  --btn: #e5eef0; --btn-ink: #0f171b; --focus: #5aa9ff;
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+*, *::before, *::after { box-sizing: inherit; }
+body {
+  margin: 0; color: var(--ink); background-color: var(--bg); line-height: 1.45;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+header { max-width: 1320px; margin: 0 auto; padding: 28px 20px 8px; }
+h1 { font-size: clamp(1.6rem, 3.4vw, 2.4rem); margin: 0 0 4px; letter-spacing: -0.01em; }
+header .back { display: inline-block; margin-bottom: 10px; color: var(--ink); font-weight: 700; }
+header p { margin: 0; color: var(--muted); max-width: 78ch; }
+.layout { max-width: 1320px; margin: 0 auto; padding: 16px 20px 40px; display: grid;
+  grid-template-columns: 330px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 920px) { .layout { grid-template-columns: 1fr; } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.controls { padding: 16px; }
+.controls h2 { font-size: 1rem; margin: 0 0 6px; }
+label.block { font-weight: 700; display: block; margin: 0 0 4px; font-size: 0.95rem; }
+select, input[type=number] { font: inherit; color: var(--ink); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 6px; }
+select { width: 100%; padding: 6px 8px; margin-bottom: 14px; }
+fieldset.part { border: 2px solid var(--line); border-radius: 10px; padding: 10px 12px 4px; margin: 0 0 14px; }
+fieldset.part legend { font-weight: 700; padding: 0 6px; }
+fieldset.p1 { border-color: var(--p1); } fieldset.p1 legend { color: var(--p1); }
+fieldset.p2 { border-color: var(--p2); } fieldset.p2 legend { color: var(--p2); }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0 0 10px; }
+.row label { font-weight: 700; font-size: 0.95rem; }
+.row .inp { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.row input[type=number] { width: 86px; padding: 3px 6px; text-align: right; }
+.unit { color: var(--muted); font-size: 0.9rem; min-width: 34px; }
+.linked { font-size: 0.93rem; color: var(--muted); margin: 0 0 10px; padding: 6px 8px; border-radius: 6px;
+  background: color-mix(in srgb, var(--p2) 8%, transparent); }
+.linked b { color: var(--ink); }
+.endsel { margin-bottom: 8px; }
+.warn { color: var(--warn); font-size: 0.92rem; margin: 0 0 10px; font-weight: 700; }
+.warn:empty { display: none; }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: 0.95rem; margin: 0 0 8px; }
+.check input { margin-top: 4px; }
+.stage { display: grid; gap: 14px; min-width: 0; }
+.motion { padding: 12px; }
+canvas { display: block; width: 100%; }
+#motion { height: 380px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+button { font: inherit; font-weight: 700; border: 2px solid var(--btn); background: var(--btn); color: var(--btn-ink);
+  border-radius: 8px; padding: 6px 14px; cursor: pointer; min-width: 84px; }
+button.ghost { background: transparent; color: var(--ink); }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.scrub { flex: 1 1 200px; display: flex; align-items: center; gap: 8px; }
+.scrub input { flex: 1; accent-color: var(--ink); }
+.readouts { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 8px; font-variant-numeric: tabular-nums; }
+.readouts .p { color: var(--pos); } .readouts .v { color: var(--vel); } .readouts .a { color: var(--acc); }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 99px; color: #fff; font-weight: 700; font-size: 0.9rem; }
+.graph { padding: 10px 12px 8px; }
+.graph h3 { margin: 0; font-size: 1rem; }
+.graph.p h3 { color: var(--pos); } .graph.v h3 { color: var(--vel); } .graph.a h3 { color: var(--acc); }
+.graph canvas { height: 170px; margin-top: 4px; }
+.legend { display: flex; gap: 18px; font-size: 0.92rem; font-weight: 700; }
+.legend span::before { content: ""; display: inline-block; width: 22px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 6px; background: currentColor; }
+.legend .l1 { color: var(--p1); } .legend .l2 { color: var(--p2); }
+.solve { padding: 14px; }
+.solve h2 { margin: 0 0 4px; font-size: 1.15rem; }
+.solve .sub { color: var(--muted); margin: 0 0 12px; }
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 760px) { .cards { grid-template-columns: 1fr; } }
+.card { border: 2px solid var(--line); border-radius: 10px; padding: 10px 14px; font-variant-numeric: tabular-nums; }
+.card.c1 { border-color: var(--p1); } .card.c2 { border-color: var(--p2); }
+.card h3 { margin: 0 0 6px; font-size: 1.05rem; }
+.card.c1 h3 { color: var(--p1); } .card.c2 h3 { color: var(--p2); }
+.card .ends { font-size: 0.9rem; color: var(--muted); margin: 0 0 8px; }
+.card table { border-collapse: collapse; width: 100%; font-size: 1rem; }
+.card td { padding: 2px 0; vertical-align: top; }
+.card td:first-child { white-space: nowrap; padding-right: 8px; }
+.card .from { color: var(--muted); font-size: 0.9rem; }
+.card .given { font-weight: 700; }
+.q { color: var(--warn); font-weight: 700; }
+.eqbox { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 8px; line-height: 1.7; }
+.eqbox .gen { color: var(--muted); }
+.totals { margin-top: 12px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../index.html">Back to all interactives</a>
+  <h1>Two-part motion lab</h1>
+  <p>Motion with two sections of constant acceleration. Choose an object, set how each part moves and how it ends, then press Play. Part 2 always starts where Part 1 ends: its x₀ and v₀ are Part 1’s final position and velocity.</p>
+</header>
+
+<main class="layout">
+  <aside class="panel controls" aria-label="Settings">
+    <label class="block" for="examples">Load an example</label>
+    <select id="examples">
+      <option value="">Choose…</option>
+      <optgroup label="Horizontal">
+        <option value="sprint1">Sprinter: speeds up 2.20 s over 12.0 m, then constant to 100 m</option>
+        <option value="sprint2">Sprinter: 3.50 m/s² for 2.80 s, then constant to 100 m</option>
+        <option value="car">Car: reaction time, then brakes to a stop</option>
+        <option value="bike">Bicycle: pedals up to speed, then coasts to a stop</option>
+      </optgroup>
+      <optgroup label="Vertical">
+        <option value="rocket1">Rocket: reaches 58.0 m/s in 9.20 s, stops 3.80 s later</option>
+        <option value="rocket2">Rocket: 16.0 m/s² for 3.90 s, then −12.0 m/s² to the top</option>
+        <option value="pumpkin">Pumpkin dropped from 380 m: free fall 4.90 s, then constant</option>
+        <option value="cannon1">Cannonball up at 22.0 m/s from a 45.0 m building</option>
+        <option value="cannon2">Cannonball up at 32.0 m/s, lands on a 25.0 m building</option>
+      </optgroup>
+    </select>
+
+    <label class="block" for="obj">Object</label>
+    <select id="obj">
+      <optgroup label="Horizontal (x)">
+        <option value="runner">Runner</option><option value="car">Car</option><option value="bike">Bicycle</option>
+      </optgroup>
+      <optgroup label="Vertical (y)">
+        <option value="rocket">Rocket</option><option value="ball">Ball</option>
+        <option value="pumpkin">Pumpkin (from a helicopter)</option><option value="cannon">Cannonball</option>
+      </optgroup>
+    </select>
+
+    <fieldset class="part p1">
+      <legend>Part 1</legend>
+      <div class="row"><label for="x0" id="x0lab">Initial position x₀</label>
+        <span class="inp"><input type="number" id="x0" step="any"><span class="unit">m</span></span></div>
+      <div class="row"><label for="v0" id="v0lab">Initial velocity v₀</label>
+        <span class="inp"><input type="number" id="v0" step="any"><span class="unit">m/s</span></span></div>
+      <div class="row"><label for="a1" id="a1lab">Acceleration a</label>
+        <span class="inp"><input type="number" id="a1" step="any"><span class="unit">m/s²</span></span></div>
+      <label class="block" for="e1">Part 1 ends…</label>
+      <select id="e1" class="endsel"></select>
+      <div class="row"><label for="e1v" id="e1lab">Δt</label>
+        <span class="inp"><input type="number" id="e1v" step="any"><span class="unit" id="e1u">s</span></span></div>
+      <p class="warn" id="w1"></p>
+    </fieldset>
+
+    <fieldset class="part p2">
+      <legend>Part 2</legend>
+      <p class="linked" id="linked"></p>
+      <div class="row"><label for="a2" id="a2lab">Acceleration a</label>
+        <span class="inp"><input type="number" id="a2" step="any"><span class="unit">m/s²</span></span></div>
+      <label class="block" for="e2">Part 2 ends…</label>
+      <select id="e2" class="endsel"></select>
+      <div class="row"><label for="e2v" id="e2lab">Δt</label>
+        <span class="inp"><input type="number" id="e2v" step="any"><span class="unit" id="e2u">s</span></span></div>
+      <p class="warn" id="w2"></p>
+    </fieldset>
+
+    <label class="check"><input type="checkbox" id="answers" checked> Show solved values (turn off so students can work out the unknowns first)</label>
+    <label class="check"><input type="checkbox" id="ghost"> Show the full graphs faintly</label>
+  </aside>
+
+  <section class="stage">
+    <div class="panel motion">
+      <canvas id="motion" aria-label="Animation of the object"></canvas>
+      <div class="toolbar">
+        <button id="play">Play</button>
+        <button id="restart" class="ghost">Restart</button>
+        <select id="speed" aria-label="Playback speed" style="width:auto;margin:0">
+          <option value="4">4× speed</option><option value="2">2× speed</option>
+          <option value="1" selected>1× speed</option><option value="0.5">½× speed</option><option value="0.25">¼× speed</option>
+        </select>
+        <div class="scrub"><label for="scrub" class="unit">time</label><input type="range" id="scrub" min="0" max="1" step="0.001" value="0"></div>
+      </div>
+      <div class="readouts">
+        <span id="rpart"></span>
+        <span>t = <b id="rt">0.00</b> s</span>
+        <span class="p"><span id="rpl">x</span> = <b id="rp">0</b> m</span>
+        <span class="v"><span id="rvl">vₓ</span> = <b id="rv">0</b> m/s</span>
+        <span class="a"><span id="ral">aₓ</span> = <b id="ra">0</b> m/s²</span>
+      </div>
+    </div>
+
+    <div class="legend" aria-hidden="true"><span class="l1">Part 1</span><span class="l2">Part 2</span></div>
+    <div class="panel graph p"><h3 id="gpt">Position vs. time</h3><canvas id="gP"></canvas></div>
+    <div class="panel graph v"><h3 id="gvt">Velocity vs. time</h3><canvas id="gV"></canvas></div>
+    <div class="panel graph a"><h3 id="gat">Acceleration vs. time</h3><canvas id="gA"></canvas></div>
+
+    <div class="panel solve">
+      <h2>Solve each part separately</h2>
+      <p class="sub">Apply the equations to one section of constant acceleration at a time, never to the whole problem. v₀ is the velocity at the start of the section; v<sub>f</sub> is the velocity at the end, just before the new acceleration.</p>
+      <div class="cards" id="cards"></div>
+      <div class="totals" id="totals"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const OBJ = {
+    runner: { axis: "x", name: "runner" }, car: { axis: "x", name: "car" }, bike: { axis: "x", name: "bicycle" },
+    rocket: { axis: "y", name: "rocket" }, ball: { axis: "y", name: "ball" },
+    pumpkin: { axis: "y", name: "pumpkin" }, cannon: { axis: "y", name: "cannonball" }
+  };
+  // [obj, x0, v0, a1, end1, val1, a2, end2, val2]
+  const EX = {
+    sprint1: ["runner", 0, 0, 4.96, "time", 2.20, 0, "pos", 100],
+    sprint2: ["runner", 0, 0, 3.50, "time", 2.80, 0, "pos", 100],
+    car:     ["car", 0, 25.0, 0, "time", 1.50, -7.00, "stop", 0],
+    bike:    ["bike", 0, 0, 1.20, "time", 5.00, -0.400, "stop", 0],
+    rocket1: ["rocket", 0, 0, 6.30, "time", 9.20, -15.26, "stop", 0],
+    rocket2: ["rocket", 0, 0, 16.0, "time", 3.90, -12.0, "stop", 0],
+    pumpkin: ["pumpkin", 380, 0, -9.81, "time", 4.90, 0, "pos", 0],
+    cannon1: ["cannon", 45.0, 22.0, -9.81, "stop", 0, -9.81, "pos", 0],
+    cannon2: ["cannon", 0, 32.0, -9.81, "stop", 0, -9.81, "pos", 25.0]
+  };
+  const S = { obj: "runner", x0: 0, v0: 0, a1: 3.5, e1: "time", e1v: 2.8, a2: 0, e2: "pos", e2v: 100,
+              parts: [], T: 1, t: 0, playing: false, speed: 1, ghost: false, answers: true, warn: ["", ""] };
+
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const minus = s => s.replace(/-/g, "−");
+  function sig(n) {
+    if (!isFinite(n)) return "—";
+    if (Math.abs(n) < 5e-10) return "0";
+    let s = Math.abs(n) >= 1000 ? Math.round(n).toString() : n.toPrecision(3);
+    if (s.includes("e")) s = Number(n.toPrecision(3)).toString();
+    return minus(s);
+  }
+  const ax = () => OBJ[S.obj].axis;
+
+  // ---------- physics ----------
+  function endTime(x0, v0, a, end, val) {
+    if (end === "time") return val > 0 ? { dt: val } : { dt: 1, warn: "Δt must be greater than 0." };
+    if (end === "stop") {
+      if (Math.abs(v0) < 1e-12) return { dt: 1, warn: "It isn’t moving at the start of this part, so it can’t come to a stop." };
+      if (a === 0 || v0 * a > 0) return { dt: 1, warn: "With this acceleration it never stops: a must point opposite to v₀." };
+      return { dt: -v0 / a };
+    }
+    // reach position val
+    const c = x0 - val;
+    if (Math.abs(c) < 1e-12) return { dt: 1, warn: "It already starts at that position." };
+    let roots = [];
+    if (Math.abs(a) < 1e-12) { if (v0 !== 0) roots = [-c / v0]; }
+    else { const d = v0 * v0 - 2 * a * c; if (d >= 0) { const r = Math.sqrt(d); roots = [(-v0 - r) / a, (-v0 + r) / a]; } }
+    roots = roots.filter(r => r > 1e-9).sort((p, q) => p - q);
+    if (!roots.length) return { dt: 1, warn: `It never reaches ${ax()} = ${sig(val)} m with these values.` };
+    return { dt: roots[0] };
+  }
+  function compute() {
+    const r1 = endTime(S.x0, S.v0, S.a1, S.e1, S.e1v);
+    const p1 = { x0: S.x0, v0: S.v0, a: S.a1, dt: Math.min(r1.dt, 120), t0: 0 };
+    p1.xf = p1.x0 + p1.v0 * p1.dt + 0.5 * p1.a * p1.dt ** 2; p1.vf = p1.v0 + p1.a * p1.dt;
+    const r2 = endTime(p1.xf, p1.vf, S.a2, S.e2, S.e2v);
+    const p2 = { x0: p1.xf, v0: p1.vf, a: S.a2, dt: Math.min(r2.dt, 120), t0: p1.dt };
+    p2.xf = p2.x0 + p2.v0 * p2.dt + 0.5 * p2.a * p2.dt ** 2; p2.vf = p2.v0 + p2.a * p2.dt;
+    S.parts = [p1, p2]; S.T = p1.dt + p2.dt; S.warn = [r1.warn || "", r2.warn || ""];
+  }
+  const partAt = t => (t <= S.parts[0].dt + 1e-12 ? 0 : 1);
+  function at(t) {
+    const P = S.parts[partAt(t)], tau = Math.max(0, t - P.t0);
+    return { x: P.x0 + P.v0 * tau + 0.5 * P.a * tau * tau, v: P.v0 + P.a * tau, a: P.a, part: partAt(t) };
+  }
+
+  // ---------- controls ----------
+  function endOptions(sel) {
+    const q = ax();
+    const cur = sel.value;
+    sel.innerHTML = `<option value="time">after a time Δt</option>` +
+      `<option value="stop">${q === "y" ? "at the top / when it stops (v = 0)" : "when it stops (v = 0)"}</option>` +
+      `<option value="pos">${q === "y" ? "when it reaches a height y (0 = ground)" : "when it reaches a position x"}</option>`;
+    sel.value = cur || "time";
+  }
+  function syncInputs() {
+    const q = ax(), sub = q === "y" ? "ᵧ" : "ₓ";
+    $("obj").value = S.obj;
+    $("x0lab").textContent = q === "y" ? "Height y₀" : "Position x₀";
+    $("v0lab").textContent = `Velocity v₀${sub}`;
+    $("a1lab").textContent = `Acceleration a${sub}`; $("a2lab").textContent = `Acceleration a${sub}`;
+    endOptions($("e1")); endOptions($("e2"));
+    $("e1").value = S.e1; $("e2").value = S.e2;
+    for (const [k, id] of [["x0", "x0"], ["v0", "v0"], ["a1", "a1"], ["a2", "a2"], ["e1v", "e1v"], ["e2v", "e2v"]])
+      if (document.activeElement !== $(id)) $(id).value = S[k];
+    for (const i of [1, 2]) {
+      const e = S["e" + i], row = $(`e${i}v`).closest(".row");
+      row.style.display = e === "stop" ? "none" : "";
+      $(`e${i}lab`).textContent = e === "time" ? `Δt of Part ${i}` : (q === "y" ? "Height y" : "Position x");
+      $(`e${i}u`).textContent = e === "time" ? "s" : "m";
+    }
+    document.querySelectorAll(".readouts .p #rpl").forEach(el => el.textContent = q);
+    $("rvl").textContent = "v" + sub; $("ral").textContent = "a" + sub;
+  }
+  function changed() {
+    compute(); S.t = 0; S.playing = false;
+    syncInputs(); text(); draw();
+  }
+  const numIn = (id, key) => $(id).addEventListener("input", e => {
+    const v = parseFloat(e.target.value); if (isNaN(v)) return;
+    S[key] = v; $("examples").value = ""; changed();
+  });
+  [["x0", "x0"], ["v0", "v0"], ["a1", "a1"], ["a2", "a2"], ["e1v", "e1v"], ["e2v", "e2v"]].forEach(([i, k]) => numIn(i, k));
+  $("e1").addEventListener("change", e => { S.e1 = e.target.value; if (S.e1 === "time" && !(S.e1v > 0)) S.e1v = 2; $("examples").value = ""; changed(); });
+  $("e2").addEventListener("change", e => { S.e2 = e.target.value; if (S.e2 === "time" && !(S.e2v > 0)) S.e2v = 2; $("examples").value = ""; changed(); });
+  $("obj").addEventListener("change", e => {
+    const wasAxis = ax(); S.obj = e.target.value; $("examples").value = "";
+    if (ax() !== wasAxis) { // sensible starting values for the new direction
+      if (ax() === "y") Object.assign(S, { x0: 0, v0: 20, a1: -9.81, e1: "stop", e1v: 0, a2: -9.81, e2: "pos", e2v: 0 });
+      else Object.assign(S, { x0: 0, v0: 0, a1: 3.5, e1: "time", e1v: 2.8, a2: 0, e2: "pos", e2v: 100 });
+    }
+    changed();
+  });
+  $("examples").addEventListener("change", e => {
+    const ex = EX[e.target.value]; if (!ex) return;
+    [S.obj, S.x0, S.v0, S.a1, S.e1, S.e1v, S.a2, S.e2, S.e2v] = ex;
+    changed(); $("examples").value = e.target.value;
+  });
+  $("answers").addEventListener("change", e => { S.answers = e.target.checked; text(); });
+  $("ghost").addEventListener("change", e => { S.ghost = e.target.checked; draw(); });
+  $("speed").addEventListener("change", e => S.speed = parseFloat(e.target.value));
+  $("play").addEventListener("click", () => {
+    if (S.t >= S.T - 1e-9) S.t = 0;
+    S.playing = !S.playing; updPlay();
+    if (S.playing) { last = performance.now(); requestAnimationFrame(loop); }
+  });
+  $("restart").addEventListener("click", () => { S.t = 0; draw(); });
+  $("scrub").addEventListener("input", e => { S.playing = false; S.t = parseFloat(e.target.value) * S.T; draw(); });
+  document.addEventListener("keydown", e => {
+    if (e.code === "Space" && !/INPUT|SELECT|BUTTON/.test(document.activeElement.tagName)) { e.preventDefault(); $("play").click(); }
+  });
+  function updPlay() { $("play").textContent = S.playing ? "Pause" : (S.t >= S.T - 1e-9 && S.t > 0 ? "Replay" : "Play"); }
+
+  // ---------- text panels ----------
+  function text() {
+    const q = ax(), [p1, p2] = S.parts, A = S.answers;
+    $("w1").textContent = S.warn[0]; $("w2").textContent = S.warn[1];
+    const hv = (v, u) => A ? `${sig(v)} ${u}` : `<span class="q">?</span>`;
+    $("linked").innerHTML = `Starts where Part 1 ends:<br>${q}₀ = ${q}<sub>f</sub> of Part 1 = <b>${hv(p1.xf, "m")}</b><br>v₀ = v<sub>f</sub> of Part 1 = <b>${hv(p1.vf, "m/s")}</b>`;
+    $("gpt").textContent = q === "y" ? "Vertical position y vs. time" : "Position x vs. time";
+    $("gvt").textContent = `Velocity v${q === "y" ? "ᵧ" : "ₓ"} vs. time`;
+    $("gat").textContent = `Acceleration a${q === "y" ? "ᵧ" : "ₓ"} vs. time`;
+    const ends = (e, val) => e === "time" ? `after Δt = ${sig(val)} s` : e === "stop" ? (q === "y" ? "at the top / when v = 0" : "when it stops (v = 0)") : `when ${q} = ${sig(val)} m`;
+    const card = (i, P) => {
+      const e = i === 1 ? S.e1 : S.e2, val = i === 1 ? S.e1v : S.e2v;
+      const g = { x0: i === 1, v0: i === 1, a: true, dt: e === "time", xf: e === "pos", vf: e === "stop" };
+      const show = (key, v, u) => (g[key] || A) ? `<span class="${g[key] ? "given" : ""}">${sig(v)} ${u}</span>` : `<span class="q">?</span>`;
+      const dx = P.xf - P.x0, vavg = (P.v0 + P.vf) / 2;
+      const from = i === 2 ? (k) => ` <span class="from">(= ${k} of Part 1)</span>` : () => "";
+      const pa = `(${sig(P.a)} m/s²)`, pv = `(${sig(P.v0)} m/s)`, px = P.x0 < 0 ? `(${sig(P.x0)} m)` : `${sig(P.x0)} m`;
+      const x0s = (g.x0 || A) ? px : "?", v0s = (g.v0 || A) ? pv : "(?)";
+      const eq = Math.abs(P.a) < 1e-12
+        ? `<div class="gen">${q} = v₀Δt + ${q}₀ &nbsp;&nbsp; v = v₀ &nbsp;(a = 0)</div><div>${q} = ${v0s}Δt + ${x0s}</div><div>v = ${(g.v0 || A) ? sig(P.v0) + " m/s" : "?"}</div>`
+        : `<div class="gen">${q} = ½aΔt² + v₀Δt + ${q}₀</div><div>${q} = ½${pa}Δt² + ${v0s}Δt + ${x0s}</div>` +
+          `<div class="gen">v = aΔt + v₀</div><div>v = ${pa}Δt + ${(g.v0 || A) ? (P.v0 < 0 ? pv : sig(P.v0) + " m/s") : "?"}</div>`;
+      return `<div class="card c${i}"><h3>Part ${i}</h3><p class="ends">Ends ${ends(e, val)}</p><table>
+        <tr><td>${q}₀ =</td><td>${show("x0", P.x0, "m")}${from(q + "<sub>f</sub>")}</td></tr>
+        <tr><td>${q}<sub>f</sub> =</td><td>${show("xf", P.xf, "m")}</td></tr>
+        <tr><td>Δ${q} = ${q}<sub>f</sub> − ${q}₀ =</td><td>${A ? sig(dx) + " m" : '<span class="q">?</span>'}</td></tr>
+        <tr><td>v₀ =</td><td>${show("v0", P.v0, "m/s")}${from("v<sub>f</sub>")}</td></tr>
+        <tr><td>v<sub>f</sub> =</td><td>${show("vf", P.vf, "m/s")}</td></tr>
+        <tr><td>v<sub>avg</sub> = (v₀ + v<sub>f</sub>)/2 =</td><td>${A ? sig(vavg) + " m/s" : '<span class="q">?</span>'}</td></tr>
+        <tr><td>a =</td><td>${show("a", P.a, "m/s²")}</td></tr>
+        <tr><td>Δt =</td><td>${show("dt", P.dt, "s")}</td></tr></table>
+        <div class="eqbox">${eq}</div></div>`;
+    };
+    $("cards").innerHTML = card(1, p1) + card(2, p2);
+    $("totals").innerHTML = `<b>Whole trip:</b> total time = Δt₁ + Δt₂ = ${A ? `${sig(p1.dt)} s + ${sig(p2.dt)} s = <b>${sig(S.T)} s</b>` : '<span class="q">?</span>'}` +
+      ` &nbsp;·&nbsp; final ${q} = ${A ? `<b>${sig(p2.xf)} m</b>` : '<span class="q">?</span>'}` +
+      ` &nbsp;·&nbsp; total Δ${q} = ${A ? `<b>${sig(p2.xf - p1.x0)} m</b>` : '<span class="q">?</span>'}`;
+  }
+
+  // ---------- drawing helpers ----------
+  function fit(cv) {
+    const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(r.width * d)), h = Math.max(1, Math.round(r.height * d));
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const ctx = cv.getContext("2d"); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, r.width, r.height);
+    ctx.font = "12px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    return { ctx, w: r.width, h: r.height };
+  }
+  function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+    return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
+  function ticks(lo, hi, n) { if (hi - lo <= 0) return [lo]; const st = niceStep((hi - lo) / n), out = [];
+    for (let v = Math.ceil(lo / st - 1e-9) * st; v <= hi + 1e-9; v += st) out.push(Math.round(v / st) * st); return out; }
+  const tl = v => minus(String(Number((Math.abs(v) < 1e-9 ? 0 : v).toPrecision(6))));
+  function arrow(ctx, x1, y1, x2, y2, color, lw = 3) {
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy); if (L < 2) return;
+    const ux = dx / L, uy = dy / L, hs = Math.min(12, L * 0.6);
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2 - ux * hs * 0.8, y2 - uy * hs * 0.8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - ux * hs - uy * hs * 0.5, y2 - uy * hs + ux * hs * 0.5);
+    ctx.lineTo(x2 - ux * hs + uy * hs * 0.5, y2 - uy * hs - ux * hs * 0.5); ctx.closePath(); ctx.fill();
+  }
+  function range() {
+    let lo = Infinity, hi = -Infinity, vmax = 0;
+    for (let i = 0; i <= 400; i++) { const s = at(S.T * i / 400); lo = Math.min(lo, s.x); hi = Math.max(hi, s.x); vmax = Math.max(vmax, Math.abs(s.v)); }
+    return { lo, hi, vmax: Math.max(vmax, 0.1), amax: Math.max(Math.abs(S.a1), Math.abs(S.a2), 0.1) };
+  }
+  function dotStep() { return [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5].find(s => S.T / s <= 34) || 5; }
+  function dirAt(t) {
+    const s = at(t); if (Math.abs(s.v) > 1e-9) return Math.sign(s.v);
+    const s2 = at(Math.min(S.T, t + 1e-3)); return Math.sign(s2.v) || Math.sign(S.parts[0].v0) || 1;
+  }
+
+  // ---------- objects ----------
+  function drawRunner(ctx, x, y, dir, phase, C) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1);
+    ctx.strokeStyle = C.obj; ctx.lineWidth = 3; ctx.lineCap = "round";
+    const s = Math.sin(phase), c = Math.cos(phase);
+    const hip = [0, -26], neck = [3, -46];
+    ctx.beginPath(); ctx.moveTo(...hip); ctx.lineTo(...neck); ctx.stroke();
+    ctx.beginPath(); ctx.arc(5, -54, 7, 0, 7); ctx.stroke();
+    const leg = (k) => { ctx.beginPath(); ctx.moveTo(...hip); ctx.lineTo(10 * k * s, -13); ctx.lineTo(10 * k * s + 6 * k * c - 3, 0); ctx.stroke(); };
+    leg(1); leg(-1);
+    const arm = (k) => { ctx.beginPath(); ctx.moveTo(2, -42); ctx.lineTo(-9 * k * s + 2, -32); ctx.lineTo(-9 * k * s + 9, -36 + 4 * k); ctx.stroke(); };
+    arm(1); arm(-1); ctx.restore();
+  }
+  function drawCar(ctx, x, y, dir, C) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1);
+    ctx.fillStyle = C.p1mix; ctx.strokeStyle = C.ink; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.roundRect(-38, -30, 76, 18, 5); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-20, -30); ctx.lineTo(-12, -44); ctx.lineTo(14, -44); ctx.lineTo(24, -30); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = C.sky; ctx.fillRect(-10, -41, 10, 9); ctx.fillRect(3, -41, 12, 9);
+    ctx.fillStyle = C.ink; for (const wx of [-22, 22]) { ctx.beginPath(); ctx.arc(wx, -9, 9, 0, 7); ctx.fill(); }
+    ctx.fillStyle = "#f2c94c"; ctx.fillRect(34, -27, 4, 5); ctx.restore();
+  }
+  function drawBike(ctx, x, y, dir, phase, C) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1);
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2;
+    for (const wx of [-22, 22]) { ctx.beginPath(); ctx.arc(wx, -14, 13, 0, 7); ctx.stroke(); }
+    ctx.strokeStyle = C.obj; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(-22, -14); ctx.lineTo(-4, -14); ctx.lineTo(16, -32); ctx.lineTo(22, -14);
+    ctx.moveTo(-4, -14); ctx.lineTo(-10, -34); ctx.lineTo(16, -32); ctx.moveTo(16, -32); ctx.lineTo(14, -40); ctx.stroke();
+    ctx.lineWidth = 3; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(-10, -36); ctx.lineTo(2, -56); ctx.lineTo(14, -40); ctx.stroke();      // body + arm
+    ctx.beginPath(); ctx.arc(5, -63, 6, 0, 7); ctx.stroke();
+    const pc = [-4 + 6 * Math.cos(phase), -14 + 6 * Math.sin(phase)];
+    ctx.beginPath(); ctx.moveTo(-10, -36); ctx.lineTo((pc[0] - 10) / 2 + 4, (pc[1] - 36) / 2 - 4); ctx.lineTo(...pc); ctx.stroke();
+    ctx.restore();
+  }
+  function drawRocket(ctx, x, y, thrust, C) {
+    ctx.save(); ctx.translate(x, y);
+    if (thrust) { ctx.fillStyle = "#ff9f1a"; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(0, 14 + 6 * Math.random()); ctx.lineTo(6, 0); ctx.fill();
+      ctx.fillStyle = "#ffd84d"; ctx.beginPath(); ctx.moveTo(-3, 0); ctx.lineTo(0, 8); ctx.lineTo(3, 0); ctx.fill(); }
+    ctx.fillStyle = C.rocket; ctx.strokeStyle = C.ink; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(-7, -38); ctx.lineTo(0, -52); ctx.lineTo(7, -38); ctx.lineTo(7, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-7, -10); ctx.lineTo(-14, 0); ctx.lineTo(-7, 0); ctx.moveTo(7, -10); ctx.lineTo(14, 0); ctx.lineTo(7, 0); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+  function drawRound(ctx, x, y, kind, C) {
+    if (kind === "pumpkin") {
+      ctx.fillStyle = "#f08c1a"; ctx.strokeStyle = "#8a4a00"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.ellipse(x, y - 11, 14, 11, 0, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, y - 22); ctx.lineTo(x, y); ctx.stroke();
+      ctx.fillStyle = "#3c7a2a"; ctx.fillRect(x - 2, y - 27, 4, 6);
+    } else {
+      const r = kind === "cannon" ? 9 : 10;
+      ctx.fillStyle = kind === "cannon" ? "#2b2f33" : C.ballc; ctx.strokeStyle = C.ink; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(x, y - r, r, 0, 7); ctx.fill(); ctx.stroke();
+    }
+  }
+  function drawHeli(ctx, x, y, C) {
+    ctx.save(); ctx.translate(x, y); ctx.strokeStyle = C.ink; ctx.fillStyle = C.panel; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(0, -22, 26, 13, 0, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(24, -24); ctx.lineTo(62, -26); ctx.moveTo(62, -34); ctx.lineTo(62, -18);
+    ctx.moveTo(-34, -40); ctx.lineTo(34, -40); ctx.moveTo(0, -40); ctx.lineTo(0, -35); ctx.moveTo(-18, -4); ctx.lineTo(18, -4);
+    ctx.moveTo(-10, -9); ctx.lineTo(-12, -4); ctx.moveTo(10, -9); ctx.lineTo(12, -4); ctx.stroke(); ctx.restore();
+  }
+
+  // ---------- motion panel ----------
+  function drawMotion() {
+    const { ctx, w, h } = fit($("motion"));
+    const C = { ink: css("--ink"), muted: css("--muted"), pos: css("--pos"), vel: css("--vel"), acc: css("--acc"),
+      p1: css("--p1"), p2: css("--p2"), track: css("--track"), fill: css("--fill"), obj: css("--obj"), sky: css("--sky"),
+      panel: css("--panel") };
+    C.p1mix = "#5b8fd9"; C.rocket = "#7ccf6a"; C.ballc = "#7a8288";
+    const R = range(), now = at(S.t), q = ax();
+    const st = dotStep(), dts = []; for (let t = 0; t <= S.t + 1e-9; t += st) dts.push(t);
+    const kv = 95 / R.vmax, aLen = a => (Math.abs(a) < 1e-12 ? 0 : 20 + 55 * Math.abs(a) / R.amax);
+
+    if (q === "x") {
+      let lo = Math.min(R.lo, 0), hi = Math.max(R.hi, 0);
+      for (const [e, v] of [[S.e1, S.e1v], [S.e2, S.e2v]]) if (e === "pos") { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+      const pad = Math.max(0.06 * (hi - lo), 0.5); lo -= pad; hi += pad;
+      const padL = 112, padR = 28, ty = h - 92, k = (w - padL - padR) / (hi - lo), P = x => padL + (x - lo) * k;
+      ctx.fillStyle = C.fill; ctx.fillRect(P(lo), ty, P(hi) - P(lo), h - ty - 30);
+      ctx.strokeStyle = C.track; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(P(lo), ty); ctx.lineTo(P(hi), ty); ctx.stroke();
+      ctx.fillStyle = C.track; ctx.textAlign = "center"; ctx.lineWidth = 1.2;
+      for (const s of ticks(lo, hi, 9)) { ctx.beginPath(); ctx.moveTo(P(s), ty); ctx.lineTo(P(s), ty + 6); ctx.stroke(); ctx.fillText(tl(s), P(s), ty + 52); }
+      ctx.fillStyle = C.muted; ctx.textAlign = "right"; ctx.fillText("x (m)", w - 6, ty + 52);
+      // start, part boundary, finish markers
+      const mark = (x, label, color, dash) => { ctx.strokeStyle = color; ctx.setLineDash(dash); ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(P(x), ty - 140); ctx.lineTo(P(x), ty); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = color; ctx.textAlign = "center"; ctx.font = "bold 12px 'Atkinson Hyperlegible', system-ui, sans-serif";
+        ctx.fillText(label, P(x), ty - 146); ctx.font = "12px 'Atkinson Hyperlegible', system-ui, sans-serif"; };
+      mark(S.parts[0].x0, "start", C.p1, [2, 4]);
+      if (S.t >= S.parts[0].dt - 1e-9) mark(S.parts[0].xf, "end of Part 1", C.p2, [6, 4]);
+      if (S.e2 === "pos") mark(S.e2v, `x = ${sig(S.e2v)} m`, C.ink, [10, 3]);
+      // dots, two rows by direction, colored by part
+      for (const t of dts) { const s = at(t); ctx.fillStyle = s.part ? C.p2 : C.p1; ctx.globalAlpha = 0.75;
+        ctx.beginPath(); ctx.arc(P(s.x), ty + (dirAt(t) > 0 ? 15 : 30), 4, 0, 7); ctx.fill(); }
+      ctx.globalAlpha = 1; ctx.fillStyle = C.muted; ctx.textAlign = "right";
+      ctx.fillText("moving right →", padL - 8, ty + 19); ctx.fillText("moving left ←", padL - 8, ty + 34);
+      // object
+      const ox = P(now.x), dir = dirAt(S.t);
+      if (S.obj === "runner") drawRunner(ctx, ox, ty, dir, Math.abs(now.x - S.parts[0].x0) * (6 / Math.max(1, (hi - lo) / 20)), C);
+      else if (S.obj === "car") drawCar(ctx, ox, ty, dir, C);
+      else drawBike(ctx, ox, ty, dir, Math.abs(now.x) * 3, C);
+      arrow(ctx, ox, ty - 92, ox + now.v * kv, ty - 92, C.vel);
+      arrow(ctx, ox, ty - 116, ox + Math.sign(now.a) * aLen(now.a), ty - 116, C.acc);
+      ctx.textAlign = "left"; ctx.fillStyle = C.muted; ctx.fillText(`dots every ${st} s`, 8, h - 10);
+    } else {
+      let lo = Math.min(R.lo, 0), hi = Math.max(R.hi, 0);
+      if (S.obj === "pumpkin") hi = Math.max(hi, S.parts[0].x0);
+      const top = 70, bot = 30, k = (h - top - bot) / Math.max(hi - lo, 1), Y = y => h - bot - (y - lo) * k;
+      const cx = Math.round(w * 0.5), axisX = 70;
+      // ground
+      if (lo >= -1e-6) { ctx.fillStyle = C.fill; ctx.fillRect(0, Y(0), w, h - Y(0));
+        ctx.strokeStyle = C.track; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, Y(0)); ctx.lineTo(w, Y(0)); ctx.stroke(); }
+      // buildings: launch platform (right) and landing roof
+      const bld = (hgt, x1, x2) => { ctx.fillStyle = C.fill; ctx.strokeStyle = C.muted; ctx.lineWidth = 1.5;
+        ctx.fillRect(x1, Y(hgt), x2 - x1, Y(0) - Y(hgt)); ctx.strokeRect(x1, Y(hgt), x2 - x1, Y(0) - Y(hgt)); };
+      if (S.obj !== "pumpkin" && S.parts[0].x0 > 0) bld(S.parts[0].x0, cx + 16, cx + 120);
+      if (S.e2 === "pos" && S.e2v > 0 && Math.abs(S.e2v - S.parts[0].x0) > 1e-6) bld(S.e2v, cx - 16, cx + 100);
+      if (S.obj === "pumpkin") drawHeli(ctx, cx, Y(S.parts[0].x0) - 26, C);
+      if (S.obj === "rocket") { ctx.fillStyle = C.muted; ctx.fillRect(cx - 22, Y(0) - 3, 44, 3); }
+      // axis
+      ctx.strokeStyle = C.muted; ctx.lineWidth = 1.2; ctx.fillStyle = C.muted; ctx.textAlign = "right";
+      ctx.beginPath(); ctx.moveTo(axisX, Y(lo)); ctx.lineTo(axisX, Y(hi)); ctx.stroke();
+      for (const v of ticks(lo, hi, 6)) { ctx.beginPath(); ctx.moveTo(axisX - 5, Y(v)); ctx.lineTo(axisX, Y(v)); ctx.stroke(); ctx.fillText(tl(v), axisX - 8, Y(v) + 4); }
+      ctx.save(); ctx.translate(16, (Y(lo) + Y(hi)) / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.fillText("height y (m)", 0, 0); ctx.restore();
+      // part boundary marker on the axis
+      if (S.t >= S.parts[0].dt - 1e-9) { ctx.strokeStyle = C.p2; ctx.setLineDash([6, 4]); ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(axisX, Y(S.parts[0].xf)); ctx.lineTo(cx - 20, Y(S.parts[0].xf)); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = C.p2; ctx.textAlign = "left"; ctx.font = "bold 12px 'Atkinson Hyperlegible', system-ui, sans-serif";
+        ctx.fillText("end of Part 1", axisX + 6, Y(S.parts[0].xf) - 5); ctx.font = "12px 'Atkinson Hyperlegible', system-ui, sans-serif"; }
+      // dots: up column and down column, colored by part
+      const colU = cx - 120, colD = cx - 92;
+      for (const t of dts) { const s = at(t); ctx.fillStyle = s.part ? C.p2 : C.p1; ctx.globalAlpha = 0.75;
+        ctx.beginPath(); ctx.arc(dirAt(t) > 0 ? colU : colD, Y(s.x), 4, 0, 7); ctx.fill(); }
+      ctx.globalAlpha = 1; ctx.fillStyle = C.muted; ctx.textAlign = "center";
+      ctx.fillText("up", colU, top - 18); ctx.fillText("down", colD, top - 18);
+      // object
+      const oy = Y(now.x);
+      if (S.obj === "rocket") drawRocket(ctx, cx, oy, now.a > 0 && S.t < S.T, C);
+      else drawRound(ctx, cx, oy, S.obj, C);
+      arrow(ctx, cx - 40, oy - 14, cx - 40, oy - 14 - now.v * kv, C.vel);
+      arrow(ctx, cx - 60, oy - 14, cx - 60, oy - 14 - Math.sign(now.a) * aLen(now.a), C.acc);
+      ctx.textAlign = "left"; ctx.fillStyle = C.muted; ctx.fillText(`dots every ${st} s`, w - 120, h - 10);
+    }
+    // legend + part badge
+    ctx.font = "bold 13px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.textAlign = "right";
+    arrow(ctx, w - 60, 18, w - 36, 18, C.vel, 2.5); ctx.fillStyle = C.vel; ctx.fillText("v", w - 12, 22);
+    arrow(ctx, w - 60, 38, w - 36, 38, C.acc, 2.5); ctx.fillStyle = C.acc; ctx.fillText("a", w - 12, 42);
+    ctx.textAlign = "left"; ctx.fillStyle = C.ink; ctx.font = "bold 14px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    ctx.fillText(`t = ${S.t.toFixed(2)} s`, 10, 20);
+    ctx.fillStyle = now.part ? C.p2 : C.p1; ctx.fillText(`Part ${now.part + 1}`, 10, 40);
+  }
+
+  // ---------- graphs ----------
+  function drawGraph(id, key, label) {
+    const { ctx, w, h } = fit($(id));
+    const muted = css("--muted"), line = css("--line"), ink = css("--ink"), c1 = css("--p1"), c2 = css("--p2");
+    const L = 60, Rr = 14, Tp = 10, B = 26, pw = w - L - Rr, ph = h - Tp - B;
+    let mn = 0, mx = 0;
+    for (let i = 0; i <= 400; i++) { const v = at(S.T * i / 400)[key]; mn = Math.min(mn, v); mx = Math.max(mx, v); }
+    if (key === "a") { mn = Math.min(mn, -1); mx = Math.max(mx, 1); }
+    const pd = Math.max(0.12 * (mx - mn), 0.2); const lo = mn - pd, hi = mx + pd;
+    const X = t => L + (t / S.T) * pw, Yv = v => Tp + (hi - v) / (hi - lo) * ph;
+    ctx.lineWidth = 1; ctx.strokeStyle = line; ctx.fillStyle = muted; ctx.textAlign = "center";
+    for (const tv of ticks(0, S.T, 9)) { ctx.beginPath(); ctx.moveTo(X(tv), Tp); ctx.lineTo(X(tv), Tp + ph); ctx.stroke(); ctx.fillText(tl(tv), X(tv), h - 8); }
+    ctx.textAlign = "right";
+    for (const vv of ticks(lo, hi, 4)) { ctx.beginPath(); ctx.moveTo(L, Yv(vv)); ctx.lineTo(L + pw, Yv(vv)); ctx.stroke(); ctx.fillText(tl(vv), L - 6, Yv(vv) + 4); }
+    ctx.strokeStyle = muted; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(L, Yv(0)); ctx.lineTo(L + pw, Yv(0)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(L, Tp); ctx.lineTo(L, Tp + ph); ctx.stroke();
+    ctx.save(); ctx.translate(14, Tp + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.fillStyle = ink; ctx.fillText(label, 0, 0); ctx.restore();
+    if (key === "a") { ctx.textAlign = "right"; ctx.fillStyle = muted; ctx.fillText("t (s)", w - Rr, h - 22); }
+    // boundary between parts
+    const t1 = S.parts[0].dt;
+    ctx.setLineDash([5, 4]); ctx.strokeStyle = muted; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(X(t1), Tp); ctx.lineTo(X(t1), Tp + ph); ctx.stroke(); ctx.setLineDash([]);
+    if (key === "x") { ctx.fillStyle = muted; ctx.textAlign = X(t1) > L + pw * 0.75 ? "right" : "left";
+      ctx.fillText(`Δt₁ = ${sig(t1)} s`, X(t1) + (ctx.textAlign === "left" ? 5 : -5), Tp + 12); }
+    const seg = (pi, tA, tB, color, alpha) => {
+      if (tB <= tA) return; ctx.strokeStyle = color; ctx.globalAlpha = alpha; ctx.lineWidth = 3.2; ctx.lineCap = "round";
+      ctx.beginPath(); const N = 120;
+      for (let i = 0; i <= N; i++) { const t = tA + (tB - tA) * i / N, P = S.parts[pi], tau = t - P.t0;
+        const v = key === "x" ? P.x0 + P.v0 * tau + 0.5 * P.a * tau * tau : key === "v" ? P.v0 + P.a * tau : P.a;
+        i ? ctx.lineTo(X(t), Yv(v)) : ctx.moveTo(X(t), Yv(v)); }
+      ctx.stroke(); ctx.globalAlpha = 1;
+    };
+    if (S.ghost) { seg(0, 0, t1, c1, 0.22); seg(1, t1, S.T, c2, 0.22); }
+    seg(0, 0, Math.min(S.t, t1), c1, 1);
+    if (S.t > t1) seg(1, t1, S.t, c2, 1);
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = ink; ctx.globalAlpha = 0.5; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(X(S.t), Tp); ctx.lineTo(X(S.t), Tp + ph); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    const s = at(S.t); ctx.fillStyle = s.part ? c2 : c1; ctx.beginPath(); ctx.arc(X(S.t), Yv(s[key]), 5.5, 0, 7); ctx.fill();
+  }
+
+  function draw() {
+    const q = ax(), sub = q === "y" ? "ᵧ" : "ₓ";
+    drawMotion();
+    drawGraph("gP", "x", `${q} (m)`); drawGraph("gV", "v", `v${sub} (m/s)`); drawGraph("gA", "a", `a${sub} (m/s²)`);
+    const s = at(S.t);
+    $("rpart").innerHTML = `<span class="badge" style="background:var(--p${s.part + 1})">Part ${s.part + 1}</span>`;
+    $("rt").textContent = S.t.toFixed(2); $("rp").textContent = sig(s.x); $("rv").textContent = sig(s.v); $("ra").textContent = sig(s.a);
+    $("scrub").value = S.T ? S.t / S.T : 0; updPlay();
+  }
+
+  let last = 0;
+  function loop(now) {
+    if (!S.playing) return;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    S.t = Math.min(S.T, S.t + dt * S.speed); if (S.t >= S.T) S.playing = false;
+    draw(); if (S.playing) requestAnimationFrame(loop);
+  }
+  new ResizeObserver(() => draw()).observe(document.querySelector(".stage"));
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+  [S.obj, S.x0, S.v0, S.a1, S.e1, S.e1v, S.a2, S.e2, S.e2v] = EX.sprint2;
+  changed(); $("examples").value = "sprint2";
+  if (document.fonts) document.fonts.ready.then(draw);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Velocity vs. displacement lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  --bg: #eaf1ee; --grid: #d3e0da; --panel: #ffffff; --ink: #15232b; --muted: #56666e; --line: #c4d3cc;
+  --pos: #23913a; --vel: #d22b2b; --acc: #1f6fb4; --turn: #d9800f;
+  --track: #8a4b1c; --fill: #e8dcc8; --cart: #5b6166; --air: #27a7c4; --fan: #cfe3f5;
+  --btn: #15232b; --btn-ink: #ffffff; --focus: #1f6fb4;
+  font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42;
+    --pos: #4cc76a; --vel: #ff6b6b; --acc: #5aa9ff; --turn: #f2a446;
+    --track: #c98a55; --fill: #2f2a22; --cart: #9aa3a9; --air: #5fd3ef; --fan: #2b4458;
+    --btn: #e5eef0; --btn-ink: #0f171b; --focus: #5aa9ff;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42;
+  --pos: #4cc76a; --vel: #ff6b6b; --acc: #5aa9ff; --turn: #f2a446;
+  --track: #c98a55; --fill: #2f2a22; --cart: #9aa3a9; --air: #5fd3ef; --fan: #2b4458;
+  --btn: #e5eef0; --btn-ink: #0f171b; --focus: #5aa9ff;
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+*, *::before, *::after { box-sizing: inherit; }
+body {
+  margin: 0; color: var(--ink); background-color: var(--bg); line-height: 1.45;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+header { max-width: 1240px; margin: 0 auto; padding: 28px 20px 8px; }
+h1 { font-size: clamp(1.6rem, 3.4vw, 2.4rem); margin: 0 0 4px; letter-spacing: -0.01em; }
+header .back { display: inline-block; margin-bottom: 10px; color: var(--ink); font-weight: 700; }
+header p { margin: 0; color: var(--muted); max-width: 72ch; }
+.layout { max-width: 1240px; margin: 0 auto; padding: 16px 20px 40px; display: grid;
+  grid-template-columns: 310px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 880px) { .layout { grid-template-columns: 1fr; } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.controls { padding: 18px; position: sticky; top: 12px; }
+@media (max-width: 880px) { .controls { position: static; } }
+.controls h2 { font-size: 1rem; margin: 0 0 10px; }
+.field { margin: 0 0 14px; }
+.field .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.field label { font-weight: 700; font-size: 0.95rem; }
+.unit { color: var(--muted); font-size: 0.9rem; }
+.field input[type=number] { width: 70px; font: inherit; padding: 2px 6px; border: 1px solid var(--line);
+  border-radius: 6px; background: var(--panel); color: var(--ink); text-align: right; }
+.field input[type=range] { width: 100%; margin: 6px 0 0; accent-color: var(--ink); }
+.note { font-size: 0.92rem; color: var(--muted); border-left: 3px solid var(--acc); padding: 2px 0 2px 10px; margin: 0 0 14px; }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: 0.95rem; margin: 0 0 8px; }
+.check input { margin-top: 4px; }
+select { font: inherit; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--ink); margin-bottom: 16px; }
+.stage { display: grid; gap: 14px; min-width: 0; }
+.motion { padding: 12px; }
+canvas { display: block; width: 100%; }
+#motion { height: 230px; }
+#graph { height: 340px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+button { font: inherit; font-weight: 700; border: 2px solid var(--btn); background: var(--btn); color: var(--btn-ink);
+  border-radius: 8px; padding: 6px 14px; cursor: pointer; min-width: 84px; }
+button.ghost { background: transparent; color: var(--ink); }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.scrub { flex: 1 1 200px; display: flex; align-items: center; gap: 8px; }
+.scrub input { flex: 1; accent-color: var(--ink); }
+.readouts { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 8px; font-variant-numeric: tabular-nums; }
+.readouts .p { color: var(--pos); } .readouts .v { color: var(--vel); } .readouts .a { color: var(--acc); }
+.graph { padding: 12px 14px 10px; }
+.graph h3 { margin: 0 0 8px; font-size: 1.05rem; color: var(--vel); }
+.eqs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-bottom: 10px; }
+.eqcard { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 1.05rem; line-height: 1.6; }
+.eqcard .lab { display: block; font-size: 0.85rem; color: var(--muted); font-weight: 700; }
+.eqcard.on { border-color: var(--vel); box-shadow: inset 4px 0 0 var(--vel); }
+.eqcard .val { color: var(--vel); font-weight: 700; }
+.live { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 1.08rem; margin-top: 10px;
+  font-variant-numeric: tabular-nums; }
+.live b { color: var(--vel); }
+.sqrt { white-space: nowrap; }
+.sqrt .rad { border-top: 1.6px solid currentColor; padding: 0 2px 0 1px; margin-left: 1px; }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../index.html">Back to all interactives</a>
+  <h1>Velocity vs. displacement lab</h1>
+  <p>A fan cart speeds up as it moves along a level track. Set the acceleration and starting velocity, press Play, and watch how the velocity depends on how far the cart has gone.</p>
+</header>
+
+<main class="layout">
+  <aside class="panel controls" aria-label="Settings">
+    <h2>Fan cart</h2>
+    <label for="examples" style="font-weight:700;display:block;margin-bottom:4px">Load an example</label>
+    <select id="examples">
+      <option value="">Choose…</option>
+      <option value="rest">From rest, a = 0.40 m/s², 1.8 m</option>
+      <option value="strong">Stronger fan from rest, a = 1.0 m/s²</option>
+      <option value="moving">Already moving, v₀ = 0.5 m/s</option>
+    </select>
+    <div class="field">
+      <div class="top"><label for="ar" id="alab" style="color:var(--acc)">Acceleration a</label>
+        <span><input type="number" id="an" aria-labelledby="alab" min="0.1" max="2" step="0.05"> <span class="unit">m/s²</span></span></div>
+      <input type="range" id="ar" aria-labelledby="alab" min="0.1" max="2" step="0.05" style="accent-color:var(--acc)">
+    </div>
+    <div class="field">
+      <div class="top"><label for="vr" id="vlab" style="color:var(--vel)">Start velocity v₀</label>
+        <span><input type="number" id="vn" aria-labelledby="vlab" min="0" max="2" step="0.1"> <span class="unit">m/s</span></span></div>
+      <input type="range" id="vr" aria-labelledby="vlab" min="0" max="2" step="0.1" style="accent-color:var(--vel)">
+    </div>
+    <div class="field">
+      <div class="top"><label for="dr" id="dlab" style="color:var(--pos)">Distance Δx</label>
+        <span><input type="number" id="dn" aria-labelledby="dlab" min="0.5" max="3" step="0.1"> <span class="unit">m</span></span></div>
+      <input type="range" id="dr" aria-labelledby="dlab" min="0.5" max="3" step="0.1" style="accent-color:var(--pos)">
+    </div>
+    <p class="note">The fan blows air to the left, so the thrust pushes the cart to the right. The cart starts at x₀ = 0 m, so its position equals its displacement Δx.</p>
+    <label class="check"><input type="checkbox" id="square"> Plot v² instead of v (a straight line with slope 2a)</label>
+    <label class="check"><input type="checkbox" id="ghost"> Show the full graph faintly (for checking predictions)</label>
+  </aside>
+
+  <section class="stage">
+    <div class="panel motion">
+      <canvas id="motion" aria-label="Animation of the fan cart"></canvas>
+      <div class="toolbar">
+        <button id="play">Play</button>
+        <button id="restart" class="ghost">Restart</button>
+        <select id="speed" aria-label="Playback speed" style="width:auto;margin:0">
+          <option value="1">1× speed</option><option value="0.5">½× speed</option><option value="0.25">¼× speed</option>
+        </select>
+        <div class="scrub"><label for="scrub" class="unit">time</label><input type="range" id="scrub" min="0" max="1" step="0.001" value="0"></div>
+      </div>
+      <div class="readouts">
+        <span>t = <b id="rt">0.00</b> s</span>
+        <span class="p">Δx = <b id="rx">0.00</b> m</span>
+        <span class="v">v = <b id="rv">0.00</b> m/s</span>
+        <span class="a">a = <b id="ra">0.00</b> m/s²</span>
+      </div>
+    </div>
+
+    <div class="panel graph">
+      <h3 id="gtitle">Velocity vs. displacement</h3>
+      <div class="eqs" id="eqs"></div>
+      <canvas id="graph" aria-label="Graph of velocity against displacement"></canvas>
+      <div class="live" id="live"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const S = { a: 0.4, v0: 0, D: 1.8, T: 3, t: 0, playing: false, speed: 1, square: false, ghost: false };
+  const EX = { rest: [0.4, 0, 1.8], strong: [1.0, 0, 1.8], moving: [0.4, 0.5, 1.8] };
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const r2 = n => Math.round(n * 100) / 100;
+  const f2 = n => n.toFixed(2);
+  const fmt = n => { const v = r2(n); return (v < 0 ? "−" : "") + Math.abs(v).toString(); };
+
+  const X = t => S.v0 * t + 0.5 * S.a * t * t;
+  const V = t => S.v0 + S.a * t;
+  const vAt = dx => Math.sqrt(S.v0 * S.v0 + 2 * S.a * dx);
+  const runTime = () => (-S.v0 + Math.sqrt(S.v0 * S.v0 + 2 * S.a * S.D)) / S.a;
+
+  // ---------- controls ----------
+  const pairs = { a: ["ar", "an"], v0: ["vr", "vn"], D: ["dr", "dn"] };
+  function sync() { for (const k in pairs) for (const id of pairs[k]) $(id).value = r2(S[k]); }
+  function changed() { S.T = runTime(); S.t = 0; S.playing = false; sync(); text(); draw(); }
+  for (const k in pairs) {
+    const [r, nm] = pairs[k];
+    const h = e => { const v = parseFloat(e.target.value); if (isNaN(v)) return;
+      const el = $(r); S[k] = Math.min(+el.max, Math.max(+el.min, v)); $("examples").value = ""; changed(); };
+    $(r).addEventListener("input", h); $(nm).addEventListener("change", h);
+  }
+  $("examples").addEventListener("change", e => { const ex = EX[e.target.value]; if (!ex) return;
+    [S.a, S.v0, S.D] = ex; changed(); });
+  $("square").addEventListener("change", e => { S.square = e.target.checked; text(); draw(); });
+  $("ghost").addEventListener("change", e => { S.ghost = e.target.checked; draw(); });
+  $("speed").addEventListener("change", e => S.speed = parseFloat(e.target.value));
+  $("play").addEventListener("click", () => {
+    if (S.t >= S.T - 1e-9) S.t = 0;
+    S.playing = !S.playing; updPlay();
+    if (S.playing) { last = performance.now(); requestAnimationFrame(loop); }
+  });
+  $("restart").addEventListener("click", () => { S.t = 0; draw(); });
+  $("scrub").addEventListener("input", e => { S.playing = false; S.t = parseFloat(e.target.value) * S.T; draw(); });
+  document.addEventListener("keydown", e => {
+    if (e.code === "Space" && !/INPUT|SELECT|BUTTON/.test(document.activeElement.tagName)) { e.preventDefault(); $("play").click(); }
+  });
+  function updPlay() { $("play").textContent = S.playing ? "Pause" : (S.t >= S.T - 1e-9 && S.t > 0 ? "Replay" : "Play"); }
+
+  // ---------- equations ----------
+  const sq = inner => `<span class="sqrt">√<span class="rad">${inner}</span></span>`;
+  function text() {
+    const rest = S.v0 === 0;
+    $("gtitle").textContent = S.square ? "Velocity squared vs. displacement" : "Velocity vs. displacement";
+    const numV = rest ? sq(`2(${fmt(S.a)} m/s²)Δx`) : sq(`(${fmt(S.v0)} m/s)² + 2(${fmt(S.a)} m/s²)Δx`);
+    let cards =
+      `<div class="eqcard"><span class="lab">Typical form</span>v<sub>f</sub>² − v<sub>0</sub>² = 2aΔx</div>` +
+      `<div class="eqcard ${rest ? "on" : ""}"><span class="lab">Starting from rest (v₀ = 0)</span>v<sub>f</sub> = ${sq("2aΔx")}</div>`;
+    if (!rest) cards += `<div class="eqcard on"><span class="lab">Solved for v<sub>f</sub> (v₀ ≠ 0)</span>v<sub>f</sub> = ${sq("v<sub>0</sub>² + 2aΔx")}</div>`;
+    cards += S.square
+      ? `<div class="eqcard"><span class="lab">With these numbers</span>v<sub>f</sub>² = ${rest ? "" : `(${fmt(S.v0)} m/s)² + `}2(${fmt(S.a)} m/s²)Δx<br><span class="val">slope = 2a = ${fmt(2 * S.a)} m/s²</span></div>`
+      : `<div class="eqcard"><span class="lab">With these numbers</span>v<sub>f</sub> = ${numV}</div>`;
+    $("eqs").innerHTML = cards;
+  }
+  function liveText() {
+    const dx = X(S.t), v = V(S.t);
+    const inner = S.v0 === 0 ? `2(${fmt(S.a)} m/s²)(${f2(dx)} m)` : `(${fmt(S.v0)} m/s)² + 2(${fmt(S.a)} m/s²)(${f2(dx)} m)`;
+    $("live").innerHTML = S.square
+      ? `Δx = ${f2(dx)} m: &nbsp; v² = ${inner} = <b>${f2(v * v)} m²/s²</b> &nbsp;→&nbsp; v = <b>${f2(v)} m/s</b>`
+      : `Δx = ${f2(dx)} m: &nbsp; v = ${sq(inner)} = <b>${f2(v)} m/s</b>`;
+  }
+
+  // ---------- drawing ----------
+  function fit(cv) {
+    const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(r.width * d)), h = Math.max(1, Math.round(r.height * d));
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const ctx = cv.getContext("2d"); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, r.width, r.height);
+    ctx.font = "12px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    return { ctx, w: r.width, h: r.height };
+  }
+  function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+    return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
+  function ticks(lo, hi, n) { const st = niceStep((hi - lo) / n), out = [];
+    for (let v = Math.ceil(lo / st - 1e-9) * st; v <= hi + 1e-9; v += st) out.push(Math.round(v / st) * st); return out; }
+  function arrow(ctx, x1, y1, x2, y2, color, lw = 3) {
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy); if (L < 2) return;
+    const ux = dx / L, uy = dy / L, hs = Math.min(12, L * 0.6);
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2 - ux * hs * 0.8, y2 - uy * hs * 0.8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - ux * hs - uy * hs * 0.5, y2 - uy * hs + ux * hs * 0.5);
+    ctx.lineTo(x2 - ux * hs + uy * hs * 0.5, y2 - uy * hs - ux * hs * 0.5); ctx.closePath(); ctx.fill();
+  }
+
+  function drawMotion() {
+    const { ctx, w, h } = fit($("motion"));
+    const C = { ink: css("--ink"), muted: css("--muted"), pos: css("--pos"), vel: css("--vel"), acc: css("--acc"),
+      track: css("--track"), fill: css("--fill"), cart: css("--cart"), air: css("--air"), fan: css("--fan") };
+    const lo = -0.1 * S.D - 0.05, hi = S.D * 1.06 + 0.05;
+    const padL = 112, padR = 30, ty = h - 62;
+    const k = (w - padL - padR) / (hi - lo), P = x => padL + (x - lo) * k;
+    ctx.fillStyle = C.fill; ctx.fillRect(P(lo), ty, P(hi) - P(lo), h - ty - 8);
+    ctx.strokeStyle = C.muted; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, h - 8); ctx.lineTo(w, h - 8); ctx.stroke();
+    ctx.strokeStyle = C.track; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(P(lo), ty); ctx.lineTo(P(hi), ty); ctx.stroke();
+    ctx.fillStyle = C.track; ctx.textAlign = "center"; ctx.lineWidth = 1.2;
+    for (const s of ticks(0, S.D, 8)) {
+      ctx.beginPath(); ctx.moveTo(P(s), ty); ctx.lineTo(P(s), ty + 7); ctx.stroke();
+      ctx.fillText(fmt(s), P(s), ty + 38);
+    }
+    ctx.fillStyle = C.muted; ctx.fillText("x (m)", P(hi) - 18, ty + 52);
+    // dots
+    const st = [0.1, 0.2, 0.25, 0.5, 1].find(s => S.T / s <= 24) || 1;
+    ctx.fillStyle = C.pos; ctx.globalAlpha = 0.6;
+    for (let t = 0; t <= S.t + 1e-9; t += st) { ctx.beginPath(); ctx.arc(P(X(t)), ty + 16, 4, 0, 7); ctx.fill(); }
+    ctx.globalAlpha = 1; ctx.textAlign = "right"; ctx.fillText("moving right →", P(lo) - 8, ty + 20);
+    ctx.textAlign = "left"; ctx.fillText(`dots every ${st} s`, 10, h - 16);
+    // cart + fan
+    const cx = P(X(S.t));
+    ctx.save(); ctx.translate(cx, ty);
+    ctx.fillStyle = C.cart; ctx.strokeStyle = C.ink; ctx.lineWidth = 1.2;
+    ctx.fillRect(-32, -38, 64, 24); ctx.strokeRect(-32, -38, 64, 24);
+    ctx.fillStyle = C.ink; for (const wx of [-20, 20]) { ctx.beginPath(); ctx.arc(wx, -7, 7, 0, 7); ctx.fill(); }
+    ctx.fillStyle = C.cart; ctx.fillRect(-4, -48, 8, 10);
+    ctx.fillStyle = C.fan; ctx.fillRect(-12, -84, 24, 36); ctx.strokeRect(-12, -84, 24, 36);
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.ellipse(-12, -66, 4, 17, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = C.air; ctx.lineWidth = 2; ctx.globalAlpha = 0.85;
+    const ph = (performance.now() / 18) % 26;
+    for (let row = -1; row <= 1; row++) for (let j = 0; j < 2; j++) {
+      const x1 = -(18 + ((ph + j * 13) % 26)), yy = -66 + row * 10;
+      ctx.beginPath(); ctx.moveTo(x1, yy); ctx.lineTo(x1 - 14, yy); ctx.stroke();
+    }
+    ctx.globalAlpha = 1; ctx.restore();
+    // arrows
+    const vmax = Math.max(vAt(S.D), 0.2);
+    arrow(ctx, cx, ty - 104, cx + V(S.t) * (110 / vmax), ty - 104, C.vel);
+    arrow(ctx, cx, ty - 128, cx + Math.min(110, 45 * S.a), ty - 128, C.acc);
+    // legend + time
+    ctx.font = "bold 13px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.textAlign = "right";
+    arrow(ctx, w - 60, 18, w - 36, 18, C.vel, 2.5); ctx.fillStyle = C.vel; ctx.fillText("v", w - 12, 22);
+    arrow(ctx, w - 60, 38, w - 36, 38, C.acc, 2.5); ctx.fillStyle = C.acc; ctx.fillText("a", w - 12, 42);
+    ctx.textAlign = "left"; ctx.fillStyle = C.ink; ctx.font = "bold 14px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    ctx.fillText(`t = ${S.t.toFixed(2)} s`, 10, 20);
+  }
+
+  function drawGraph() {
+    const { ctx, w, h } = fit($("graph"));
+    const muted = css("--muted"), line = css("--line"), ink = css("--ink"), vel = css("--vel");
+    const L = 62, R = 16, Tp = 12, B = 40, pw = w - L - R, ph = h - Tp - B;
+    const fy = S.square ? (dx => vAt(dx) ** 2) : vAt;
+    const ymax = fy(S.D) * 1.12 || 1;
+    const Xp = dx => L + (dx / (S.D * 1.03)) * pw, Yp = v => Tp + (1 - v / ymax) * ph;
+    ctx.strokeStyle = line; ctx.lineWidth = 1; ctx.fillStyle = muted; ctx.textAlign = "center";
+    for (const s of ticks(0, S.D * 1.03, 8)) {
+      ctx.beginPath(); ctx.moveTo(Xp(s), Tp); ctx.lineTo(Xp(s), Tp + ph); ctx.stroke(); ctx.fillText(fmt(s), Xp(s), h - 22);
+    }
+    ctx.fillText("displacement Δx (m)", L + pw / 2, h - 4);
+    ctx.textAlign = "right";
+    for (const v of ticks(0, ymax, 5)) {
+      ctx.beginPath(); ctx.moveTo(L, Yp(v)); ctx.lineTo(L + pw, Yp(v)); ctx.stroke(); ctx.fillText(fmt(v), L - 6, Yp(v) + 4);
+    }
+    ctx.strokeStyle = muted; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(L, Tp); ctx.lineTo(L, Tp + ph); ctx.lineTo(L + pw, Tp + ph); ctx.stroke();
+    ctx.save(); ctx.translate(16, Tp + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.fillStyle = vel;
+    ctx.fillText(S.square ? "velocity squared v² (m²/s²)" : "velocity v (m/s)", 0, 0); ctx.restore();
+    const path = dmax => { ctx.beginPath();
+      for (let i = 0; i <= 300; i++) { const dx = Math.min(dmax, S.D * i / 300); const p = [Xp(dx), Yp(fy(dx))];
+        i ? ctx.lineTo(...p) : ctx.moveTo(...p); if (dx >= dmax) break; } ctx.stroke(); };
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    if (S.ghost) { ctx.strokeStyle = vel; ctx.globalAlpha = 0.22; ctx.lineWidth = 3.5; path(S.D); ctx.globalAlpha = 1; }
+    const dx = X(S.t);
+    ctx.strokeStyle = vel; ctx.lineWidth = 3.5; if (S.t > 0) path(dx);
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = ink; ctx.globalAlpha = 0.5; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(Xp(dx), Tp); ctx.lineTo(Xp(dx), Tp + ph); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    ctx.fillStyle = vel; ctx.beginPath(); ctx.arc(Xp(dx), Yp(fy(dx)), 6, 0, 7); ctx.fill();
+    if (dx > S.D * 0.7) {
+      ctx.fillStyle = vel; ctx.textAlign = "right"; ctx.font = "13px 'Atkinson Hyperlegible', system-ui, sans-serif";
+      ctx.fillText(S.square ? `straight line: slope = 2a = ${fmt(2 * S.a)} m/s²`
+                            : "curve flattens: v grows like √Δx", L + pw - 8, Tp + ph - 12);
+    }
+  }
+
+  function draw() {
+    drawMotion(); drawGraph(); liveText();
+    $("rt").textContent = f2(S.t); $("rx").textContent = f2(X(S.t)); $("rv").textContent = f2(V(S.t)); $("ra").textContent = f2(S.a);
+    $("scrub").value = S.T ? S.t / S.T : 0; updPlay();
+  }
+  let last = 0;
+  function loop(now) {
+    if (!S.playing) return;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    S.t = Math.min(S.T, S.t + dt * S.speed); if (S.t >= S.T) S.playing = false;
+    draw(); if (S.playing) requestAnimationFrame(loop);
+  }
+  new ResizeObserver(() => draw()).observe(document.querySelector(".stage"));
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+  changed();
+  if (document.fonts) document.fonts.ready.then(draw);
+})();
+</script>
+</body>
+</html>
