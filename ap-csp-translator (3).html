@@ -1,0 +1,1825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python ⇄ AP Pseudocode Translator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Courier+Prime:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #E8EDF4; --paper: #FFFFFF; --ink: #14213D; --muted: #4F5D78; --line: #BFCADB;
+  --blue: #0A5A9C; --on-blue: #FFFFFF; --strip: #DCE8F5; --strip-ink: #12306B; --gutter: #F3F6FA;
+  --block: #D3D8E0; --block-line: #6B778C;
+  --diff: #9A4A00; --diff-bg: #FFEFD6; --ext: #0B6B63; --ext-bg: #DDF3F0; --err: #B3261E; --err-bg: #FDE9E7;
+  --kw: #12306B; --fn: #0B6B63; --str: #8A3B12; --num: #6B2FA0; --com: #5B6881; --sym: #B3261E;
+  --focus: #0A5A9C;
+  --ui: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-ap: 'Courier Prime', 'Courier New', Courier, monospace;
+  --font-py: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1526; --paper: #16203A; --ink: #E7EDF8; --muted: #A3B0CA; --line: #2E3C5F;
+    --blue: #79B8F5; --on-blue: #0E1526; --strip: #1E2F52; --strip-ink: #CFE2FA; --gutter: #121B31;
+    --block: #2B3858; --block-line: #8795B3;
+    --diff: #F2B36B; --diff-bg: #3A2A14; --ext: #6FD6C8; --ext-bg: #12332F; --err: #FF9C94; --err-bg: #3D1A18;
+    --kw: #8CC3FA; --fn: #7FDDD0; --str: #F0A87A; --num: #C9A6F2; --com: #8E9BB8; --sym: #FF9C94; --focus: #79B8F5;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1526; --paper: #16203A; --ink: #E7EDF8; --muted: #A3B0CA; --line: #2E3C5F;
+  --blue: #79B8F5; --on-blue: #0E1526; --strip: #1E2F52; --strip-ink: #CFE2FA; --gutter: #121B31;
+  --block: #2B3858; --block-line: #8795B3;
+  --diff: #F2B36B; --diff-bg: #3A2A14; --ext: #6FD6C8; --ext-bg: #12332F; --err: #FF9C94; --err-bg: #3D1A18;
+  --kw: #8CC3FA; --fn: #7FDDD0; --str: #F0A87A; --num: #C9A6F2; --com: #8E9BB8; --sym: #FF9C94; --focus: #79B8F5;
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); -webkit-text-size-adjust: 100%; }
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--ui); font-size: 16px; line-height: 1.5; }
+button, select, textarea { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+textarea, pre, .output, .gutter, .blocks, .row, .sym { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.page { max-width: 1200px; margin: 0 auto; padding: 22px 20px 36px; }
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin-bottom: 18px; }
+h1 { margin: 0; font-size: 2rem; line-height: 1.15; font-weight: 700; letter-spacing: -0.015em; color: var(--blue); }
+.sub { margin: 6px 0 0; max-width: 64ch; color: var(--muted); }
+.tabs { display: flex; gap: 4px; }
+.tab { background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 14px; cursor: pointer; color: var(--muted); font-weight: 700; }
+.tab[aria-selected="true"] { color: var(--strip-ink); border-bottom-color: var(--blue); }
+.tab:hover { color: var(--ink); }
+
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 12px; }
+.seg { display: inline-flex; border: 1.5px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--paper); }
+.seg button { background: transparent; border: 0; padding: 8px 14px; cursor: pointer; }
+.seg button + button { border-left: 1.5px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--blue); color: var(--on-blue); font-weight: 700; }
+.seg button:focus-visible { outline-offset: -3px; }
+.seg.small button { padding: 4px 10px; font-size: 14px; }
+.btn { background: var(--paper); border: 1.5px solid var(--line); border-radius: 8px; padding: 5px 12px; cursor: pointer; font-size: 15px; }
+.btn:hover { border-color: var(--blue); }
+.field { display: inline-flex; align-items: center; gap: 8px; }
+.field select { background: var(--paper); border: 1.5px solid var(--line); border-radius: 8px; padding: 6px 10px; max-width: 100%; }
+.opts { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.opts[hidden] { display: none; }
+.check { display: inline-flex; align-items: center; gap: 6px; }
+.check input { width: 18px; height: 18px; accent-color: var(--blue); }
+
+.panes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.pane { background: var(--paper); border: 1.5px solid var(--line); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.pane-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; background: var(--strip); border-bottom: 1.5px solid var(--line); padding: 8px 12px; min-height: 52px; }
+.pane-head h2 { margin: 0; font-size: 1.05rem; color: var(--strip-ink); }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.symbols { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 6px 12px; border-bottom: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+.symbols[hidden] { display: none; }
+.sym { min-width: 38px; height: 34px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--paper); cursor: pointer; font-family: var(--font-ap); font-size: 19px; line-height: 1; }
+.sym:hover { border-color: var(--blue); }
+
+.editor { display: flex; height: clamp(300px, 52vh, 540px); min-height: 0; }
+.editor:focus-within { outline: 3px solid var(--focus); outline-offset: -3px; }
+.gutter, .num { font-size: 14px; line-height: 22px; color: var(--muted); }
+.gutter { flex: 0 0 46px; padding: 12px 8px 30px 0; text-align: right; background: var(--gutter); border-right: 1px solid var(--line); overflow: hidden; user-select: none; white-space: pre; }
+.editor textarea { flex: 1; min-width: 0; border: 0; outline: 0; resize: none; margin: 0; padding: 12px 12px 12px 12px; font-size: 14px; line-height: 22px; background: var(--paper); white-space: pre; overflow: auto; tab-size: 4; }
+.editor.py .gutter, .editor.py textarea, .output.py { font-family: var(--font-py); font-size: 13.5px; }
+.editor.ap .gutter, .editor.ap textarea, .output.ap { font-family: var(--font-ap); font-size: 15px; }
+.hint { margin: 0; padding: 6px 12px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--muted); background: var(--gutter); }
+
+.output { height: clamp(300px, 52vh, 540px); overflow: auto; padding: 12px 0 24px; line-height: 22px; }
+.output:focus-visible { outline-offset: -3px; }
+.row { display: flex; min-height: 22px; padding-right: 12px; }
+.row .num { flex: 0 0 46px; padding-right: 8px; text-align: right; user-select: none; font-family: var(--font-py); font-size: 13px; }
+.row .mk { flex: 0 0 4px; margin-right: 10px; border-radius: 2px; }
+.row .tx { white-space: pre; }
+.row.k-diff .mk { background: var(--diff); }
+.row.k-ext .mk { background: var(--ext); }
+.row.k-err .mk { background: var(--err); }
+.row.k-err { background: var(--err-bg); }
+.row.hl, .bstmt.hl, .blk.hl > .bhead { background: var(--strip); box-shadow: inset 0 0 0 2px var(--blue); }
+.empty { padding: 16px; color: var(--muted); font-family: var(--ui); font-size: 16px; line-height: 1.5; }
+.k { color: var(--kw); font-weight: 700; }
+.f { color: var(--fn); }
+.s { color: var(--str); }
+.n { color: var(--num); }
+.c { color: var(--com); font-style: italic; }
+.y { color: var(--sym); font-weight: 700; }
+
+.blocks { padding: 12px 14px 24px; display: grid; gap: 8px; align-content: start; font-family: var(--font-ap); font-size: 15px; }
+.blk { background: var(--block); border: 1.5px solid var(--block-line); border-radius: 14px; padding: 8px 10px 10px; }
+.bhead { padding: 2px 4px; border-radius: 8px; }
+.pill { display: inline-block; background: var(--paper); border: 1.5px solid var(--block-line); border-radius: 999px; padding: 0 10px; margin: 0 2px; }
+.bbody { display: grid; gap: 6px; margin: 6px 0 8px 14px; min-height: 12px; }
+.bstmt { background: var(--paper); border: 1.5px solid var(--block-line); border-radius: 10px; padding: 3px 10px; width: fit-content; max-width: 100%; overflow-wrap: anywhere; }
+.bstmt.k-err { background: var(--err-bg); border-color: var(--err); }
+.bstmt.k-diff, .blk.k-diff > .bhead { border-left: 6px solid var(--diff); }
+.bstmt.k-ext, .blk.k-ext > .bhead { border-left: 6px solid var(--ext); }
+.bcom { color: var(--com); font-style: italic; padding: 0 4px; }
+
+.notes { margin-top: 16px; background: var(--paper); border: 1.5px solid var(--line); border-radius: 12px; padding: 14px 16px 16px; }
+.notes h2 { margin: 0 0 10px; font-size: 1.05rem; color: var(--strip-ink); }
+.notes ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.notes .muted { color: var(--muted); }
+.note { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 12px; align-items: start; width: 100%; text-align: left; background: transparent; border: 1.5px solid var(--line); border-left-width: 6px; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+.note:hover { background: var(--gutter); }
+.note[aria-pressed="true"] { background: var(--strip); border-color: var(--blue); }
+.note.diff { border-left-color: var(--diff); }
+.note.ext { border-left-color: var(--ext); }
+.note.err { border-left-color: var(--err); }
+.tag { font-size: 13px; font-weight: 700; padding: 1px 9px; border-radius: 999px; white-space: nowrap; }
+.diff .tag { background: var(--diff-bg); color: var(--diff); }
+.ext .tag { background: var(--ext-bg); color: var(--ext); }
+.err .tag { background: var(--err-bg); color: var(--err); }
+.where { font-size: 14px; color: var(--muted); white-space: nowrap; }
+
+.ref h2 { margin: 22px 0 8px; font-size: 1.15rem; color: var(--strip-ink); }
+.ref h2:first-child { margin-top: 0; }
+.ref p { margin: 0 0 10px; max-width: 70ch; color: var(--muted); }
+.tablewrap { overflow-x: auto; background: var(--paper); border: 1.5px solid var(--line); border-radius: 12px; }
+.ref table { width: 100%; border-collapse: collapse; min-width: 640px; }
+.ref th { text-align: left; background: var(--strip); color: var(--strip-ink); padding: 8px 12px; border-bottom: 1.5px solid var(--line); }
+.ref td { vertical-align: top; padding: 8px 12px; border-top: 1px solid var(--line); }
+.ref tr:first-child td { border-top: 0; }
+.ref td pre { margin: 0; font-size: 14px; line-height: 1.45; white-space: pre; }
+.ref td.py pre { font-family: var(--font-py); font-size: 13px; }
+.ref td.ap pre { font-family: var(--font-ap); font-size: 15px; }
+.ref td.nt { font-size: 15px; color: var(--muted); }
+.ref .tag.ext { background: var(--ext-bg); color: var(--ext); margin-right: 6px; }
+.nolist { margin: 0; padding-left: 1.2em; max-width: 70ch; }
+.nolist li { margin: 4px 0; }
+
+.foot { margin-top: 22px; font-size: 14px; color: var(--muted); max-width: 80ch; }
+
+@media (max-width: 860px) {
+  .panes { grid-template-columns: minmax(0, 1fr); }
+  .editor, .output { height: clamp(260px, 42vh, 420px); }
+  .note { grid-template-columns: minmax(0, 1fr); }
+  h1 { font-size: 1.6rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
+.grp { display: contents; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div>
+      <h1>Python &#8644; AP pseudocode</h1>
+      <p class="sub">Translate between Python and the pseudocode on the AP CSP Exam Reference Sheet. Notes point out where the two languages behave differently, and mark anything that goes beyond what the exam sheet includes.</p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" id="tab-t" aria-selected="true" aria-controls="view-t">Translator</button>
+      <button class="tab" role="tab" id="tab-r" aria-selected="false" aria-controls="view-r" tabindex="-1">Reference</button>
+    </div>
+  </header>
+
+  <main>
+  <section id="view-t" role="tabpanel" aria-labelledby="tab-t">
+    <div class="bar">
+      <div class="seg" id="dirseg" role="group" aria-label="Translation direction">
+        <button type="button" data-dir="py2ap" aria-pressed="true">Python &rarr; AP pseudocode</button>
+        <button type="button" data-dir="ap2py" aria-pressed="false">AP pseudocode &rarr; Python</button>
+      </div>
+      <label class="field">Load an example
+        <select id="example"><option value="">Choose one</option></select>
+      </label>
+      <div class="opts" id="opts">
+        <label class="check"><input type="checkbox" id="appv" checked> Global variables use app. (CS Academy)</label>
+        <span class="grp" id="apgrp" hidden>
+        <label class="field">RANDOM becomes
+          <select id="rand"><option value="randint">random.randint(a, b)</option><option value="randrange">randrange(a, b + 1)</option></select>
+        </label>
+        <label class="field">INPUT becomes
+          <select id="inp"><option value="input">input()</option><option value="cmu">app.getTextInput(...)</option></select>
+        </label>
+        <label class="check"><input type="checkbox" id="keep"> Match DISPLAY spacing</label>
+        </span>
+      </div>
+    </div>
+
+    <div class="panes">
+      <section class="pane" aria-labelledby="in-title">
+        <div class="pane-head">
+          <h2 id="in-title">Python</h2>
+          <div class="tools"><button type="button" class="btn" id="clear">Clear</button></div>
+        </div>
+        <div class="symbols" id="symbols" hidden>
+          <span>Insert</span>
+          <button type="button" class="sym" data-ch="&larr;" aria-label="Assignment arrow">&larr;</button>
+          <button type="button" class="sym" data-ch="&ne;" aria-label="Not equal">&ne;</button>
+          <button type="button" class="sym" data-ch="&ge;" aria-label="Greater than or equal">&ge;</button>
+          <button type="button" class="sym" data-ch="&le;" aria-label="Less than or equal">&le;</button>
+          <span>You can also type &lt;- != &gt;= &lt;=</span>
+        </div>
+        <div class="editor py" id="editor">
+          <div class="gutter" id="gutter" aria-hidden="true"></div>
+          <textarea id="src" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" aria-label="Python code to translate"></textarea>
+        </div>
+        <p class="hint" id="hint"></p>
+      </section>
+
+      <section class="pane" aria-labelledby="out-title">
+        <div class="pane-head">
+          <h2 id="out-title">AP pseudocode</h2>
+          <div class="tools">
+            <div class="seg small" id="viewseg" role="group" aria-label="Output style">
+              <button type="button" data-view="text" aria-pressed="true">Text</button>
+              <button type="button" data-view="blocks" aria-pressed="false">Blocks</button>
+            </div>
+            <button type="button" class="btn" id="back">Translate this back</button>
+            <button type="button" class="btn" id="copy">Copy</button>
+          </div>
+        </div>
+        <div id="out" class="output ap" tabindex="0" role="region" aria-label="Translation result"></div>
+      </section>
+    </div>
+    <p class="sr" id="status" role="status" aria-live="polite"></p>
+
+    <section class="notes" aria-labelledby="notes-title">
+      <h2 id="notes-title">Things to notice<span id="notes-count"></span></h2>
+      <ul id="notes"></ul>
+    </section>
+  </section>
+
+  <section id="view-r" role="tabpanel" aria-labelledby="tab-r" hidden></section>
+  </main>
+
+  <p class="foot">The translator follows fixed rules, so the same code always gives the same result. It covers the instructions on the AP CSP Exam Reference Sheet plus the Python used in CS Academy lessons. Always check a translation against the official sheet before relying on it for the exam.</p>
+</div>
+<noscript><p style="padding:16px">This translator needs JavaScript turned on.</p></noscript>
+<script>
+(function (root) {
+'use strict';
+
+class Problem extends Error {}
+
+/* ---------- AST helpers ---------- */
+const N = {
+  num: v => ({ t: 'num', v: String(v) }),
+  str: (v, q) => ({ t: 'str', v, q: q || '"' }),
+  bool: v => ({ t: 'bool', v: !!v }),
+  name: v => ({ t: 'name', v }),
+  list: items => ({ t: 'list', items }),
+  index: (o, i) => ({ t: 'index', o, i }),
+  call: (f, args) => ({ t: 'call', f, args }),
+  attr: (o, n) => ({ t: 'attr', o, n }),
+  bin: (op, l, r) => ({ t: 'bin', op, l, r }),
+  un: (op, e) => ({ t: 'un', op, e })
+};
+
+const PREC = { 'or': 1, 'and': 2, '==': 4, '!=': 4, '<': 4, '>': 4, '<=': 4, '>=': 4, '+': 5, '-': 5, '*': 6, '/': 6, '//': 6, '%': 6, '**': 8 };
+const AP_OP = { '+': '+', '-': '-', '*': '*', '/': '/', '%': 'MOD', '==': '=', '!=': '≠', '<': '<', '>': '>', '<=': '≤', '>=': '≥', 'and': 'AND', 'or': 'OR' };
+const PY_OP = { '+': '+', '-': '-', '*': '*', '/': '/', '%': '%', '==': '==', '!=': '!=', '<': '<', '>': '>', '<=': '<=', '>=': '>=', 'and': 'and', 'or': 'or' };
+const FLIP = { '<': '>=', '>': '<=', '<=': '>', '>=': '<', '==': '!=', '!=': '==' };
+
+function litInt(n) {
+  if (n.t === 'num' && /^\d+$/.test(n.v)) return parseInt(n.v, 10);
+  if (n.t === 'un' && n.op === '-' && n.e.t === 'num' && /^\d+$/.test(n.e.v)) return -parseInt(n.e.v, 10);
+  return null;
+}
+const mkInt = k => (k < 0 ? N.un('-', N.num(-k)) : N.num(k));
+
+function addConst(n, k) {
+  if (k === 0) return n;
+  const li = litInt(n);
+  if (li !== null) return mkInt(li + k);
+  if (n.t === 'bin' && (n.op === '+' || n.op === '-')) {
+    const rc = litInt(n.r);
+    if (rc !== null) {
+      const base = n.op === '+' ? rc : -rc;
+      const m = base + k;
+      if (m === 0) return n.l;
+      return m > 0 ? N.bin('+', n.l, N.num(m)) : N.bin('-', n.l, N.num(-m));
+    }
+  }
+  return k > 0 ? N.bin('+', n, N.num(k)) : N.bin('-', n, N.num(-k));
+}
+
+function negate(n) {
+  if (n.t === 'bin' && FLIP[n.op]) return N.bin(FLIP[n.op], n.l, n.r);
+  if (n.t === 'un' && n.op === 'not') return n.e;
+  if (n.t === 'bool') return N.bool(!n.v);
+  return N.un('not', n);
+}
+
+function usesName(x, name) {
+  if (Array.isArray(x)) return x.some(i => usesName(i, name));
+  if (x && typeof x === 'object') {
+    if (x.t === 'name' && x.v === name) return true;
+    for (const k in x) { if (k !== 't' && usesName(x[k], name)) return true; }
+  }
+  return false;
+}
+
+function dq(v, q) {
+  let out = '';
+  for (let i = 0; i < v.length; i++) {
+    const ch = v[i];
+    if (ch === '\\' && i + 1 < v.length) {
+      const nx = v[++i];
+      if (nx === "'" && q === "'") out += "'"; else out += '\\' + nx;
+      continue;
+    }
+    out += ch === '"' ? '\\"' : ch;
+  }
+  return out;
+}
+const toDQ = n => '"' + dq(n.v, n.q) + '"';
+const wrapP = (r, min) => (r.p < min ? '(' + r.s + ')' : r.s);
+
+function binStr(n, opText, E) {
+  const p = PREC[n.op];
+  const l = E(n.l), r = E(n.r);
+  const ls = l.p < p ? '(' + l.s + ')' : l.s;
+  const rs = r.p <= p ? '(' + r.s + ')' : r.s;
+  return { s: ls + ' ' + opText + ' ' + rs, p };
+}
+
+/* ---------- Messages ---------- */
+const MSG = {
+  idxPy2Ap: 'Python counts list positions from 0, but AP pseudocode counts from 1, so every index is shifted up by one.',
+  idxAp2Py: 'AP pseudocode counts list positions from 1, but Python counts from 0, so every index is shifted down by one.',
+  display: 'DISPLAY puts a space after each value, while print() starts a new line. A print() with several values becomes one DISPLAY per value.',
+  displayAp2Py: 'DISPLAY puts a space after its value, while print() starts a new line. Turn on "Match DISPLAY spacing" under Options to get print(..., end=" ").',
+  printkw: "print() options such as end= and sep= aren't part of AP pseudocode, so they were left out.",
+  inputPrompt: 'INPUT() has no message option, so the prompt is shown with its own DISPLAY first.',
+  conv: "AP pseudocode doesn't need int() or float(), so the conversion was left out and the value is used as is.",
+  inputStr: 'input() always gives back text (a string). To do math with it, wrap it: int(input()) or float(input()).',
+  importLine: "Imports aren't written in AP pseudocode, so import lines were left out.",
+  globalLine: 'AP pseudocode has no global keyword, so that line was left out.',
+  alias: "Python's = makes both names share one list, so changing one changes the other. AP pseudocode's ← makes a separate copy, so the two behave differently.",
+  aliasAp2Py: "AP pseudocode's ← makes a separate copy of a list. Python's = would share one list, so .copy() was added.",
+  copy: "AP pseudocode's ← already makes a copy of a list, so .copy() and list() aren't needed.",
+  elif: 'AP pseudocode has no ELIF. An else-if is written as an IF inside the ELSE.',
+  floordiv: 'AP pseudocode has no // operator. a // b was rewritten with MOD, which works when both numbers are whole numbers and a is not negative.',
+  pow: "AP pseudocode has no exponent operator (**), so this line can't be translated.",
+  forrange: 'AP pseudocode has no counting for loop. The counter is set before REPEAT and changed at the bottom of the loop, so after the loop it ends one step past the last value Python would give.',
+  dot: "Dot notation (like circle.centerX or app.background) isn't part of AP pseudocode, so it is shown unchanged.",
+  kw: "Keyword arguments (like fill='red') aren't part of AP pseudocode. They are shown as name: value.",
+  fstr: "f-strings aren't part of AP pseudocode. The pieces are joined with + instead.",
+  randrange: 'randrange(a, b) stops before b, but RANDOM(a, b) includes b, so b - 1 is used.',
+  choice: 'AP pseudocode has no random choice. A random position from 1 to LENGTH(list) picks the item instead.',
+  popValue: 'pop() both removes an item and gives it back, but REMOVE only removes it. Save the item first (x ← aList[i]), then use REMOVE.',
+  removeValue: 'list.remove(value) removes by value, but REMOVE(aList, i) removes by position. Find the position first, then use REMOVE.',
+  robot: "The robot commands belong to the exam's grid-robot questions. Python has no built-in robot, so you would need to define these yourself.",
+  breakCont: "break and continue jump out of a loop, and AP pseudocode has no way to do that. Try a REPEAT UNTIL condition or an IF instead.",
+  eq2: 'AP pseudocode tests equality with a single =, not ==.',
+  randomAp2Py: 'randrange(a, b) stops before b, so b + 1 is used to keep RANDOM(a, b) inclusive.',
+  getText: 'app.getTextInput() asks in a pop-up with a message, but INPUT() has no message option, so the prompt was left out.',
+  merge: 'INPUT() already gives back the value, so getting the text and then converting it with int() or float() becomes one step.',
+  inputStrCmu: 'app.getTextInput() always gives back text (a string). To do math with it, wrap it: int(app.getTextInput("...")). The message "Enter a value" is a placeholder you can change.',
+  appProp: "In CS Academy, global variables are kept as properties of app (like app.score). AP pseudocode allows global variables, so app. is removed and the variable is written as score.",
+  appGlobal: "CS Academy doesn't allow global variables, so global variables are kept as properties of app (like app.score) in Python. In AP pseudocode they are written without app.",
+  extFn: name => name + " isn't on the AP exam reference sheet. It is shown in AP style as an extension."
+};
+
+/* ---------- Context ---------- */
+function makeCtx(opts) {
+  const notes = new Map();
+  const c = {
+    opts: opts || {}, line: 0, pre: [], listVars: new Set(), stmtNode: null, needRandom: false, notes,
+    note(kind, key, msg) {
+      let n = notes.get(key);
+      if (!n) { n = { kind, msg, lines: new Set() }; notes.set(key, n); }
+      if (c.line) n.lines.add(c.line);
+    }
+  };
+  return c;
+}
+
+/* ---------- Python lexer ---------- */
+const PY_OPS = ['**=', '//=', '**', '//', '==', '!=', '<=', '>=', '+=', '-=', '*=', '/=', '%=', '->', ':=', '+', '-', '*', '/', '%', '<', '>', '=', '(', ')', '[', ']', '{', '}', ',', ':', '.', ';', '@'];
+
+function lexPy(src) {
+  src = src.replace(/\r\n?/g, '\n').replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+  const L = [];
+  let i = 0, n = src.length, line = 1, depth = 0, atStart = true;
+  const mk = () => ({ indent: 0, toks: [], line, comment: null, text: '', s: 0, e: 0, ce: undefined });
+  let cur = mk();
+  const finish = () => {
+    if (cur.toks.length || cur.comment !== null) {
+      const end = cur.ce !== undefined ? cur.ce : cur.e;
+      cur.text = src.slice(cur.s, end).replace(/\s*\n\s*/g, ' ').trim();
+      L.push(cur);
+    }
+  };
+  const push = (k, v, extra) => cur.toks.push(Object.assign({ k, v, line }, extra || {}));
+  while (i < n) {
+    if (atStart) {
+      let ind = 0;
+      while (i < n && (src[i] === ' ' || src[i] === '\t')) { ind += src[i] === '\t' ? 4 : 1; i++; }
+      cur.indent = ind; cur.line = line; cur.s = i; atStart = false;
+      continue;
+    }
+    const ch = src[i];
+    if (ch === '\n') {
+      i++;
+      if (depth > 0) { line++; continue; }
+      cur.e = i - 1; finish(); line++; cur = mk(); atStart = true; continue;
+    }
+    if (ch === ' ' || ch === '\t') { i++; continue; }
+    if (ch === '\\' && src[i + 1] === '\n') { i += 2; line++; continue; }
+    if (ch === '#') {
+      let j = src.indexOf('\n', i); if (j < 0) j = n;
+      if (cur.ce === undefined) cur.ce = i;
+      cur.comment = src.slice(i + 1, j).trim();
+      i = j; continue;
+    }
+    const sm = /^([fFrRbBuU]{0,2})('''|"""|'|")/.exec(src.slice(i, i + 5));
+    if (sm) {
+      const pre = sm[1].toLowerCase(), q = sm[2];
+      let j = i + sm[0].length; const bs = j; const triple = q.length === 3; let closed = false;
+      while (j < n) {
+        if (src[j] === '\\') { j += 2; continue; }
+        if (src.startsWith(q, j)) { closed = true; break; }
+        if (!triple && src[j] === '\n') break;
+        if (src[j] === '\n') line++;
+        j++;
+      }
+      if (closed) { push('str', src.slice(bs, j), { q: q[0], f: pre.includes('f'), triple }); i = j + q.length; }
+      else { push('bad', 'unterminated string'); i = j; }
+      continue;
+    }
+    let m;
+    if (/[0-9]/.test(ch) || (ch === '.' && /[0-9]/.test(src[i + 1] || ''))) {
+      m = /^(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?/.exec(src.slice(i));
+      push('num', m[0]); i += m[0].length; continue;
+    }
+    if (/[A-Za-z_]/.test(ch)) {
+      m = /^[A-Za-z_][A-Za-z0-9_]*/.exec(src.slice(i));
+      push('name', m[0]); i += m[0].length; continue;
+    }
+    let matched = null;
+    for (const op of PY_OPS) { if (src.startsWith(op, i)) { matched = op; break; } }
+    if (matched) {
+      if ('([{'.includes(matched)) depth++;
+      if (')]}'.includes(matched)) depth = Math.max(0, depth - 1);
+      push('op', matched); i += matched.length; continue;
+    }
+    push('bad', ch); i++;
+  }
+  cur.e = n; finish();
+  return L;
+}
+
+/* ---------- AP lexer ---------- */
+function lexAP(src) {
+  src = src.replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/[−–—]/g, '-');
+  const toks = [];
+  let i = 0, n = src.length, line = 1;
+  const push = (k, v, s, e, extra) => toks.push(Object.assign({ k, v, s, e, line }, extra || {}));
+  const OPS2 = { '<-': '←', '<=': '≤', '>=': '≥', '!=': '≠', '==': '=' };
+  while (i < n) {
+    const ch = src[i];
+    if (ch === '\n') { push('nl', '\n', i, i + 1); line++; i++; continue; }
+    if (ch === ' ' || ch === '\t' || ch === '\r') { i++; continue; }
+    if (ch === '/' && src[i + 1] === '/') { let j = src.indexOf('\n', i); if (j < 0) j = n; push('comment', src.slice(i + 2, j).trim(), i, j); i = j; continue; }
+    if (ch === '/' && src[i + 1] === '*') {
+      const j = src.indexOf('*/', i + 2); const end = j < 0 ? n : j + 2;
+      push('comment', src.slice(i + 2, j < 0 ? n : j).trim(), i, end);
+      line += (src.slice(i, end).match(/\n/g) || []).length; i = end; continue;
+    }
+    if (ch === '"' || ch === "'") {
+      let j = i + 1, closed = false;
+      while (j < n) { if (src[j] === '\\') { j += 2; continue; } if (src[j] === ch) { closed = true; break; } if (src[j] === '\n') break; j++; }
+      if (closed) { push('str', src.slice(i + 1, j), i, j + 1, { q: ch }); i = j + 1; }
+      else { push('bad', 'unterminated string', i, j); i = j; }
+      continue;
+    }
+    if (/[0-9]/.test(ch)) { const m = /^\d+(\.\d+)?/.exec(src.slice(i)); push('num', m[0], i, i + m[0].length); i += m[0].length; continue; }
+    if (/[A-Za-z_]/.test(ch)) { const m = /^[A-Za-z_][A-Za-z0-9_]*/.exec(src.slice(i)); push('name', m[0], i, i + m[0].length); i += m[0].length; continue; }
+    if (src.startsWith('<--', i)) { push('op', '←', i, i + 3, { ascii: '<--' }); i += 3; continue; }
+    const two = src.slice(i, i + 2);
+    if (OPS2[two]) { push('op', OPS2[two], i, i + 2, { ascii: two }); i += 2; continue; }
+    if ('←≠≤≥=<>+-*/()[]{},.:'.includes(ch)) { push('op', ch, i, i + 1); i++; continue; }
+    push('bad', ch, i, i + 1); i++;
+  }
+  push('eof', '', n, n);
+  const out = [];
+  for (const t of toks) {
+    if (t.k === 'comment') {
+      const prev = out[out.length - 1];
+      if (prev && prev.k !== 'nl' && prev.k !== 'cline') prev.cmt = (prev.cmt ? prev.cmt + ' ' : '') + t.v;
+      else out.push({ k: 'cline', v: t.v, line: t.line, s: t.s, e: t.e });
+    } else out.push(t);
+  }
+  return { toks: out, src };
+}
+
+/* ---------- Expression parser (both languages) ---------- */
+const EOFT = { k: 'eof', v: '' };
+const PY_BLOCKED = new Set(['lambda', 'yield', 'await', 'async', 'class', 'try', 'except', 'finally', 'with', 'raise', 'assert', 'del', 'import', 'from', 'global', 'nonlocal', 'pass', 'break', 'continue', 'if', 'elif', 'else', 'while', 'for', 'def', 'return', 'in', 'is', 'not', 'and', 'or', 'as']);
+const AP_RESERVED = new Set(['IF', 'ELSE', 'REPEAT', 'UNTIL', 'TIMES', 'FOR', 'EACH', 'IN', 'PROCEDURE', 'RETURN']);
+
+class ExprParser {
+  constructor(toks, mode) { this.t = toks; this.i = 0; this.m = mode; this.depth = 0; this.notes = null; }
+  sk() { if (this.depth > 0) while (this.t[this.i] && (this.t[this.i].k === 'nl' || this.t[this.i].k === 'cline')) this.i++; }
+  peek(o) { o = o || 0; if (o === 0) { this.sk(); } return this.t[this.i + o] || EOFT; }
+  isOp(v, o) { const t = this.peek(o); return t.k === 'op' && t.v === v; }
+  isW(v, o) { const t = this.peek(o); return t.k === 'name' && t.v === v; }
+  atEnd() { return this.i >= this.t.length; }
+  end() { if (!this.atEnd()) { const t = this.peek(); throw new Problem('Unexpected "' + t.v + '" here.'); } }
+  expect(v) {
+    if (!this.isOp(v)) { const t = this.peek(); throw new Problem('Expected "' + v + '"' + (t.k === 'eof' || t.k === 'nl' ? ' before the end of the line.' : ' but found "' + t.v + '".')); }
+    this.i++;
+  }
+  expectName() {
+    const t = this.peek();
+    if (t.k !== 'name' || (this.m === 'py' && PY_BLOCKED.has(t.v))) throw new Problem('Expected a name here.');
+    this.i++; return t;
+  }
+  parseExpr() { return this.parseOr(); }
+  W(py, ap) { return this.m === 'py' ? py : ap; }
+  parseOr() { let l = this.parseAnd(); while (this.isW(this.W('or', 'OR'))) { this.i++; l = N.bin('or', l, this.parseAnd()); } return l; }
+  parseAnd() { let l = this.parseNot(); while (this.isW(this.W('and', 'AND'))) { this.i++; l = N.bin('and', l, this.parseNot()); } return l; }
+  parseNot() {
+    if (this.isW(this.W('not', 'NOT'))) { this.i++; return N.un('not', this.parseNot()); }
+    return this.parseCmp();
+  }
+  cmpOp() {
+    const t = this.peek();
+    if (this.m === 'py') {
+      if (t.k === 'op' && ['==', '!=', '<', '>', '<=', '>='].includes(t.v)) { this.i++; return t.v; }
+      if (this.isW('in') || this.isW('is') || (this.isW('not') && this.isW('in', 1)))
+        throw new Problem("The in, not in and is operators have no AP pseudocode equivalent. To check whether a list holds a value, loop through it with FOR EACH and compare each item.");
+      return null;
+    }
+    if (t.k === 'op') {
+      if (t.v === '=') { if (t.ascii === '==') this.notes && this.notes.add('eq2'); this.i++; return '=='; }
+      if (t.v === '≠') { this.i++; return '!='; }
+      if (t.v === '≤') { this.i++; return '<='; }
+      if (t.v === '≥') { this.i++; return '>='; }
+      if (t.v === '<' || t.v === '>') { this.i++; return t.v; }
+    }
+    return null;
+  }
+  parseCmp() {
+    const l = this.parseAdd(); let prev = l, result = null;
+    for (;;) {
+      const op = this.cmpOp(); if (!op) break;
+      const r = this.parseAdd();
+      const c = N.bin(op, prev, r);
+      result = result ? N.bin('and', result, c) : c; prev = r;
+    }
+    return result || l;
+  }
+  parseAdd() {
+    let l = this.parseMul();
+    for (;;) {
+      if (this.isOp('+')) { this.i++; l = N.bin('+', l, this.parseMul()); }
+      else if (this.isOp('-')) { this.i++; l = N.bin('-', l, this.parseMul()); }
+      else break;
+    }
+    return l;
+  }
+  parseMul() {
+    let l = this.parseUnary();
+    for (;;) {
+      const t = this.peek();
+      if (t.k === 'op' && (t.v === '*' || t.v === '/' || (this.m === 'py' && (t.v === '//' || t.v === '%')))) { this.i++; l = N.bin(t.v, l, this.parseUnary()); }
+      else if (this.m === 'ap' && t.k === 'name' && t.v === 'MOD') { this.i++; l = N.bin('%', l, this.parseUnary()); }
+      else break;
+    }
+    return l;
+  }
+  parseUnary() {
+    if (this.isOp('-')) { this.i++; return N.un('-', this.parseUnary()); }
+    if (this.isOp('+') && this.m === 'py') { this.i++; return this.parseUnary(); }
+    const base = this.parsePostfix();
+    if (this.m === 'py' && this.isOp('**')) { this.i++; return N.bin('**', base, this.parseUnary()); }
+    return base;
+  }
+  parsePostfix() {
+    let e = this.parseAtom();
+    for (;;) {
+      if (this.isOp('(')) { this.i++; const args = this.parseArgs(); e = N.call(e, args); }
+      else if (this.isOp('[')) {
+        this.i++; this.depth++;
+        const idx = this.parseExpr();
+        if (this.isOp(':')) throw new Problem('Slices like list[1:3] have no AP pseudocode equivalent. Use a loop to pick out the items you need.');
+        this.expect(']'); this.depth--; e = N.index(e, idx);
+      }
+      else if (this.isOp('.')) { this.i++; const nm = this.expectName(); e = N.attr(e, nm.v); }
+      else break;
+    }
+    return e;
+  }
+  parseArgs() {
+    const args = []; this.depth++;
+    const py = this.m === 'py';
+    while (!this.isOp(')')) {
+      if (this.isOp('*') || this.isOp('**')) throw new Problem('Star arguments (*args) are not supported.');
+      const t = this.peek(), t1 = this.peek(1);
+      if (t.k === 'name' && t1.k === 'op' && t1.v === (py ? '=' : ':')) { this.i += 2; args.push({ name: t.v, e: this.parseExpr() }); }
+      else args.push({ e: this.parseExpr() });
+      if (py && this.isW('for')) throw new Problem('Generator expressions and comprehensions are not supported.');
+      if (this.isOp(',')) this.i++; else break;
+    }
+    this.expect(')'); this.depth--; return args;
+  }
+  parseAtom() {
+    const t = this.peek(); const py = this.m === 'py';
+    switch (t.k) {
+      case 'num': this.i++; return N.num(t.v);
+      case 'str': this.i++; return t.f ? this.fstr(t) : N.str(t.v, t.q);
+      case 'name': {
+        const v = t.v;
+        if (py) {
+          if (v === 'True' || v === 'False') { this.i++; return N.bool(v === 'True'); }
+          if (PY_BLOCKED.has(v)) throw new Problem('"' + v + '" can\'t be used inside an expression here.');
+        } else {
+          if (v === 'true' || v === 'false' || v === 'True' || v === 'False') { this.i++; return N.bool(v.toLowerCase() === 'true'); }
+          if (AP_RESERVED.has(v)) throw new Problem('"' + v + '" can\'t be used inside an expression here.');
+        }
+        this.i++; return N.name(v);
+      }
+      case 'op':
+        if (t.v === '(') {
+          this.i++; this.depth++;
+          const e = this.parseExpr();
+          if (py && this.isOp(',')) throw new Problem('Tuples (values separated by commas inside parentheses) are not supported.');
+          this.expect(')'); this.depth--; return e;
+        }
+        if (t.v === '[') {
+          this.i++; this.depth++;
+          const items = [];
+          while (!this.isOp(']')) {
+            items.push(this.parseExpr());
+            if (py && this.isW('for')) throw new Problem('List comprehensions are not supported.');
+            if (this.isOp(',')) this.i++; else break;
+          }
+          this.expect(']'); this.depth--; return N.list(items);
+        }
+        if (t.v === '{' && py) throw new Problem('Dictionaries and sets are not supported.');
+        break;
+      case 'bad':
+        if (t.v === 'unterminated string') throw new Problem('This string is missing its closing quote.');
+        if (t.v === '%') throw new Problem('AP pseudocode uses MOD instead of %.');
+        if (t.v === '&' || t.v === '|') throw new Problem('AP pseudocode uses AND and OR instead of ' + t.v + '.');
+        throw new Problem('Unexpected character "' + t.v + '".');
+      case 'eof': case 'nl': case 'cline':
+        throw new Problem('This line ends too soon. Something is missing after the last symbol.');
+    }
+    throw new Problem('Unexpected "' + t.v + '".');
+  }
+  fstr(t) {
+    const s = t.v, parts = []; let lit = ''; let i = 0;
+    while (i < s.length) {
+      const ch = s[i];
+      if (ch === '{' && s[i + 1] === '{') { lit += '{'; i += 2; continue; }
+      if (ch === '}' && s[i + 1] === '}') { lit += '}'; i += 2; continue; }
+      if (ch === '{') {
+        let d = 1, j = i + 1, inq = null;
+        while (j < s.length && d > 0) {
+          const cj = s[j];
+          if (inq) { if (cj === inq) inq = null; }
+          else if (cj === '"' || cj === "'") inq = cj;
+          else if ('([{'.includes(cj)) d++;
+          else if (')]}'.includes(cj)) d--;
+          if (d > 0) j++;
+        }
+        if (d > 0) throw new Problem('This f-string has a { without a matching }.');
+        let inner = s.slice(i + 1, j), depth2 = 0, cut = -1, q2 = null;
+        for (let k = 0; k < inner.length; k++) {
+          const ck = inner[k];
+          if (q2) { if (ck === q2) q2 = null; continue; }
+          if (ck === '"' || ck === "'") { q2 = ck; continue; }
+          if ('([{'.includes(ck)) depth2++;
+          else if (')]}'.includes(ck)) depth2--;
+          else if ((ck === ':' || (ck === '!' && inner[k + 1] !== '=')) && depth2 === 0) { cut = k; break; }
+        }
+        if (cut >= 0) inner = inner.slice(0, cut);
+        if (lit) { parts.push({ lit }); lit = ''; }
+        const lx = lexPy(inner.trim());
+        if (!lx.length) throw new Problem('This f-string has an empty { }.');
+        const P = new ExprParser(lx[0].toks, 'py');
+        const e = P.parseExpr(); P.end();
+        parts.push({ e });
+        i = j + 1; continue;
+      }
+      lit += ch; i++;
+    }
+    if (lit) parts.push({ lit });
+    return { t: 'fstr', parts, q: t.q };
+  }
+}
+
+/* ---------- Python parser ---------- */
+const AUG = ['+=', '-=', '*=', '/=', '//=', '%=', '**='];
+
+function parsePython(src) {
+  const L = lexPy(src);
+  const mins = L.filter(l => l.toks.length).map(l => l.indent);
+  const base = mins.length ? Math.min.apply(null, mins) : 0;
+  L.forEach(l => { l.indent = Math.max(0, l.indent - base); });
+  let idx = 0;
+  const errStmt = (ln, msg, body) => ({ t: 'err', msg, line: ln.line, text: ln.text, body: body || [] });
+
+  function checkTarget(e) {
+    if (!(e.t === 'name' || e.t === 'index' || e.t === 'attr')) throw new Problem("You can only store a value in a variable, a list item or an object property.");
+  }
+  function colon(P) {
+    if (!P.isOp(':')) {
+      if (P.isOp('=')) throw new Problem('A single = stores a value. To compare two values, use ==.');
+      const t = P.peek();
+      throw new Problem(t.k === 'eof' ? 'Expected a colon : at the end of this line.' : 'Expected ":" but found "' + t.v + '".');
+    }
+    P.i++;
+  }
+  function parseSimple(toks) {
+    const first = toks[0]; const w = first.k === 'name' ? first.v : null;
+    const P = new ExprParser(toks, 'py');
+    switch (w) {
+      case 'pass': return { t: 'pass' };
+      case 'break': case 'continue': throw new Problem(MSG.breakCont);
+      case 'import': case 'from': return { t: 'import' };
+      case 'global': case 'nonlocal': return { t: 'global' };
+      case 'return': { P.i = 1; let e = null; if (!P.atEnd()) e = P.parseExpr(); P.end(); return { t: 'return', e }; }
+      case 'del': {
+        P.i = 1; const tg = P.parseExpr(); P.end();
+        if (tg.t !== 'index') throw new Problem('del is only supported for removing a list item, like del myList[2].');
+        return { t: 'del', target: tg };
+      }
+      case 'class': case 'try': case 'except': case 'finally': case 'with': case 'raise': case 'assert': case 'yield': case 'async': case 'await': case 'lambda':
+        throw new Problem(w + " isn't supported by this translator, and it isn't part of AP pseudocode either.");
+    }
+    if (w === 'print' && toks[1] && toks[1].k !== 'op') throw new Problem('In Python 3, print needs parentheses, like print("hi").');
+    if (toks.length === 1 && first.k === 'str') return { t: 'docstring', text: first.v };
+    const e = P.parseExpr();
+    if (P.isOp('=')) {
+      P.i++; checkTarget(e);
+      const v = P.parseExpr();
+      if (P.isOp('=')) throw new Problem('Chained assignment like a = b = 0 is not supported. Write each assignment on its own line.');
+      if (P.isOp(',')) throw new Problem('Several values separated by commas (a tuple) are not supported.');
+      P.end();
+      return { t: 'assign', target: e, value: v };
+    }
+    const at = P.peek();
+    if (at.k === 'op' && AUG.includes(at.v)) {
+      P.i++; checkTarget(e);
+      const v = P.parseExpr(); P.end();
+      return { t: 'aug', target: e, op: at.v.slice(0, -1), value: v };
+    }
+    if (P.isOp(',')) throw new Problem('Several values separated by commas (a tuple) are not supported.');
+    P.end();
+    return { t: 'expr', e };
+  }
+  function bodyOf(P, ln) {
+    const rest = ln.toks.slice(P.i);
+    if (rest.length) { const st = parseSimple(rest); st.line = ln.line; return [st]; }
+    const b = parseBlock(ln.indent);
+    if (!b.some(s => s.t !== 'comment')) b.push(errStmt(ln, 'This line ends with a colon, so it needs an indented block below it.'));
+    return b;
+  }
+  function parseLine(ln, siblings) {
+    const toks = ln.toks; const first = toks[0];
+    const w = first.k === 'name' ? first.v : null;
+    const done = st => { st.line = ln.line; st.comment = ln.comment || null; st.text = ln.text; return st; };
+    try {
+      switch (w) {
+        case 'if': case 'while': {
+          const P = new ExprParser(toks, 'py'); P.i = 1;
+          const cond = P.parseExpr(); colon(P);
+          const body = bodyOf(P, ln);
+          return done(w === 'if' ? { t: 'if', cond, body, orelse: null } : { t: 'while', cond, body });
+        }
+        case 'elif': case 'else': {
+          const P = new ExprParser(toks, 'py'); P.i = 1;
+          let cond = null; if (w === 'elif') cond = P.parseExpr();
+          colon(P);
+          let k = siblings.length - 1; while (k >= 0 && siblings[k].t === 'comment') k--;
+          let tgt = k >= 0 && siblings[k].t === 'if' ? siblings[k] : null;
+          if (!tgt) { const b = bodyOf(P, ln); return done(errStmt(ln, w + ' needs an if directly above it, at the same indentation.', b)); }
+          while (tgt.orelse && tgt.orelse.length === 1 && tgt.orelse[0].t === 'if' && tgt.orelse[0].isElif) tgt = tgt.orelse[0];
+          if (tgt.orelse) { const b = bodyOf(P, ln); return done(errStmt(ln, 'This if already has an else, so ' + w + ' has nowhere to attach.', b)); }
+          const body = bodyOf(P, ln);
+          if (w === 'elif') { tgt.orelse = [done({ t: 'if', cond, body, orelse: null, isElif: true })]; }
+          else { tgt.orelse = body; tgt.elseLine = ln.line; }
+          return null;
+        }
+        case 'for': {
+          const P = new ExprParser(toks, 'py'); P.i = 1;
+          const v = P.expectName();
+          if (P.isOp(',')) throw new Problem('Looping with two variables at once (like for a, b in ...) is not supported.');
+          if (!P.isW('in')) throw new Problem('A for loop looks like: for item in something:');
+          P.i++;
+          const iter = P.parseExpr(); colon(P);
+          const body = bodyOf(P, ln);
+          return done({ t: 'for', var: v.v, iter, body });
+        }
+        case 'def': {
+          const P = new ExprParser(toks, 'py'); P.i = 1;
+          const nm = P.expectName(); P.expect('(');
+          const params = [];
+          while (!P.isOp(')')) {
+            if (P.isOp('*') || P.isOp('**')) throw new Problem('Star parameters (*args) are not supported.');
+            params.push(P.expectName().v);
+            if (P.isOp('=')) throw new Problem('Default parameter values are not supported.');
+            if (P.isOp(',')) P.i++; else break;
+          }
+          P.expect(')'); colon(P);
+          const body = bodyOf(P, ln);
+          return done({ t: 'def', name: nm.v, params, body });
+        }
+        default:
+          return done(parseSimple(toks));
+      }
+    } catch (e) {
+      if (!(e instanceof Problem)) throw e;
+      let body = [];
+      const lastTok = toks[toks.length - 1];
+      if (lastTok && lastTok.k === 'op' && lastTok.v === ':') body = parseBlock(ln.indent);
+      return errStmt(ln, e.message, body);
+    }
+  }
+  function parseBlock(parentIndent) {
+    const stmts = []; let blockIndent = null;
+    while (idx < L.length) {
+      const ln = L[idx];
+      if (!ln.toks.length) {
+        let j = idx + 1; while (j < L.length && !L[j].toks.length) j++;
+        const nextIndent = j < L.length ? L[j].indent : null;
+        let attach;
+        if (blockIndent === null) attach = nextIndent !== null ? nextIndent > parentIndent : ln.indent > parentIndent;
+        else attach = nextIndent !== null ? nextIndent >= blockIndent : ln.indent >= blockIndent;
+        if (!attach) break;
+        stmts.push({ t: 'comment', text: ln.comment || '', line: ln.line });
+        idx++; continue;
+      }
+      if (blockIndent === null) { if (ln.indent <= parentIndent) break; blockIndent = ln.indent; }
+      if (ln.indent < blockIndent) break;
+      idx++;
+      if (ln.indent > blockIndent) { stmts.push(errStmt(ln, 'This line is indented more than the lines around it.')); continue; }
+      const st = parseLine(ln, stmts);
+      if (st) stmts.push(st);
+    }
+    return stmts;
+  }
+  const out = [];
+  while (idx < L.length) {
+    const before = idx;
+    out.push.apply(out, parseBlock(-1));
+    if (idx === before) idx++;
+  }
+  return out;
+}
+
+/* ---------- AP parser ---------- */
+const AP_STMT_HINT = new Set(['IF', 'ELSE', 'REPEAT', 'FOR', 'PROCEDURE', 'RETURN', 'DISPLAY', 'APPEND', 'INSERT', 'REMOVE']);
+
+function parseAP(srcIn) {
+  const lx = lexAP(srcIn); const toks = lx.toks; const src = lx.src;
+  const P = new ExprParser(toks, 'ap');
+  const notes = new Set(); P.notes = notes;
+  const lineText = i => { let j = i; while (toks[j].k !== 'nl' && toks[j].k !== 'eof') j++; return src.slice(toks[i].s, toks[j].s).trim(); };
+  const errStmt = (i, msg) => ({ t: 'err', msg, line: toks[i].line, text: lineText(i) });
+
+  function sigAfter(j) { while (toks[j].k === 'nl' || toks[j].k === 'cline') j++; return j; }
+  function parseBlock() {
+    let j = P.i; const before = [];
+    while (toks[j].k === 'nl' || toks[j].k === 'cline') { j++; }
+    const t = toks[j];
+    if (!(t.k === 'op' && t.v === '{'))
+      throw new Problem('Expected { to start the block. In AP pseudocode, IF, ELSE, REPEAT, FOR EACH and PROCEDURE are each followed by { } around their instructions.');
+    let k = j - 1; while (k >= 0 && (toks[k].k === 'nl' || toks[k].k === 'cline')) k--;
+    const cm = [k >= 0 ? toks[k].cmt : null, t.cmt].filter(Boolean).join(' ');
+    P.i = j + 1;
+    const body = parseStmts(t);
+    return { body, comment: cm || null };
+  }
+  function endStmt(st) {
+    const t = P.peek();
+    if (t.k === 'nl' || t.k === 'eof' || (t.k === 'op' && t.v === '}')) {
+      const last = toks[P.i - 1]; if (last && last.cmt) st.comment = last.cmt;
+      return st;
+    }
+    if (t.k === 'bad' && t.v === '%') throw new Problem('AP pseudocode uses MOD instead of %.');
+    if (t.k === 'bad' && (t.v === '&' || t.v === '|')) throw new Problem('AP pseudocode uses AND and OR instead of ' + t.v + '.');
+    throw new Problem('Each instruction goes on its own line. "' + t.v + '" appears after the end of this instruction.');
+  }
+  function parseStmt() {
+    P.depth = 0;
+    const t = P.peek(); const line = t.line; const startI = P.i;
+    if (t.k === 'cline') { P.i++; return { t: 'comment', text: t.v, line }; }
+    if (t.k === 'name') {
+      if (t.v !== t.v.toUpperCase() && AP_STMT_HINT.has(t.v.toUpperCase()) && !(toks[P.i + 1].k === 'op' && toks[P.i + 1].v === '←'))
+        throw new Problem('Did you mean ' + t.v.toUpperCase() + '? AP pseudocode keywords are written in capital letters.');
+      switch (t.v) {
+        case 'IF': {
+          P.i++; const cond = P.parseExpr();
+          const b = parseBlock();
+          let orelse = null, elseLine = null;
+          const j = sigAfter(P.i);
+          if (toks[j].k === 'name' && toks[j].v === 'ELSE') { elseLine = toks[j].line; P.i = j + 1; orelse = parseBlock().body; }
+          return { t: 'if', cond, body: b.body, orelse, elseLine, comment: b.comment, line };
+        }
+        case 'ELSE': throw new Problem('ELSE needs an IF { } directly before it.');
+        case 'REPEAT': {
+          P.i++;
+          if (P.isW('UNTIL')) { P.i++; const cond = P.parseExpr(); const b = parseBlock(); return { t: 'until', cond, body: b.body, comment: b.comment, line }; }
+          const n = P.parseExpr();
+          if (!P.isW('TIMES')) throw new Problem('Expected TIMES after the number of repeats, like REPEAT 5 TIMES.');
+          P.i++;
+          const b = parseBlock(); return { t: 'times', n, body: b.body, comment: b.comment, line };
+        }
+        case 'FOR': {
+          P.i++;
+          if (!P.isW('EACH')) throw new Problem('Expected FOR EACH item IN aList.');
+          P.i++;
+          const item = P.expectName();
+          if (!P.isW('IN')) throw new Problem('Expected IN after the item name, like FOR EACH item IN aList.');
+          P.i++;
+          const list = P.parseExpr(); const b = parseBlock();
+          return { t: 'foreach', item: item.v, list, body: b.body, comment: b.comment, line };
+        }
+        case 'PROCEDURE': {
+          P.i++;
+          const nm = P.expectName(); P.expect('(');
+          const params = [];
+          while (!P.isOp(')')) { params.push(P.expectName().v); if (P.isOp(',')) P.i++; else break; }
+          P.expect(')');
+          const b = parseBlock();
+          return { t: 'proc', name: nm.v, params, body: b.body, comment: b.comment, line };
+        }
+        case 'RETURN': {
+          P.i++;
+          let e = null;
+          if (P.isOp('(') && P.isOp(')', 1)) P.i += 2;
+          else e = P.parseExpr();
+          const st = { t: 'return', e, line }; return endStmt(st);
+        }
+      }
+    }
+    const e = P.parseExpr();
+    if (P.isOp('←')) {
+      P.i++;
+      if (!(e.t === 'name' || e.t === 'index' || e.t === 'attr')) throw new Problem('The left side of ← must be a variable or a list item.');
+      const value = P.parseExpr();
+      return endStmt({ t: 'assign', target: e, value, line });
+    }
+    if (e.t === 'bin' && e.op === '==')
+      throw new Problem('This line compares two values instead of storing one. To store a value, use ← (or type <-). In AP pseudocode, = asks whether two values are equal.');
+    if (e.t === 'call' && e.f.t === 'name' && e.f.v !== e.f.v.toUpperCase() && AP_STMT_HINT.has(e.f.v.toUpperCase()))
+      throw new Problem('Did you mean ' + e.f.v.toUpperCase() + '? AP pseudocode keywords are written in capital letters.');
+    if (e.t !== 'call') throw new Problem("This line doesn't do anything on its own. To store a value, use ←.");
+    return endStmt({ t: 'expr', e, line });
+  }
+  function resync(startI) {
+    if (P.i <= startI) P.i = startI + 1;
+    while (toks[P.i].k !== 'nl' && toks[P.i].k !== 'eof') P.i++;
+    const j = sigAfter(P.i);
+    if (toks[j].k === 'op' && toks[j].v === '{') {
+      let d = 0, k = j;
+      while (toks[k].k !== 'eof') {
+        if (toks[k].k === 'op' && toks[k].v === '{') d++;
+        if (toks[k].k === 'op' && toks[k].v === '}') { d--; if (d === 0) { k++; break; } }
+        k++;
+      }
+      P.i = k;
+    }
+  }
+  function parseStmts(openTok) {
+    const out = [];
+    for (;;) {
+      while (toks[P.i].k === 'nl') P.i++;
+      const t = toks[P.i];
+      if (t.k === 'eof') {
+        if (openTok) out.push({ t: 'err', msg: 'This block is missing its closing }.', line: openTok.line, text: '' });
+        return out;
+      }
+      if (t.k === 'op' && t.v === '}') {
+        P.i++;
+        if (openTok) return out;
+        out.push({ t: 'err', msg: "This } doesn't match any opening {.", line: t.line, text: '}' });
+        continue;
+      }
+      const startI = P.i;
+      try { out.push(parseStmt()); }
+      catch (e) {
+        if (!(e instanceof Problem)) throw e;
+        out.push(errStmt(startI, e.message));
+        resync(startI);
+      }
+    }
+  }
+  const stmts = parseStmts(null);
+  stmts.notes = notes;
+  return stmts;
+}
+
+/* ---------- Python AST -> AP ---------- */
+const EVENTS = new Set(['onMousePress', 'onMouseRelease', 'onMouseMove', 'onMouseDrag', 'onKeyPress', 'onKeyRelease', 'onKeyHold', 'onStep']);
+const APP_BUILTIN = new Set(['background', 'stepsPerSecond', 'width', 'height', 'autofs', 'paused', 'group', 'maxShapeCount']);
+const AP_BUILTIN = new Set(['DISPLAY', 'INPUT', 'RANDOM', 'LENGTH', 'APPEND', 'INSERT', 'REMOVE']);
+
+function emitAP(n, c) {
+  switch (n.t) {
+    case 'num': return { s: n.v, p: 10 };
+    case 'bool': return { s: n.v ? 'true' : 'false', p: 10 };
+    case 'str': return { s: toDQ(n), p: 10 };
+    case 'fstr': {
+      c.note('ext', 'fstr', MSG.fstr);
+      const parts = n.parts.map(p => (p.lit !== undefined ? '"' + dq(p.lit, n.q) + '"' : wrapP(emitAP(p.e, c), 6))).filter(s => s !== '""');
+      if (!parts.length) return { s: '""', p: 10 };
+      return { s: parts.join(' + '), p: 5 };
+    }
+    case 'name':
+      if (n.v === 'None') throw new Problem('None has no AP pseudocode equivalent.');
+      return { s: n.v, p: 10 };
+    case 'list': return { s: '[' + n.items.map(i => emitAP(i, c).s).join(', ') + ']', p: 10 };
+    case 'index': {
+      c.note('diff', 'idx', MSG.idxPy2Ap);
+      const o = wrapP(emitAP(n.o, c), 10);
+      const li = litInt(n.i);
+      const idx = li !== null && li < 0 ? addConst(N.call(N.name('len'), [{ e: n.o }]), 1 + li) : addConst(n.i, 1);
+      return { s: o + '[' + emitAP(idx, c).s + ']', p: 10 };
+    }
+    case 'attr':
+      if (n.o.t === 'name' && n.o.v === 'app' && c.opts.appVars !== false && !APP_BUILTIN.has(n.n)) { c.note('diff', 'appprop', MSG.appProp); return { s: n.n, p: 10 }; }
+      c.note('ext', 'dot', MSG.dot); return { s: wrapP(emitAP(n.o, c), 10) + '.' + n.n, p: 10 };
+    case 'call': return emitCallAP(n, c);
+    case 'un': {
+      const r = emitAP(n.e, c);
+      if (n.op === 'not') return { s: 'NOT ' + wrapP(r, 5), p: 3 };
+      return { s: '-' + wrapP(r, 7), p: 7 };
+    }
+    case 'bin':
+      if (n.op === '//') { c.note('diff', 'floordiv', MSG.floordiv); return emitAP(N.bin('/', N.bin('-', n.l, N.bin('%', n.l, n.r)), n.r), c); }
+      if (n.op === '**') throw new Problem(MSG.pow);
+      return binStr(n, AP_OP[n.op], x => emitAP(x, c));
+  }
+  throw new Problem('Unsupported expression.');
+}
+
+function emitCallAP(n, c) {
+  const f = n.f, args = n.args, A = args.map(a => a.e);
+  const hasKw = args.some(a => a.name);
+  let fname = null, meth = null, obj = null, viaRandom = false;
+  if (f.t === 'name') fname = f.v;
+  else if (f.t === 'attr') {
+    if (f.o.t === 'name' && f.o.v === 'random') { fname = f.n; viaRandom = true; }
+    else { meth = f.n; obj = f.o; }
+  } else throw new Problem("Calling the result of another expression isn't supported.");
+  const argc = k => { if (A.length !== k || hasKw) throw new Problem((fname || meth) + '() needs ' + k + ' value' + (k === 1 ? '' : 's') + ' here.'); };
+  const E = x => emitAP(x, c).s;
+  const upperCall = name => ({ s: name + '(' + A.map(E).join(', ') + ')', p: 10 });
+  if (fname) {
+    switch (fname) {
+      case 'print': throw new Problem('print() can only be its own line, not part of another expression.');
+      case 'len': argc(1); return { s: 'LENGTH(' + E(A[0]) + ')', p: 10 };
+      case 'input': {
+        if (A.length > 1 || hasKw) throw new Problem('input() takes at most one message.');
+        if (A.length === 1) { c.pre.push('DISPLAY(' + E(A[0]) + ')'); c.note('diff', 'inputPrompt', MSG.inputPrompt); }
+        return { s: 'INPUT()', p: 10 };
+      }
+      case 'int': case 'float': case 'str': {
+        argc(1);
+        const a = A[0];
+        if (fname !== 'str' && isInputCall(a)) { c.note('diff', 'conv', MSG.conv); return emitAP(a, c); }
+        if (fname !== 'str') { c.note('diff', 'conv', MSG.conv); return emitAP(a, c); }
+        const nm = 'STRING';
+        c.note('ext', 'fn:' + nm, MSG.extFn(nm));
+        return { s: nm + '(' + E(a) + ')', p: 10 };
+      }
+      case 'abs': case 'round': case 'min': case 'max': case 'sum': {
+        if (hasKw || !A.length) throw new Problem(fname + '() needs values to work on.');
+        const nm = fname.toUpperCase(); c.note('ext', 'fn:' + nm, MSG.extFn(nm));
+        return upperCall(nm);
+      }
+      case 'list': argc(1); c.note('diff', 'copy', MSG.copy); return emitAP(A[0], c);
+      case 'range': throw new Problem('range() can only be used in a for loop.');
+      case 'randint': argc(2); return { s: 'RANDOM(' + E(A[0]) + ', ' + E(A[1]) + ')', p: 10 };
+      case 'randrange': {
+        c.note('diff', 'randrange', MSG.randrange);
+        if (A.length === 1 && !hasKw) return { s: 'RANDOM(0, ' + E(addConst(A[0], -1)) + ')', p: 10 };
+        argc(2); return { s: 'RANDOM(' + E(A[0]) + ', ' + E(addConst(A[1], -1)) + ')', p: 10 };
+      }
+      case 'choice': {
+        argc(1); c.note('diff', 'choice', MSG.choice);
+        const o = wrapP(emitAP(A[0], c), 10);
+        return { s: o + '[RANDOM(1, LENGTH(' + o + '))]', p: 10 };
+      }
+      case 'move_forward': case 'rotate_left': case 'rotate_right': argc(0); c.note('ext', 'robot', MSG.robot); return { s: fname.toUpperCase() + '()', p: 10 };
+      case 'can_move': {
+        argc(1);
+        if (A[0].t !== 'str') throw new Problem('can_move() needs a direction in quotes: "left", "right", "forward" or "backward".');
+        c.note('ext', 'robot', MSG.robot); return { s: 'CAN_MOVE(' + A[0].v + ')', p: 10 };
+      }
+      default: {
+        if (viaRandom) throw new Problem('random.' + fname + "() isn't supported. The random tools that translate are randint, randrange and choice.");
+        if (hasKw) c.note('ext', 'kw', MSG.kw);
+        const parts = args.map(a => (a.name ? a.name + ': ' : '') + E(a.e));
+        return { s: fname + '(' + parts.join(', ') + ')', p: 10 };
+      }
+    }
+  }
+  if (isGetText(n)) { c.note('diff', 'getText', MSG.getText); return { s: 'INPUT()', p: 10 }; }
+  const o = E(obj);
+  const oo = wrapP(emitAP(obj, c), 10);
+  switch (meth) {
+    case 'append': argc(1); return { s: 'APPEND(' + o + ', ' + E(A[0]) + ')', p: 10 };
+    case 'insert': argc(2); c.note('diff', 'idx', MSG.idxPy2Ap); return { s: 'INSERT(' + o + ', ' + E(addConst(A[0], 1)) + ', ' + E(A[1]) + ')', p: 10 };
+    case 'pop': {
+      if (n !== c.stmtNode) throw new Problem(MSG.popValue);
+      if (A.length === 0 && !hasKw) return { s: 'REMOVE(' + o + ', LENGTH(' + o + '))', p: 10 };
+      argc(1); c.note('diff', 'idx', MSG.idxPy2Ap);
+      return { s: 'REMOVE(' + o + ', ' + E(addConst(A[0], 1)) + ')', p: 10 };
+    }
+    case 'remove': throw new Problem(MSG.removeValue);
+    case 'copy': argc(0); c.note('diff', 'copy', MSG.copy); return emitAP(obj, c);
+  }
+  c.note('ext', 'dot', MSG.dot);
+  if (hasKw) c.note('ext', 'kw', MSG.kw);
+  const parts = args.map(a => (a.name ? a.name + ': ' : '') + E(a.e));
+  return { s: oo + '.' + meth + '(' + parts.join(', ') + ')', p: 10 };
+}
+
+function isGetText(n) {
+  return n.t === 'call' && n.f.t === 'attr' && n.f.n === 'getTextInput' && n.f.o.t === 'name' && n.f.o.v === 'app';
+}
+function isInputCall(n) {
+  return n.t === 'call' && ((n.f.t === 'name' && n.f.v === 'input') || isGetText(n));
+}
+function isListish(v) {
+  return v.t === 'list' || (v.t === 'call' && ((v.f.t === 'name' && v.f.v === 'list') || (v.f.t === 'attr' && v.f.n === 'copy')));
+}
+
+function stmtsAP(list, c) {
+  const out = [];
+  for (let i = 0; i < list.length; i++) {
+    const s = list[i], nx = list[i + 1];
+    if (s.t === 'assign' && s.target.t === 'name' && isInputCall(s.value) && nx && nx.t === 'assign' && nx.target.t === 'name' &&
+        nx.value.t === 'call' && nx.value.f.t === 'name' && (nx.value.f.v === 'int' || nx.value.f.v === 'float') &&
+        nx.value.args.length === 1 && !nx.value.args[0].name && nx.value.args[0].e.t === 'name' && nx.value.args[0].e.v === s.target.v &&
+        (nx.target.v === s.target.v || !usesName(list.slice(i + 2), s.target.v))) {
+      const merged = Object.assign({}, nx, { value: s.value, comment: nx.comment || s.comment });
+      c.line = s.line; c.note('diff', 'merge', MSG.merge);
+      c.line = nx.line; c.note('diff', 'merge', MSG.merge);
+      out.push.apply(out, stmtAP(merged, c));
+      i++; continue;
+    }
+    out.push.apply(out, stmtAP(s, c));
+  }
+  return out;
+}
+
+function stmtAP(s, c) {
+  const ln = s.line || c.line;
+  c.line = ln; c.stmtNode = null;
+  const myPre = []; c.pre = myPre;
+  const tail = s.comment ? '  // ' + s.comment : '';
+  let main;
+  try { main = stmtAPInner(s, c, tail, ln); }
+  catch (e) {
+    if (!(e instanceof Problem)) throw e;
+    c.line = ln;
+    c.note('err', 'err:' + ln + ':' + e.message, e.message);
+    main = [{ text: '/* could not translate: ' + (s.text || s.msg || '') + ' */', src: ln, kind: 'err' }];
+    main = main.concat(stmtsAP((s.body || []).concat(s.orelse || []), c));
+  }
+  return myPre.map(t => ({ text: t, src: ln })).concat(main);
+}
+
+function stmtAPInner(s, c, tail, ln) {
+  const E = x => emitAP(x, c);
+  switch (s.t) {
+    case 'comment': return s.text.split('\n').map(x => ({ text: '// ' + x, src: ln, kind: 'comment' }));
+    case 'docstring': return s.text.split('\n').map(x => ({ text: '// ' + x.trim(), src: ln, kind: 'comment' })).filter(x => x.text !== '// ');
+    case 'pass': return [];
+    case 'import': c.note('diff', 'import', MSG.importLine); return [];
+    case 'global': c.note('diff', 'global', MSG.globalLine); return [];
+    case 'err': throw new Problem(s.msg);
+    case 'assign': {
+      const v = s.value;
+      if (v.t === 'name' && c.listVars.has(v.v)) c.note('diff', 'alias', MSG.alias);
+      const rhs = E(v).s;
+      const lhs = E(s.target).s;
+      if (isListish(v) && s.target.t === 'name') c.listVars.add(s.target.v);
+      return [{ text: lhs + ' ← ' + rhs + tail, src: ln }];
+    }
+    case 'aug': {
+      const rhs = E(N.bin(s.op, s.target, s.value)).s;
+      const lhs = E(s.target).s;
+      return [{ text: lhs + ' ← ' + rhs + tail, src: ln }];
+    }
+    case 'expr': {
+      const e = s.e;
+      if (e.t === 'call' && e.f.t === 'name' && e.f.v === 'print') return printAP(e, c, ln, tail);
+      c.stmtNode = e;
+      return [{ text: E(e).s + tail, src: ln }];
+    }
+    case 'del': {
+      c.stmtNode = null;
+      const o = E(s.target.o).s; c.note('diff', 'idx', MSG.idxPy2Ap);
+      return [{ text: 'REMOVE(' + o + ', ' + E(addConst(s.target.i, 1)).s + ')' + tail, src: ln }];
+    }
+    case 'return':
+      return [{ text: (s.e ? 'RETURN(' + E(s.e).s + ')' : 'RETURN()') + tail, src: ln }];
+    case 'if': {
+      if (s.isElif) c.note('diff', 'elif', MSG.elif);
+      const cond = E(s.cond).s;
+      const node = { text: 'IF(' + cond + ')' + tail, parts: [{ k: 'kw', v: 'IF' }, { k: 'ex', v: cond }], comment: s.comment, src: ln, kids: null, els: null };
+      node.kids = stmtsAP(s.body, c);
+      if (s.orelse) { node.els = stmtsAP(s.orelse, c); node.elseSrc = s.orelse[0] && s.orelse[0].isElif ? s.orelse[0].line : (s.elseLine || ln); }
+      return [node];
+    }
+    case 'while': {
+      const cond = E(negate(s.cond)).s;
+      return [{ text: 'REPEAT UNTIL(' + cond + ')' + tail, parts: [{ k: 'kw', v: 'REPEAT UNTIL' }, { k: 'ex', v: cond }], comment: s.comment, src: ln, kids: stmtsAP(s.body, c), els: null }];
+    }
+    case 'for': return forAP(s, c, tail, ln);
+    case 'def': {
+      if (EVENTS.has(s.name)) c.note('ext', 'event:' + s.name, s.name + ' is a CS Academy event. CS Academy calls it for you when that event happens. AP pseudocode has no events, so it is shown as an ordinary PROCEDURE.');
+      const ps = s.params.join(', ');
+      return [{ text: 'PROCEDURE ' + s.name + '(' + ps + ')' + tail, parts: [{ k: 'kw', v: 'PROCEDURE' }, { k: 'tx', v: s.name }, { k: 'ex', v: ps }], comment: s.comment, src: ln, kids: stmtsAP(s.body, c), els: null }];
+    }
+  }
+  throw new Problem('This kind of statement is not supported.');
+}
+
+function printAP(e, c, ln, tail) {
+  c.note('diff', 'display', MSG.display);
+  if (e.args.some(a => a.name)) c.note('diff', 'printkw', MSG.printkw);
+  const A = e.args.filter(a => !a.name).map(a => a.e);
+  if (!A.length) return [{ text: 'DISPLAY("")' + tail, src: ln }];
+  return A.map((a, i) => ({ text: 'DISPLAY(' + emitAP(a, c).s + ')' + (i === A.length - 1 ? tail : ''), src: ln }));
+}
+
+function forAP(s, c, tail, ln) {
+  const it = s.iter;
+  const E = x => emitAP(x, c);
+  if (it.t === 'call' && it.f.t === 'name' && it.f.v === 'range') {
+    if (it.args.some(a => a.name) || it.args.length < 1 || it.args.length > 3) throw new Problem('range() needs one to three numbers.');
+    const A = it.args.map(a => a.e);
+    const start = A.length >= 2 ? A[0] : N.num(0);
+    const stop = A.length >= 2 ? A[1] : A[0];
+    const step = A.length === 3 ? A[2] : N.num(1);
+    const sv = litInt(step);
+    if (sv === null) throw new Problem('A range() step that is a variable can\'t be written with REPEAT. Use a number like 2 or -1.');
+    if (sv === 0) throw new Problem('A range() step of 0 never ends.');
+    const a0 = litInt(start), b0 = litInt(stop);
+    let count;
+    if (a0 !== null && b0 !== null) count = N.num(Math.max(0, Math.ceil((b0 - a0) / sv)));
+    else if (sv === 1) count = a0 !== null ? addConst(stop, -a0) : N.bin('-', stop, start);
+    else if (sv === -1) count = b0 !== null ? addConst(start, -b0) : N.bin('-', start, stop);
+    else throw new Problem('A range() step other than 1 or -1 needs plain numbers (no variables) to become REPEAT.');
+    const cs = E(count).s;
+    const used = s.var !== '_' && usesName(s.body, s.var);
+    const kids = stmtsAP(s.body, c);
+    const head = { text: 'REPEAT ' + cs + ' TIMES' + tail, parts: [{ k: 'kw', v: 'REPEAT' }, { k: 'ex', v: cs }, { k: 'kw', v: 'TIMES' }], comment: s.comment, src: ln, kids, els: null };
+    if (!used) return [head];
+    c.line = ln; c.note('diff', 'forrange', MSG.forrange);
+    const init = { text: s.var + ' ← ' + E(start).s, src: ln };
+    kids.push({ text: s.var + ' ← ' + s.var + (sv > 0 ? ' + ' + sv : ' - ' + (-sv)), src: ln });
+    return [init, head];
+  }
+  if (it.t === 'call' && it.f.t === 'name' && ['enumerate', 'zip', 'reversed', 'sorted'].includes(it.f.v))
+    throw new Problem(it.f.v + '() inside a for loop is not supported.');
+  const lst = E(it).s;
+  return [{ text: 'FOR EACH ' + s.var + ' IN ' + lst + tail, parts: [{ k: 'kw', v: 'FOR EACH' }, { k: 'tx', v: s.var }, { k: 'kw', v: 'IN' }, { k: 'ex', v: lst }], comment: s.comment, src: ln, kids: stmtsAP(s.body, c), els: null }];
+}
+
+function flattenAP(nodes, depth, out) {
+  for (const n of nodes) {
+    if (n.kids) {
+      out.push({ t: n.text, d: depth, src: n.src });
+      out.push({ t: '{', d: depth, src: n.src });
+      flattenAP(n.kids, depth + 1, out);
+      out.push({ t: '}', d: depth, src: n.src });
+      if (n.els) {
+        out.push({ t: 'ELSE', d: depth, src: n.elseSrc });
+        out.push({ t: '{', d: depth, src: n.elseSrc });
+        flattenAP(n.els, depth + 1, out);
+        out.push({ t: '}', d: depth, src: n.elseSrc });
+      }
+    } else out.push({ t: n.text, d: depth, src: n.src, kind: n.kind });
+  }
+}
+
+/* ---------- AP AST -> Python ---------- */
+function emitPy(n, c) {
+  switch (n.t) {
+    case 'num': return { s: n.v, p: 10 };
+    case 'bool': return { s: n.v ? 'True' : 'False', p: 10 };
+    case 'str': return { s: toDQ(n), p: 10 };
+    case 'name':
+      if (c.globals && c.globals.has(n.v) && !(c.locals && c.locals.has(n.v))) { c.note('diff', 'appGlobal', MSG.appGlobal); return { s: 'app.' + n.v, p: 10 }; }
+      return { s: n.v, p: 10 };
+    case 'list': return { s: '[' + n.items.map(i => emitPy(i, c).s).join(', ') + ']', p: 10 };
+    case 'index': {
+      c.note('diff', 'idx', MSG.idxAp2Py);
+      return { s: wrapP(emitPy(n.o, c), 10) + '[' + emitPy(addConst(n.i, -1), c).s + ']', p: 10 };
+    }
+    case 'attr': c.note('ext', 'dot', MSG.dot); return { s: wrapP(emitPy(n.o, c), 10) + '.' + n.n, p: 10 };
+    case 'call': return emitCallPy(n, c);
+    case 'un': {
+      const r = emitPy(n.e, c);
+      if (n.op === 'not') return { s: 'not ' + wrapP(r, 5), p: 3 };
+      return { s: '-' + wrapP(r, 7), p: 7 };
+    }
+    case 'bin': return binStr(n, PY_OP[n.op], x => emitPy(x, c));
+  }
+  throw new Problem('Unsupported expression.');
+}
+
+function emitCallPy(n, c) {
+  const f = n.f, args = n.args, A = args.map(a => a.e);
+  const hasKw = args.some(a => a.name);
+  const E = x => emitPy(x, c).s;
+  const argc = k => { if (A.length !== k || hasKw) throw new Problem(f.v + ' needs ' + k + ' value' + (k === 1 ? '' : 's') + ' here.'); };
+  if (f.t === 'attr') {
+    c.note('ext', 'dot', MSG.dot);
+    const parts = args.map(a => (a.name ? a.name + '=' : '') + E(a.e));
+    return { s: wrapP(emitPy(f.o, c), 10) + '.' + f.n + '(' + parts.join(', ') + ')', p: 10 };
+  }
+  if (f.t !== 'name') throw new Problem("Calling the result of another expression isn't supported.");
+  const nm = f.v;
+  switch (nm) {
+    case 'DISPLAY': {
+      if (n !== c.stmtNode) throw new Problem('DISPLAY shows a value but gives nothing back, so it can only be its own line.');
+      if (A.length > 1 || hasKw) throw new Problem('DISPLAY takes one value. Use one DISPLAY for each value.');
+      c.note('diff', 'display', MSG.displayAp2Py);
+      if (!A.length) return { s: 'print()', p: 10 };
+      return { s: 'print(' + E(A[0]) + (c.opts.keepSpace ? ', end=" "' : '') + ')', p: 10 };
+    }
+    case 'INPUT': argc(0);
+      if (c.opts.input === 'cmu') { c.note('diff', 'inputStr', MSG.inputStrCmu); return { s: 'app.getTextInput("Enter a value")', p: 10 }; }
+      c.note('diff', 'inputStr', MSG.inputStr); return { s: 'input()', p: 10 };
+    case 'RANDOM': {
+      argc(2);
+      if (c.opts.random === 'randrange') { c.note('diff', 'randomAp2Py', MSG.randomAp2Py); return { s: 'randrange(' + E(A[0]) + ', ' + E(addConst(A[1], 1)) + ')', p: 10 }; }
+      c.needRandom = true; return { s: 'random.randint(' + E(A[0]) + ', ' + E(A[1]) + ')', p: 10 };
+    }
+    case 'LENGTH': argc(1); return { s: 'len(' + E(A[0]) + ')', p: 10 };
+    case 'APPEND': argc(2); return { s: wrapP(emitPy(A[0], c), 10) + '.append(' + E(A[1]) + ')', p: 10 };
+    case 'INSERT': argc(3); c.note('diff', 'idx', MSG.idxAp2Py); return { s: wrapP(emitPy(A[0], c), 10) + '.insert(' + E(addConst(A[1], -1)) + ', ' + E(A[2]) + ')', p: 10 };
+    case 'REMOVE': {
+      argc(2); c.note('diff', 'idx', MSG.idxAp2Py);
+      if (n !== c.stmtNode) throw new Problem('REMOVE only removes an item. It can only be its own line.');
+      return { s: 'del ' + wrapP(emitPy(A[0], c), 10) + '[' + E(addConst(A[1], -1)) + ']', p: 0 };
+    }
+    case 'MOVE_FORWARD': case 'ROTATE_LEFT': case 'ROTATE_RIGHT': argc(0); c.note('ext', 'robot', MSG.robot); return { s: nm.toLowerCase() + '()', p: 10 };
+    case 'CAN_MOVE': {
+      argc(1);
+      const d = A[0];
+      c.note('ext', 'robot', MSG.robot);
+      if (d.t === 'name') return { s: 'can_move("' + d.v + '")', p: 10 };
+      return { s: 'can_move(' + E(d) + ')', p: 10 };
+    }
+    case 'ABS': case 'ROUND': case 'MIN': case 'MAX': case 'SUM': case 'INT': case 'FLOAT': case 'STRING': {
+      c.note('ext', 'fn:' + nm, MSG.extFn(nm));
+      const py = nm === 'STRING' ? 'str' : nm.toLowerCase();
+      return { s: py + '(' + A.map(E).join(', ') + ')', p: 10 };
+    }
+  }
+  if (nm !== nm.toUpperCase() && AP_BUILTIN.has(nm.toUpperCase()))
+    throw new Problem('Did you mean ' + nm.toUpperCase() + '? AP pseudocode keywords are written in capital letters.');
+  if (hasKw) c.note('ext', 'kw', "Named values like fill: \"red\" aren't part of AP pseudocode. They become fill=\"red\" in Python.");
+  const parts = args.map(a => (a.name ? a.name + '=' : '') + E(a.e));
+  return { s: nm + '(' + parts.join(', ') + ')', p: 10 };
+}
+
+function collectGlobals(stmts, inProc, set) {
+  set = set || new Set();
+  for (const s of stmts) {
+    if (s.t === 'assign' && !inProc && s.target.t === 'name' && s.target.v !== 'app') set.add(s.target.v);
+    if (s.t === 'proc') collectGlobals(s.body, true, set);
+    else { if (s.body) collectGlobals(s.body, inProc, set); if (s.orelse) collectGlobals(s.orelse, inProc, set); }
+  }
+  return set;
+}
+
+function withLocals(c, names, fn) {
+  const prev = c.locals;
+  c.locals = new Set(prev || []);
+  names.forEach(x => c.locals.add(x));
+  try { fn(); } finally { c.locals = prev; }
+}
+
+function stmtsPy(list, c, d, out) { for (const s of list) stmtPy(s, c, d, out); }
+function blockPy(list, c, d, out, ln) {
+  const before = out.length;
+  stmtsPy(list, c, d, out);
+  if (!list.some(s => s.t !== 'comment' && s.t !== 'err')) out.push({ t: 'pass', d, src: ln });
+  else if (out.length === before) out.push({ t: 'pass', d, src: ln });
+}
+
+function stmtPy(s, c, d, out) {
+  const ln = s.line || c.line;
+  c.line = ln; c.stmtNode = null;
+  const tail = s.comment ? '  # ' + s.comment : '';
+  const mark = out.length;
+  try {
+    switch (s.t) {
+      case 'comment': s.text.split('\n').forEach(x => out.push({ t: '# ' + x, d, src: ln, kind: 'comment' })); return;
+      case 'err': throw new Problem(s.msg);
+      case 'assign': {
+        const v = s.value;
+        let rhs = emitPy(v, c).s;
+        if (v.t === 'name' && c.listVars.has(v.v)) { rhs += '.copy()'; c.note('diff', 'aliasAp2Py', MSG.aliasAp2Py); }
+        const lhs = emitPy(s.target, c).s;
+        if (v.t === 'list' && s.target.t === 'name') c.listVars.add(s.target.v);
+        out.push({ t: lhs + ' = ' + rhs + tail, d, src: ln }); return;
+      }
+      case 'expr': {
+        c.stmtNode = s.e;
+        out.push({ t: emitPy(s.e, c).s + tail, d, src: ln }); return;
+      }
+      case 'return': out.push({ t: (s.e ? 'return ' + emitPy(s.e, c).s : 'return') + tail, d, src: ln }); return;
+      case 'if': emitIfPy(s, c, d, out, false); return;
+      case 'times': {
+        out.push({ t: 'for _ in range(' + emitPy(s.n, c).s + '):' + tail, d, src: ln });
+        blockPy(s.body, c, d + 1, out, ln); return;
+      }
+      case 'until': {
+        out.push({ t: 'while ' + emitPy(negate(s.cond), c).s + ':' + tail, d, src: ln });
+        blockPy(s.body, c, d + 1, out, ln); return;
+      }
+      case 'foreach': {
+        out.push({ t: 'for ' + s.item + ' in ' + emitPy(s.list, c).s + ':' + tail, d, src: ln });
+        withLocals(c, [s.item], () => blockPy(s.body, c, d + 1, out, ln)); return;
+      }
+      case 'proc': {
+        if (EVENTS.has(s.name)) c.note('ext', 'event:' + s.name, s.name + ' is a CS Academy event, so CS Academy will call this function for you when it happens.');
+        out.push({ t: 'def ' + s.name + '(' + s.params.join(', ') + '):' + tail, d, src: ln });
+        withLocals(c, s.params, () => blockPy(s.body, c, d + 1, out, ln)); return;
+      }
+    }
+    throw new Problem('This kind of statement is not supported.');
+  } catch (e) {
+    if (!(e instanceof Problem)) throw e;
+    out.length = mark;
+    c.line = ln;
+    c.note('err', 'err:' + ln + ':' + e.message, e.message);
+    out.push({ t: '# could not translate: ' + (s.text || s.msg || ''), d, src: ln, kind: 'err' });
+    stmtsPy((s.body || []).concat(s.orelse || []), c, d, out);
+  }
+}
+
+function emitIfPy(s, c, d, out, isElif) {
+  const ln = s.line; c.line = ln;
+  const tail = s.comment ? '  # ' + s.comment : '';
+  const mark = out.length;
+  try {
+    const cond = emitPy(s.cond, c).s;
+    out.push({ t: (isElif ? 'elif ' : 'if ') + cond + ':' + tail, d, src: ln });
+  } catch (e) {
+    if (!(e instanceof Problem)) throw e;
+    c.line = ln; c.note('err', 'err:' + ln + ':' + e.message, e.message);
+    out.length = mark;
+    out.push({ t: '# could not translate: ' + (s.text || s.msg || ''), d, src: ln, kind: 'err' });
+    stmtsPy(s.body.concat(s.orelse || []), c, d, out);
+    return;
+  }
+  blockPy(s.body, c, d + 1, out, ln);
+  if (s.orelse) {
+    const sig = s.orelse.filter(x => x.t !== 'comment');
+    if (sig.length === 1 && sig[0].t === 'if' && s.orelse.length === 1) emitIfPy(sig[0], c, d, out, true);
+    else { out.push({ t: 'else:', d, src: s.elseLine || ln }); blockPy(s.orelse, c, d + 1, out, ln); }
+  }
+}
+
+/* ---------- Public API ---------- */
+function finish(lines, tree, c, lang, unit) {
+  const notes = Array.from(c.notes.values()).map(n => ({ kind: n.kind, msg: n.msg, lines: Array.from(n.lines).sort((a, b) => a - b) }));
+  notes.sort((a, b) => (a.lines[0] || 0) - (b.lines[0] || 0));
+  const rank = { err: 3, diff: 2, ext: 1 };
+  const kindByLine = {};
+  notes.forEach(n => n.lines.forEach(l => { if (!kindByLine[l] || rank[n.kind] > rank[kindByLine[l]]) kindByLine[l] = n.kind; }));
+  const text = lines.map(l => ' '.repeat(l.d * unit) + l.t).join('\n');
+  return { lines, tree, notes, text, lang, kindByLine, errCount: notes.filter(n => n.kind === 'err').length };
+}
+
+function translate(dir, src, opts) {
+  src = (src || '').replace(/\r\n?/g, '\n');
+  const c = makeCtx(opts);
+  if (dir === 'py2ap') {
+    const parsed = parsePython(src);
+    const tree = stmtsAP(parsed, c);
+    const lines = []; flattenAP(tree, 0, lines);
+    return finish(lines, tree, c, 'ap', 2);
+  }
+  const parsed = parseAP(src);
+  parsed.notes.forEach(k => { c.line = 0; if (k === 'eq2') c.notes.set('eq2', { kind: 'diff', msg: MSG.eq2, lines: new Set() }); });
+  const out = [];
+  c.globals = c.opts.appVars === false ? new Set() : collectGlobals(parsed, false);
+  stmtsPy(parsed, c, 0, out);
+  if (c.needRandom) out.unshift({ t: 'import random', d: 0, src: 0 });
+  return finish(out, null, c, 'py', 4);
+}
+
+const api = { translate, MSG };
+if (typeof module !== 'undefined' && module.exports) module.exports = api;
+else root.Translator = api;
+})(typeof window !== 'undefined' ? window : this);
+
+</script>
+<script>
+(function () {
+'use strict';
+const T = window.Translator;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+const EXAMPLES = [
+  { label: 'Counting high scores', py: [
+    '# Count the high scores', 'scores = [72, 95, 88, 61]', 'count = 0', 'for s in scores:', '    if s >= 80:', '        count += 1', 'print(count)'] },
+  { label: 'Variables and DISPLAY', py: [
+    '# Compute a total', 'price = 12', 'quantity = 3', 'total = price * quantity', 'print(total)', 'print("Total:", total)'] },
+  { label: 'If, else if, else', py: [
+    'score = 87', 'if score >= 90:', '    print("A")', 'elif score >= 80:', '    print("B")', 'else:', '    print("Keep practicing")'] },
+  { label: 'Loops: for and while', py: [
+    'total = 0', 'for i in range(1, 6):', '    total += i', 'print(total)', '',
+    'countdown = 3', 'while countdown > 0:', '    print(countdown)', '    countdown -= 1', '',
+    'for _ in range(3):', '    print("Hip")'] },
+  { label: 'Lists', py: [
+    'colors = ["red", "green", "blue"]', 'colors.append("purple")', 'colors.insert(0, "pink")', 'del colors[1]',
+    'print(colors[0])', 'print(colors[-1])', 'print(len(colors))', 'backup = colors.copy()'] },
+  { label: 'Functions and random', py: [
+    'import random', '', 'def rollDice():', '    return random.randint(1, 6)', '',
+    'def isDouble(a, b):', '    return a == b', '',
+    'first = rollDice()', 'second = rollDice()', 'if isDouble(first, second) and first > 3:', '    print("High doubles!")'] },
+  { label: 'CS Academy: mouse event', py: [
+    'from cmu_graphics import *', '', "app.background = 'lightBlue'", 'app.clicks = 0', "app.ball = Circle(200, 200, 30, fill='red')", '',
+    'def onMousePress(mouseX, mouseY):', '    app.ball.centerX = mouseX', '    app.ball.centerY = mouseY', '    app.clicks += 1'] },
+  { label: 'CS Academy: getting a number', py: [
+    'str = app.getTextInput("Enter a Number")', 'A = int(str)', 'print(A + 1)'] },
+  { label: 'Python the translator skips', py: [
+    'names = ["Ana", "Ben", "Cy"]', 'for name in names:', '    if name in names[1:]:', '        continue', '    print(name ** 2)'] }
+].map(e => ({ label: e.label, py: e.py.join('\n') }));
+
+const state = { dir: 'py2ap', view: 'text', random: 'randint', input: 'input', appVars: true, keepSpace: false, buf: { py: '', ap: '' }, res: null, hl: null, timer: null };
+const ta = $('src');
+const inLang = () => (state.dir === 'py2ap' ? 'py' : 'ap');
+const outLang = () => (state.dir === 'py2ap' ? 'ap' : 'py');
+
+/* ---------- highlighting ---------- */
+const KW_AP = new Set('IF ELSE REPEAT UNTIL TIMES FOR EACH IN PROCEDURE RETURN AND OR NOT MOD true false'.split(' '));
+const BI_AP = new Set('DISPLAY INPUT RANDOM APPEND INSERT REMOVE LENGTH MOVE_FORWARD ROTATE_LEFT ROTATE_RIGHT CAN_MOVE ABS ROUND MIN MAX SUM INT FLOAT STRING'.split(' '));
+const KW_PY = new Set('if elif else while for in def return and or not import True False pass'.split(' '));
+const BI_PY = new Set('print input len range int float str abs round min max sum randint randrange choice'.split(' '));
+const RX = /(\/\/.*|\/\*.*?\*\/|#.*)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(\b\d+(?:\.\d+)?\b)|([A-Za-z_][A-Za-z0-9_]*)|([←≠≥≤])/g;
+function hl(t, lang) {
+  let out = '', last = 0, m; RX.lastIndex = 0;
+  while ((m = RX.exec(t))) {
+    out += esc(t.slice(last, m.index));
+    if (m[1]) out += '<span class="c">' + esc(m[1]) + '</span>';
+    else if (m[2]) out += '<span class="s">' + esc(m[2]) + '</span>';
+    else if (m[3]) out += '<span class="n">' + esc(m[3]) + '</span>';
+    else if (m[4]) {
+      const w = m[4];
+      const cls = lang === 'ap' ? (KW_AP.has(w) ? 'k' : BI_AP.has(w) ? 'f' : '') : (KW_PY.has(w) ? 'k' : BI_PY.has(w) ? 'f' : '');
+      out += cls ? '<span class="' + cls + '">' + esc(w) + '</span>' : esc(w);
+    } else out += '<span class="y">' + esc(m[5]) + '</span>';
+    last = RX.lastIndex;
+  }
+  return out + esc(t.slice(last));
+}
+
+/* ---------- rendering ---------- */
+const KIND_LABEL = { diff: 'Heads-up', ext: 'Beyond the exam sheet', err: "Couldn't translate" };
+
+function rowClass(src) { const k = state.res && state.res.kindByLine[src]; return k ? ' k-' + k : ''; }
+
+function renderGutter() {
+  const n = ta.value.split('\n').length;
+  let s = ''; for (let i = 1; i <= n; i++) s += i + '\n';
+  $('gutter').textContent = s;
+  $('gutter').scrollTop = ta.scrollTop;
+}
+
+function blocksHTML(nodes) {
+  return nodes.map(n => {
+    if (n.kind === 'comment') return '<div class="bcom">' + esc(n.text) + '</div>';
+    if (n.kind === 'err') return '<div class="bstmt k-err" data-src="' + n.src + '">' + esc(n.text) + '</div>';
+    if (n.kids) {
+      const head = n.parts.map(p => p.k === 'kw' ? '<span class="k">' + esc(p.v) + '</span>' : p.k === 'ex' ? (p.v ? '<span class="pill">' + hl(p.v, 'ap') + '</span>' : '') : esc(p.v)).join(' ');
+      let h = '<div class="blk' + rowClass(n.src) + '" data-src="' + n.src + '"><div class="bhead">' + head + (n.comment ? ' <span class="c">// ' + esc(n.comment) + '</span>' : '') + '</div><div class="bbody">' + blocksHTML(n.kids) + '</div>';
+      if (n.els) h += '<div class="bhead" data-src="' + n.elseSrc + '"><span class="k">ELSE</span></div><div class="bbody">' + blocksHTML(n.els) + '</div>';
+      return h + '</div>';
+    }
+    return '<div class="bstmt' + rowClass(n.src) + '" data-src="' + n.src + '">' + hl(n.text, 'ap') + '</div>';
+  }).join('');
+}
+
+function renderOut() {
+  const out = $('out'); const r = state.res; const lang = outLang();
+  out.className = 'output ' + lang;
+  if (!ta.value.trim()) { out.innerHTML = '<div class="empty">Your translation will show up here as soon as you type or paste some code.</div>'; return; }
+  if (lang === 'ap' && state.view === 'blocks' && r.tree) {
+    out.className = 'output ap'; out.innerHTML = '<div class="blocks">' + blocksHTML(r.tree) + '</div>'; return;
+  }
+  let prev = null, html = '';
+  r.lines.forEach(l => {
+    const isClose = l.t === '}';
+    const first = !isClose && l.src && l.src !== prev; if (!isClose) prev = l.src;
+    html += '<div class="row' + rowClass(l.src) + (l.kind === 'err' ? ' k-err' : '') + '" data-src="' + l.src + '"><span class="num" aria-hidden="true">' + (first ? l.src : '') + '</span><span class="mk" aria-hidden="true"></span><span class="tx">' + ' '.repeat(l.d * (lang === 'ap' ? 2 : 4)) + hl(l.t, lang) + '</span></div>';
+  });
+  out.innerHTML = html || '<div class="empty">Nothing to show yet. That code has no lines that translate.</div>';
+}
+
+function renderNotes() {
+  const ul = $('notes'); const r = state.res;
+  $('notes-count').textContent = ta.value.trim() && r.notes.length ? ' (' + r.notes.length + ')' : '';
+  if (!ta.value.trim()) { ul.innerHTML = '<li class="muted">Differences between Python and AP pseudocode will be explained here.</li>'; return; }
+  if (!r.notes.length) { ul.innerHTML = '<li class="muted">No differences to point out in this code.</li>'; return; }
+  ul.innerHTML = r.notes.map((n, i) =>
+    '<li><button type="button" class="note ' + n.kind + '" data-i="' + i + '" aria-pressed="false"><span class="tag">' + KIND_LABEL[n.kind] + '</span><span class="msg">' + esc(n.msg) + '</span><span class="where">' + (n.lines.length ? (n.lines.length === 1 ? 'Line ' : 'Lines ') + n.lines.join(', ') : '') + '</span></button></li>').join('');
+}
+
+function applyHl() {
+  document.querySelectorAll('#out .hl').forEach(e => e.classList.remove('hl'));
+  document.querySelectorAll('#notes .note').forEach(b => b.setAttribute('aria-pressed', 'false'));
+  if (state.hl === null || !state.res.notes[state.hl]) return;
+  const n = state.res.notes[state.hl];
+  const btn = document.querySelector('#notes .note[data-i="' + state.hl + '"]'); if (btn) btn.setAttribute('aria-pressed', 'true');
+  let first = null;
+  n.lines.forEach(l => document.querySelectorAll('#out [data-src="' + l + '"]').forEach(e => { e.classList.add('hl'); if (!first) first = e; }));
+  if (first) first.scrollIntoView({ block: 'nearest' });
+}
+
+function run() {
+  state.res = T.translate(state.dir, ta.value, { random: state.random, input: state.input, appVars: state.appVars, keepSpace: state.keepSpace });
+  state.hl = null;
+  renderGutter(); renderOut(); renderNotes();
+}
+function schedule() { clearTimeout(state.timer); state.timer = setTimeout(run, 120); }
+function onInput() { state.buf[inLang()] = ta.value; renderGutter(); schedule(); }
+
+/* ---------- direction, view, options ---------- */
+function setDir(dir) {
+  state.dir = dir;
+  document.querySelectorAll('#dirseg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.dir === dir)));
+  const py = dir === 'py2ap';
+  $('in-title').textContent = py ? 'Python' : 'AP pseudocode';
+  $('out-title').textContent = py ? 'AP pseudocode' : 'Python';
+  $('symbols').hidden = py;
+  $('apgrp').hidden = py;
+  $('viewseg').hidden = !py;
+  $('editor').className = 'editor ' + inLang();
+  ta.setAttribute('aria-label', py ? 'Python code to translate' : 'AP pseudocode to translate');
+  ta.value = state.buf[inLang()];
+  $('hint').textContent = 'Tab adds spaces. Press Esc, then Tab, to move to the next control.';
+  run();
+}
+function setView(v) {
+  state.view = v;
+  document.querySelectorAll('#viewseg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
+  renderOut(); applyHl();
+}
+
+function loadExample(i) {
+  const ex = EXAMPLES[i]; if (!ex) return;
+  state.buf.py = ex.py;
+  state.buf.ap = T.translate('py2ap', ex.py, {}).text;
+  ta.value = state.buf[inLang()];
+  run();
+}
+
+/* ---------- editing helpers ---------- */
+let releaseTab = false;
+function insertAtCursor(text) {
+  ta.focus();
+  let ok = false;
+  try { ok = document.execCommand('insertText', false, text); } catch (_) { ok = false; }
+  if (!ok) { ta.setRangeText(text, ta.selectionStart, ta.selectionEnd, 'end'); onInput(); }
+}
+ta.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { releaseTab = true; return; }
+  if (e.key === 'Tab' && !e.shiftKey && !releaseTab && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault(); insertAtCursor(state.dir === 'py2ap' ? '    ' : '  '); return;
+  }
+  if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && ta.selectionStart === ta.selectionEnd) {
+    const v = ta.value, s = ta.selectionStart;
+    const ls = v.lastIndexOf('\n', s - 1) + 1;
+    const line = v.slice(ls, s);
+    const ind = /^[ \t]*/.exec(line)[0];
+    const t = line.replace(/\s+$/, '');
+    const extra = state.dir === 'py2ap' ? (t.endsWith(':') ? '    ' : '') : (t.endsWith('{') ? '  ' : '');
+    e.preventDefault(); insertAtCursor('\n' + ind + extra);
+  }
+});
+ta.addEventListener('blur', () => { releaseTab = false; });
+ta.addEventListener('input', onInput);
+ta.addEventListener('scroll', () => { $('gutter').scrollTop = ta.scrollTop; });
+
+/* ---------- wiring ---------- */
+document.querySelectorAll('#dirseg button').forEach(b => b.addEventListener('click', () => { if (b.dataset.dir !== state.dir) setDir(b.dataset.dir); }));
+document.querySelectorAll('#viewseg button').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+document.querySelectorAll('.sym').forEach(b => b.addEventListener('click', () => insertAtCursor(b.dataset.ch)));
+$('rand').addEventListener('change', e => { state.random = e.target.value; run(); });
+$('inp').addEventListener('change', e => { state.input = e.target.value; run(); });
+$('appv').addEventListener('change', e => { state.appVars = e.target.checked; run(); });
+$('keep').addEventListener('change', e => { state.keepSpace = e.target.checked; run(); });
+$('clear').addEventListener('click', () => { ta.value = ''; onInput(); ta.focus(); });
+$('back').addEventListener('click', () => {
+  if (!ta.value.trim()) return;
+  state.buf[outLang()] = state.res.text;
+  setDir(state.dir === 'py2ap' ? 'ap2py' : 'py2ap');
+});
+$('copy').addEventListener('click', () => {
+  const text = state.res ? state.res.text : '';
+  const done = () => { $('copy').textContent = 'Copied'; $('status').textContent = 'Copied to clipboard'; setTimeout(() => { $('copy').textContent = 'Copy'; $('status').textContent = ''; }, 1600); };
+  const fallback = () => {
+    const t = document.createElement('textarea'); t.value = text; t.style.position = 'fixed'; t.style.opacity = '0'; document.body.appendChild(t); t.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (_) {}
+    document.body.removeChild(t); if (ok) done(); else { $('status').textContent = 'Copy is blocked here. Select the text and copy it by hand.'; }
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+});
+$('notes').addEventListener('click', e => {
+  const b = e.target.closest('.note'); if (!b) return;
+  const i = Number(b.dataset.i);
+  state.hl = state.hl === i ? null : i; applyHl();
+});
+const exSel = $('example');
+EXAMPLES.forEach((e, i) => { const o = document.createElement('option'); o.value = String(i); o.textContent = e.label; exSel.appendChild(o); });
+exSel.addEventListener('change', () => { if (exSel.value !== '') loadExample(Number(exSel.value)); exSel.value = ''; });
+
+/* ---------- tabs ---------- */
+function showTab(which) {
+  const t = which === 'translator';
+  $('tab-t').setAttribute('aria-selected', String(t)); $('tab-t').tabIndex = t ? 0 : -1;
+  $('tab-r').setAttribute('aria-selected', String(!t)); $('tab-r').tabIndex = t ? -1 : 0;
+  $('view-t').hidden = !t; $('view-r').hidden = t;
+}
+$('tab-t').addEventListener('click', () => showTab('translator'));
+$('tab-r').addEventListener('click', () => showTab('reference'));
+document.querySelector('.tabs').addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { const t = e.target.id === 'tab-t' ? 'reference' : 'translator'; showTab(t); $(t === 'translator' ? 'tab-t' : 'tab-r').focus(); }
+});
+
+/* ---------- reference ---------- */
+const SHEET = [
+  ['x = 5', 'x ← 5', ''],
+  ['print(x)', 'DISPLAY(x)', 'DISPLAY puts a space after the value. print() starts a new line.'],
+  ['input()', 'INPUT()', 'input() always gives back a string.'],
+  ['str = app.getTextInput("Enter a Number")\nA = int(str)', 'A ← INPUT()', 'CS Academy. The prompt is left out, and the two steps become one.'],
+  ['a % b', 'a MOD b', ''],
+  ['random.randint(a, b)', 'RANDOM(a, b)', 'Both a and b can be picked.'],
+  ['a == b\na != b\na >= b\na <= b', 'a = b\na ≠ b\na ≥ b\na ≤ b', 'A single = tests equality in AP pseudocode.'],
+  ['a and b\na or b\nnot a', 'a AND b\na OR b\nNOT a', ''],
+  ['if x > 3:\n    ...\nelse:\n    ...', 'IF(x > 3)\n{\n  ...\n}\nELSE\n{\n  ...\n}', ''],
+  ['for _ in range(n):\n    ...', 'REPEAT n TIMES\n{\n  ...\n}', ''],
+  ['while not done:\n    ...', 'REPEAT UNTIL(done)\n{\n  ...\n}', 'REPEAT UNTIL stops when the condition becomes true.'],
+  ['aList = [1, 2, 3]', 'aList ← [1, 2, 3]', ''],
+  ['aList[0]', 'aList[1]', 'AP lists start at index 1.'],
+  ['aList.insert(i, v)', 'INSERT(aList, i + 1, v)', 'The index shifts by one.'],
+  ['aList.append(v)', 'APPEND(aList, v)', ''],
+  ['del aList[i]', 'REMOVE(aList, i + 1)', ''],
+  ['len(aList)', 'LENGTH(aList)', ''],
+  ['for item in aList:\n    ...', 'FOR EACH item IN aList\n{\n  ...\n}', ''],
+  ['def f(a, b):\n    return a + b', 'PROCEDURE f(a, b)\n{\n  RETURN(a + b)\n}', ''],
+  ['move_forward()\nrotate_left()\nrotate_right()\ncan_move("left")', 'MOVE_FORWARD()\nROTATE_LEFT()\nROTATE_RIGHT()\nCAN_MOVE(left)', 'The robot has no standard Python version. You would define these yourself.']
+];
+const EXTRA = [
+  ['elif x > 5:', 'ELSE { IF(x > 5) { ... } }', 'There is no ELIF. Nest an IF inside the ELSE.'],
+  ['while x < 5:\n    ...', 'REPEAT UNTIL(x ≥ 5)\n{\n  ...\n}', 'The condition is flipped, because REPEAT UNTIL runs until it is true.'],
+  ['for i in range(1, 6):\n    ...', 'i ← 1\nREPEAT 5 TIMES\n{\n  ...\n  i ← i + 1\n}', 'There is no counting loop. The counter is set up and updated by hand.'],
+  ['x += 1', 'x ← x + 1', 'The same for -=, *=, /= and %=.'],
+  ['a // b', '(a - a MOD b) / b', 'Works for whole numbers when a is not negative.'],
+  ['randrange(a, b)', 'RANDOM(a, b - 1)', 'randrange stops before b.'],
+  ['random.choice(aList)', 'aList[RANDOM(1, LENGTH(aList))]', ''],
+  ['aList.pop(i)', 'REMOVE(aList, i + 1)', 'Only as its own line, because REMOVE does not give the item back.'],
+  ['abs(x)  round(x)\nmin(a, b)  max(a, b)\nsum(aList)', 'ABS(x)  ROUND(x)\nMIN(a, b)  MAX(a, b)\nSUM(aList)', 'Written in AP style.'],
+  ['int(x)  float(x)  str(x)', 'INT(x)  FLOAT(x)  STRING(x)', 'int(input()) becomes just INPUT().'],
+  ['f"Score: {score}"', '"Score: " + score', 'Joined with +.'],
+  ['# a comment', '// a comment', ''],
+  ["Circle(200, 200, 30, fill='red')", 'Circle(200, 200, 30, fill: "red")', 'Named values are written name: value.'],
+  ['app.score = 0\napp.score += 1', 'score ← 0\nscore ← score + 1', 'CS Academy keeps global variables on app. AP pseudocode just uses the name. Built-in ones like app.background stay as they are.'],
+  ['ball.centerX = mouseX', 'ball.centerX ← mouseX', 'Dot notation is kept as is.'],
+  ['def onMousePress(mouseX, mouseY):\n    ...', 'PROCEDURE onMousePress(mouseX, mouseY)\n{\n  ...\n}', 'CS Academy calls event functions for you. AP pseudocode has no events.']
+];
+const SKIPPED = [
+  'break and continue (use a REPEAT UNTIL condition or an IF instead)',
+  'in, not in and is (loop through the list with FOR EACH and compare)',
+  'Slices like aList[1:3], tuples, dictionaries, sets and comprehensions',
+  'Exponents (**), classes, try/except, lambda and with',
+  'list.remove(value), which removes by value instead of by position',
+  'pop() used as a value, since REMOVE does not hand the item back'
+];
+function refTable(rows, ext) {
+  return '<div class="tablewrap"><table><thead><tr><th scope="col">Python</th><th scope="col">AP pseudocode</th><th scope="col">Notes</th></tr></thead><tbody>' +
+    rows.map(r => '<tr><td class="py"><pre>' + esc(r[0]) + '</pre></td><td class="ap"><pre>' + esc(r[1]) + '</pre></td><td class="nt">' + (ext ? '<span class="tag ext">Beyond the exam sheet</span>' : '') + esc(r[2]) + '</td></tr>').join('') +
+    '</tbody></table></div>';
+}
+$('view-r').innerHTML = '<div class="ref">' +
+  '<h2>On the exam reference sheet</h2><p>These Python lines translate to instructions that appear on the AP CSP Exam Reference Sheet.</p>' + refTable(SHEET, false) +
+  '<h2>Extra Python we translate</h2><p>These are common in class but are not on the sheet. The translator rewrites them using only the sheet\'s instructions where it can, and marks the rest as extensions.</p>' + refTable(EXTRA, true) +
+  '<h2>Python the translator skips</h2><p>These lines get a note explaining why, and show up as a comment in the output.</p><ul class="nolist">' + SKIPPED.map(s => '<li>' + esc(s) + '</li>').join('') + '</ul></div>';
+
+/* ---------- start ---------- */
+state.buf.py = EXAMPLES[0].py;
+state.buf.ap = T.translate('py2ap', EXAMPLES[0].py, {}).text;
+setDir('py2ap');
+})();
+
+</script>
+</body>
+</html>
