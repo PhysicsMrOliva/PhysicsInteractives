@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Video analysis & graphing · Physics</title>
+<meta name="description" content="Sigmund video analysis and nPlot graphing tools, with a step-by-step guide.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<!-- Navigation: the same on every page. Change "Physics" to your class name here and on the other pages. -->
+<div class="topnav"><div class="wrap">
+  <a class="brand" href="index.html"><span class="stripe" aria-hidden="true"><span></span><span></span><span></span></span>Physics</a>
+  <nav aria-label="Site">
+    <a href="index.html">Home</a>
+    <a href="interactives.html">Interactives</a>
+    <a href="simulations.html">Simulations</a>
+    <a href="tools.html" aria-current="page">Video analysis &amp; graphing</a>
+  </nav>
+</div></div>
+<div class="wrap">
+  <header class="page">
+    <h1>Video analysis &amp; graphing</h1>
+    <p class="lede">Record a motion on video, track it in Sigmund to get position-time data, and graph and fit that data in nPlot. Both run in the browser on iPads, Chromebooks, Macs and laptops.</p>
+    <div class="stripe" aria-hidden="true"><span></span><span></span><span></span></div>
+  </header>
+
+  <main>
+    <section aria-labelledby="tools-h">
+      <h2 id="tools-h">The tools</h2>
+      <div class="labs">
+        <article class="card accent g"><div class="body">
+          <h3>Sigmund: video analysis</h3>
+          <p>Load a video, calibrate it with an object of known length, set t = 0 and the origin, then click on the object frame by frame to collect position-time data. Copy the data straight into nPlot or download it as a CSV file.</p>
+          <p>Works best on an iPad, Chromebook or laptop; a phone screen is too small to use it comfortably.</p>
+          <div class="links"><a class="btn ext" href="https://calacattack.com/sigmund/" target="_blank" rel="noopener">Open Sigmund</a></div>
+        </div></article>
+        <article class="card accent b"><div class="body">
+          <h3>nPlot: graphing and curve fitting</h3>
+          <p>Paste or type data, label both axes, and choose a model such as linear, quadratic or square law. The Tangent Finder gives the slope at any point, and Copy Slopes turns a fitted position-time graph into velocity-time data.</p>
+          <p>Save graphs in the browser or to a file, and copy them into a lab report.</p>
+          <div class="links"><a class="btn ext" href="https://calacattack.com/nplot/" target="_blank" rel="noopener">Open nPlot</a></div>
+        </div></article>
+      </div>
+    </section>
+
+    <section aria-labelledby="flow-h">
+      <h2 id="flow-h">From video to graph</h2>
+      <p class="section-note">The basic workflow for a video analysis lab.</p>
+      <ol class="steps">
+        <li><h3>Record the video</h3><p>Hold the camera still, perpendicular to the motion, with a meter stick or other known length in the frame. See the tips below.</p></li>
+        <li><h3>Load and calibrate</h3><p>In Sigmund, load the video, then click Calibrate and draw a line along your known length and enter its length and units.</p></li>
+        <li><h3>Set the time and origin</h3><p>Step to the frame where you want to start and click t = 0. Then set where x = 0 and y = 0 are.</p></li>
+        <li><h3>Get data points</h3><p>Click Get Data Points and click the center of the object in each frame. Sigmund advances the video for you after each click.</p></li>
+        <li><h3>Copy the data</h3><p>Click “x vs. t” or “y vs. t” to copy two columns, or Download CSV. Then click Launch nPlot.</p></li>
+        <li><h3>Graph and fit</h3><p>Paste into nPlot and label both axes (the graph appears once both are labeled). Choose the model that matches the shape of the data, and compare models using the RMSE.</p></li>
+      </ol>
+      <p class="section-note" style="margin-top:14px">If the motion has several sections, like the broom ball lab, don’t fit one model to the whole graph. Identify each section of constant velocity or constant acceleration first.</p>
+    </section>
+
+    <section aria-labelledby="tips-h">
+      <h2 id="tips-h">Tips for recording a good lab video</h2>
+      <div class="tips"><ul>
+        <li><b>Use the “Most Compatible” (H.264) video format</b> if Sigmund says your video can’t be played. Newer phones save in a high-efficiency format by default.</li>
+        <li><b>Don’t edit or trim the video on your phone.</b> Editing scrambles the timing information Sigmund needs. If you want a short video, record a short video.</li>
+        <li><b>Keep it short:</b> under 2 minutes and under 300 MB.</li>
+        <li><b>Skip slow motion</b> unless the motion is very fast. If you use it, set the frame rate manually in Sigmund.</li>
+        <li><b>Put the known length in the same plane as the motion,</b> and keep the camera still and square to it.</li>
+      </ul></div>
+    </section>
+
+    <section aria-labelledby="cred-h">
+      <h2 id="cred-h">Credits</h2>
+      <p class="credit">Sigmund and nPlot were created by Geoff Nunes (<a href="https://noragulfa.com/sigmund/" target="_blank" rel="noopener">original Sigmund</a>, <a href="https://noragulfa.com/nPlot/" target="_blank" rel="noopener">original nPlot</a>). The versions linked on this page were adapted by <a href="https://calacattack.com" target="_blank" rel="noopener">CalacAttack.com</a> to work more reliably on iPads and in Safari, Chrome and Firefox.</p>
+    </section>
+  </main>
+
+  <footer>
+    <!-- Add your name, school or a contact link here -->
+    <p>Physics. Free to use in the classroom.</p>
+  </footer>
+</div>
+</body>
+</html>
