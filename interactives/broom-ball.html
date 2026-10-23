@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Broom ball force lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  --bg: #eaf1ee; --grid: #d3e0da; --panel: #ffffff; --ink: #15232b; --muted: #56666e; --line: #c4d3cc;
+  --pos: #23913a; --vel: #d22b2b; --acc: #1f6fb4; --force: #2e7d32; --data: #6b7280;
+  --wood: #e6c99a; --wood2: #d9b77f; --ball: #8b0f0f; --band: rgba(21, 35, 43, 0.045);
+  --btn: #15232b; --btn-ink: #ffffff; --focus: #1f6fb4;
+  font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42;
+    --pos: #4cc76a; --vel: #ff6b6b; --acc: #5aa9ff; --force: #6fd37a; --data: #a3acb5;
+    --wood: #5a4730; --wood2: #4c3b27; --ball: #d9534f; --band: rgba(229, 238, 240, 0.06);
+    --btn: #e5eef0; --btn-ink: #0f171b; --focus: #5aa9ff;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42;
+  --pos: #4cc76a; --vel: #ff6b6b; --acc: #5aa9ff; --force: #6fd37a; --data: #a3acb5;
+  --wood: #5a4730; --wood2: #4c3b27; --ball: #d9534f; --band: rgba(229, 238, 240, 0.06);
+  --btn: #e5eef0; --btn-ink: #0f171b; --focus: #5aa9ff;
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+*, *::before, *::after { box-sizing: inherit; }
+body {
+  margin: 0; color: var(--ink); background-color: var(--bg); line-height: 1.45;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+header { max-width: 1320px; margin: 0 auto; padding: 28px 20px 8px; }
+h1 { font-size: clamp(1.6rem, 3.4vw, 2.4rem); margin: 0 0 4px; letter-spacing: -0.01em; }
+header .back { display: inline-block; margin-bottom: 10px; color: var(--ink); font-weight: 700; }
+header p { margin: 0; color: var(--muted); max-width: 80ch; }
+.layout { max-width: 1320px; margin: 0 auto; padding: 16px 20px 40px; display: grid;
+  grid-template-columns: 330px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 920px) { .layout { grid-template-columns: 1fr; } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.controls { padding: 16px; }
+label.block { font-weight: 700; display: block; margin: 0 0 4px; font-size: 0.95rem; }
+select, input[type=number] { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+select { width: 100%; padding: 6px 8px; margin-bottom: 14px; }
+fieldset.stage { border: 2px solid var(--line); border-radius: 10px; padding: 8px 12px 2px; margin: 0 0 12px; }
+fieldset.stage legend { font-weight: 700; padding: 0 6px; }
+fieldset.push { border-color: var(--force); } fieldset.push legend { color: var(--force); }
+.row { margin: 0 0 10px; }
+.row .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.row label { font-weight: 700; font-size: 0.93rem; }
+.row input[type=number] { width: 74px; padding: 2px 6px; text-align: right; }
+.row input[type=range] { width: 100%; margin: 4px 0 0; accent-color: var(--ink); }
+.row.f input[type=range] { accent-color: var(--force); }
+.unit { color: var(--muted); font-size: 0.88rem; }
+.calc { font-size: 0.9rem; color: var(--muted); margin: -2px 0 8px; font-variant-numeric: tabular-nums; }
+.calc b { color: var(--acc); }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: 0.95rem; margin: 0 0 8px; }
+.check input { margin-top: 4px; }
+.stagecol { display: grid; gap: 14px; min-width: 0; }
+.motion, .video { padding: 12px; }
+canvas { display: block; width: 100%; }
+#motion { height: 240px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+button { font: inherit; font-weight: 700; border: 2px solid var(--btn); background: var(--btn); color: var(--btn-ink);
+  border-radius: 8px; padding: 6px 14px; cursor: pointer; min-width: 84px; }
+button.ghost { background: transparent; color: var(--ink); }
+button:focus-visible, select:focus-visible, input:focus-visible, video:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.scrub { flex: 1 1 200px; display: flex; align-items: center; gap: 8px; }
+.scrub input { flex: 1; accent-color: var(--ink); }
+.readouts { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 8px; font-variant-numeric: tabular-nums; }
+.readouts .p { color: var(--pos); } .readouts .v { color: var(--vel); } .readouts .a { color: var(--acc); } .readouts .F { color: var(--force); }
+.graph { padding: 10px 12px 8px; }
+.graph h3 { margin: 0; font-size: 1rem; }
+.graph.p h3 { color: var(--pos); } .graph.v h3 { color: var(--vel); } .graph.a h3 { color: var(--acc); }
+.graph h3 span { color: var(--force); font-weight: 700; }
+.graph canvas { height: 165px; margin-top: 4px; }
+.video h2, .segs h2 { margin: 0 0 4px; font-size: 1.15rem; }
+.video p, .segs .sub { color: var(--muted); margin: 0 0 10px; }
+video { width: 100%; border-radius: 8px; background: #000; display: block; }
+.segs { padding: 14px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: 12px; }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.card.on { border: 2px solid var(--force); }
+.card.cur { box-shadow: 0 0 0 3px var(--focus); }
+.card h3 { margin: 0 0 2px; font-size: 1.02rem; }
+.card .time { color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.card dl { margin: 8px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 0.95rem; }
+.card dt { font-weight: 700; color: var(--muted); }
+.card dd { margin: 0; }
+.card svg { display: block; margin-top: 6px; width: 100%; max-width: 260px; height: 70px; }
+.hidden { color: var(--muted); font-style: italic; }
+.note { font-size: 0.9rem; color: var(--muted); border-left: 3px solid var(--line); padding: 2px 0 2px 10px; margin: 6px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../index.html">Back to all interactives</a>
+  <h1>Broom ball force lab</h1>
+  <p>A bowling ball rolls on a gym floor. A broom push is the only horizontal force, so the ball only speeds up, slows down or changes direction while the broom is touching it. Set the pushes, press Play, and connect each force to the ball’s motion.</p>
+</header>
+
+<main class="layout">
+  <aside class="panel controls" aria-label="Settings">
+    <label class="block" for="examples">Load an example</label>
+    <select id="examples">
+      <option value="video">Match the lab video</option>
+      <option value="gentle">Gentle pushes</option>
+      <option value="stop">Push to a stop (no direction change)</option>
+      <option value="hard">Hard start, gentle reverse</option>
+    </select>
+
+    <div class="row"><div class="top"><label for="m">Ball mass m</label>
+      <span><input type="number" id="m" min="1" max="10" step="0.1"> <span class="unit">kg</span></span></div></div>
+
+    <fieldset class="stage"><legend>1 · At rest</legend>
+      <div class="row"><div class="top"><label for="tr">Wait time</label>
+        <span><input type="number" id="tr" min="0" max="10" step="0.1"> <span class="unit">s</span></span></div>
+        <input type="range" id="trR" min="0" max="10" step="0.1"></div>
+    </fieldset>
+
+    <fieldset class="stage push"><legend>2 · Push to start (to the right)</legend>
+      <div class="row f"><div class="top"><label for="F1">Broom force F</label>
+        <span><input type="number" id="F1" min="0" max="40" step="0.1"> <span class="unit">N →</span></span></div>
+        <input type="range" id="F1R" min="0" max="40" step="0.1"></div>
+      <div class="row"><div class="top"><label for="d1">Push time</label>
+        <span><input type="number" id="d1" min="0.1" max="10" step="0.1"> <span class="unit">s</span></span></div>
+        <input type="range" id="d1R" min="0.1" max="10" step="0.1"></div>
+      <p class="calc" id="c1"></p>
+    </fieldset>
+
+    <fieldset class="stage"><legend>3 · No contact (coasting)</legend>
+      <div class="row"><div class="top"><label for="D">Coasting distance</label>
+        <span><input type="number" id="D" min="0" max="60" step="0.5"> <span class="unit">m</span></span></div>
+        <input type="range" id="DR" min="0" max="60" step="0.5"></div>
+      <p class="calc" id="c2"></p>
+    </fieldset>
+
+    <fieldset class="stage push"><legend>4–5 · Push the other way (to the left)</legend>
+      <div class="row f"><div class="top"><label for="F2">Broom force F</label>
+        <span><input type="number" id="F2" min="0" max="40" step="0.1"> <span class="unit">N ←</span></span></div>
+        <input type="range" id="F2R" min="0" max="40" step="0.1"></div>
+      <div class="row"><div class="top"><label for="d2">Push time</label>
+        <span><input type="number" id="d2" min="0.1" max="15" step="0.1"> <span class="unit">s</span></span></div>
+        <input type="range" id="d2R" min="0.1" max="15" step="0.1"></div>
+      <p class="calc" id="c3"></p>
+    </fieldset>
+
+    <fieldset class="stage"><legend>6 · No contact again</legend>
+      <div class="row"><div class="top"><label for="d3">Coast time</label>
+        <span><input type="number" id="d3" min="0" max="10" step="0.1"> <span class="unit">s</span></span></div>
+        <input type="range" id="d3R" min="0" max="10" step="0.1"></div>
+    </fieldset>
+
+    <label class="check"><input type="checkbox" id="answers" checked> Show segment answers (turn off so students can fill in the worksheet first)</label>
+    <label class="check"><input type="checkbox" id="overlay" checked> Show the lab video’s data on the graphs</label>
+    <label class="check"><input type="checkbox" id="ghost"> Show the full graphs faintly</label>
+  </aside>
+
+  <section class="stagecol">
+    <div class="panel motion">
+      <canvas id="motion" aria-label="Animation of the bowling ball and broom"></canvas>
+      <div class="toolbar">
+        <button id="play">Play</button>
+        <button id="restart" class="ghost">Restart</button>
+        <select id="speed" aria-label="Playback speed" style="width:auto;margin:0">
+          <option value="2">2× speed</option><option value="1" selected>1× speed</option><option value="0.5">½× speed</option>
+        </select>
+        <div class="scrub"><label for="scrub" class="unit">time</label><input type="range" id="scrub" min="0" max="1" step="0.001" value="0"></div>
+      </div>
+      <div class="readouts">
+        <span>t = <b id="rt">0.00</b> s</span>
+        <span>Segment <b id="rs">1</b></span>
+        <span class="p">x = <b id="rx">0</b> m</span>
+        <span class="v">vₓ = <b id="rv">0</b> m/s</span>
+        <span class="a">aₓ = <b id="ra">0</b> m/s²</span>
+        <span class="F">F = <b id="rF">0</b> N</span>
+      </div>
+    </div>
+
+    <div class="panel graph p"><h3>Position x vs. time</h3><canvas id="gX"></canvas></div>
+    <div class="panel graph v"><h3>Velocity vₓ vs. time</h3><canvas id="gV"></canvas></div>
+    <div class="panel graph a"><h3>Acceleration aₓ vs. time <span>· broom force F = m·aₓ</span></h3><canvas id="gA"></canvas></div>
+
+    <div class="panel segs">
+      <h2>The segments</h2>
+      <p class="sub">Each segment is a section of constant acceleration. Red is velocity, blue is acceleration and green is the broom’s force on the ball, as on the worksheet. Because a = F/m, the acceleration arrow is shorter than the force arrow for any ball heavier than 1 kg.</p>
+      <div class="cards" id="cards"></div>
+    </div>
+
+    <div class="panel video">
+      <h2>Lab video</h2>
+      <p>The original broom ball video. When “Move the simulation with the video” is on, playing or scrubbing the video moves the animation and graphs to the same time, so you can compare the real ball with the model. Gray dots on the graphs are the position data from the video (velocities are worked out from neighboring points).</p>
+      <video id="vid" controls muted playsinline preload="metadata">
+        <source src="../animations/broom_ball_video.mp4" type="video/mp4">
+        <source src="../animations/broom_ball_video.webm" type="video/webm">
+        Your browser can’t play this video.
+      </video>
+      <label class="check" style="margin-top:10px"><input type="checkbox" id="sync" checked> Move the simulation with the video</label>
+      <p class="note">The video analysis recorded positions in feet. They are converted to meters here (1 ft = 0.3048 m), so the ball travels about 17.7 m and reaches about 2.9 m/s.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const DATA = [[0.0, 0.0], [0.667, 0.0], [1.033, 0.0], [1.368, 0.0], [1.702, 0.0], [2.035, 0.0], [2.368, 0.0], [2.702, 0.071], [3.035, 0.429], [3.368, 1.214], [3.703, 2.5], [4.037, 4.071], [4.37, 6.071], [4.703, 8.357], [5.037, 11.0], [5.37, 14.0], [5.703, 17.143], [6.038, 20.357], [6.372, 23.428], [6.705, 26.571], [7.038, 29.571], [7.372, 32.643], [7.705, 35.785], [8.038, 38.857], [8.373, 41.785], [8.707, 44.5], [9.04, 47.0], [9.373, 49.214], [9.707, 51.357], [10.04, 53.143], [10.373, 54.785], [10.708, 56.142], [11.042, 57.214], [11.375, 57.857], [11.708, 58.142], [12.042, 57.928], [12.375, 57.571], [12.708, 57.071], [13.043, 56.571], [13.377, 55.857], [13.71, 55.0], [14.043, 53.714], [14.377, 52.357], [14.71, 51.0], [15.043, 49.214], [15.378, 47.0], [15.712, 44.5], [16.045, 41.785], [16.378, 38.857], [16.712, 36.071], [17.045, 33.143], [17.378, 30.286], [17.713, 27.428], [18.047, 24.571], [18.38, 21.714], [18.713, 18.714], [19.047, 15.857], [19.38, 13.0], [19.713, 10.0], [20.048, 7.071], [20.382, 4.0]];
+  const FT = 0.3048; DATA.forEach(p => { p[1] = p[1] * FT; });   // video data were recorded in feet: convert to meters
+  const $ = id => document.getElementById(id);
+  const EX = {
+    video:  { m: 6.0, tr: 2.5, F1: 6.2, d1: 2.8, D: 7.6, F2: 4.0, d2: 8.2, d3: 4.2 },
+    gentle: { m: 6.0, tr: 1.0, F1: 6, d1: 2.0, D: 4, F2: 6, d2: 4.0, d3: 2.0 },
+    stop:   { m: 6.0, tr: 1.0, F1: 12, d1: 2.0, D: 6, F2: 8, d2: 3.0, d3: 2.0 },
+    hard:   { m: 6.0, tr: 1.0, F1: 30, d1: 1.0, D: 10, F2: 6, d2: 12.0, d3: 2.0 }
+  };
+  let lastSeg = 0;
+  const S = Object.assign({ segs: [], T: 1, t: 0, playing: false, speed: 1, answers: true, overlay: true, ghost: false }, EX.video);
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const minus = s => s.replace(/-/g, "−");
+  const sig = n => { if (!isFinite(n)) return "—"; if (Math.abs(n) < 5e-10) return "0";
+    let s = Math.abs(n) >= 1000 ? Math.round(n).toString() : n.toPrecision(3); if (s.includes("e")) s = String(Number(n.toPrecision(3))); return minus(s); };
+  const f2 = n => minus((Math.abs(n) < 5e-4 ? 0 : n).toFixed(2));
+
+  // data-derived velocities (central differences)
+  const DV = DATA.slice(1).map((p, i) => [(p[0] + DATA[i][0]) / 2, (p[1] - DATA[i][1]) / (p[0] - DATA[i][0])]);
+
+  // ---------- physics: build the segments ----------
+  function build() {
+    const segs = []; let t = 0, x = 0, v = 0;
+    const add = (dt, a, F, contact, kind) => {
+      if (dt <= 1e-9) return;
+      segs.push({ t0: t, dt, x0: x, v0: v, a, F, contact, kind });
+      x += v * dt + 0.5 * a * dt * dt; v += a * dt; t += dt;
+    };
+    add(S.tr, 0, 0, false, "rest");
+    const a1 = S.F1 / S.m; add(S.d1, a1, S.F1, true, "push1");
+    const coastT = v > 1e-9 ? S.D / v : 0; add(coastT, 0, 0, false, "coast1");
+    const a2 = -S.F2 / S.m;
+    const tStop = (a2 < 0 && v > 0) ? v / -a2 : Infinity;
+    if (tStop < S.d2 - 1e-9) { add(tStop, a2, -S.F2, true, "slow"); v = 0; add(S.d2 - tStop, a2, -S.F2, true, "reverse"); }
+    else add(S.d2, a2, -S.F2, true, "slow");
+    add(S.d3, 0, 0, false, "coast2");
+    if (!segs.length) segs.push({ t0: 0, dt: 1, x0: 0, v0: 0, a: 0, F: 0, contact: false, kind: "rest" });
+    segs.forEach((s, i) => s.n = i + 1);
+    S.segs = segs; S.T = t || 1; S.tStop = tStop; S.v1 = a1 * S.d1;
+  }
+  function segAt(t) { for (const s of S.segs) if (t <= s.t0 + s.dt + 1e-9) return s; return S.segs[S.segs.length - 1]; }
+  function at(t) {
+    const s = segAt(t), tau = Math.max(0, Math.min(s.dt, t - s.t0));
+    return { x: s.x0 + s.v0 * tau + 0.5 * s.a * tau * tau, v: s.v0 + s.a * tau, a: s.a, F: s.F, seg: s };
+  }
+
+  // ---------- controls ----------
+  const keys = ["m", "tr", "F1", "d1", "D", "F2", "d2", "d3"];
+  function sync() {
+    for (const k of keys) {
+      if (document.activeElement !== $(k)) $(k).value = S[k];
+      if ($(k + "R") && document.activeElement !== $(k + "R")) $(k + "R").value = S[k];
+    }
+    const a1 = S.F1 / S.m, a2 = S.F2 / S.m;
+    $("c1").innerHTML = `a = F/m = ${sig(S.F1)} N / ${sig(S.m)} kg = <b>${sig(a1)} m/s²</b><br>top speed = ${sig(S.v1)} m/s`;
+    $("c2").innerHTML = S.v1 > 0 ? `takes ${sig(S.D / S.v1)} s at a constant ${sig(S.v1)} m/s` : "The ball isn’t moving, so it can’t coast.";
+    $("c3").innerHTML = `a = −F/m = <b>−${sig(a2)} m/s²</b><br>` + (isFinite(S.tStop) && S.tStop < S.d2
+      ? `stops after ${sig(S.tStop)} s (direction change), then moves left for ${sig(S.d2 - S.tStop)} s`
+      : isFinite(S.tStop) && Math.abs(S.tStop - S.d2) < 0.05 ? "stops just as the push ends"
+      : `slows down but doesn’t stop (it would need ${isFinite(S.tStop) ? sig(S.tStop) + " s" : "a push"})`);
+  }
+  function changed() { build(); S.t = 0; S.playing = false; sync(); cards(); draw(); }
+  for (const k of keys) {
+    const h = e => { const v = parseFloat(e.target.value); if (isNaN(v)) return;
+      const el = $(k); S[k] = Math.min(+el.max, Math.max(+el.min, v)); $("examples").value = ""; changed(); };
+    $(k).addEventListener("change", h); if ($(k + "R")) $(k + "R").addEventListener("input", h);
+  }
+  $("examples").addEventListener("change", e => { const ex = EX[e.target.value]; if (!ex) return; Object.assign(S, ex); changed(); $("examples").value = e.target.value; });
+  $("answers").addEventListener("change", e => { S.answers = e.target.checked; cards(); });
+  $("overlay").addEventListener("change", e => { S.overlay = e.target.checked; draw(); });
+  $("ghost").addEventListener("change", e => { S.ghost = e.target.checked; draw(); });
+  $("speed").addEventListener("change", e => S.speed = parseFloat(e.target.value));
+  $("play").addEventListener("click", () => {
+    if (S.t >= S.T - 1e-9) S.t = 0;
+    S.playing = !S.playing; updPlay();
+    if (S.playing) { last = performance.now(); requestAnimationFrame(loop); }
+  });
+  $("restart").addEventListener("click", () => { S.t = 0; draw(); });
+  $("scrub").addEventListener("input", e => { S.playing = false; S.t = parseFloat(e.target.value) * S.T; draw(); });
+  document.addEventListener("keydown", e => {
+    if (e.code === "Space" && !/INPUT|SELECT|BUTTON|VIDEO/.test(document.activeElement.tagName)) { e.preventDefault(); $("play").click(); }
+  });
+  function updPlay() { $("play").textContent = S.playing ? "Pause" : (S.t >= S.T - 1e-9 && S.t > 0 ? "Replay" : "Play"); }
+
+  // video sync
+  const vid = $("vid");
+  let vidRAF = 0;
+  const fromVideo = () => { if (!$("sync").checked) return; S.playing = false; S.t = Math.min(S.T, vid.currentTime); draw(); };
+  const vidLoop = () => { fromVideo(); if (!vid.paused && !vid.ended) vidRAF = requestAnimationFrame(vidLoop); };
+  vid.addEventListener("play", () => { cancelAnimationFrame(vidRAF); vidLoop(); });
+  vid.addEventListener("seeked", fromVideo);
+  vid.addEventListener("timeupdate", () => { if (vid.paused) fromVideo(); });
+
+  // ---------- segment cards ----------
+  function classify(s) {
+    const vm = s.v0 + s.a * s.dt / 2, eps = 1e-9;
+    const dir = vm > eps ? "+" : vm < -eps ? "−" : "none";
+    let type, rule;
+    if (Math.abs(s.a) < eps) { type = "Constant speed (aₓ = 0)"; rule = dir === "none" ? "vₓ = 0" : dir === "+" ? "vₓ > 0" : "vₓ < 0"; }
+    else if (vm * s.a > 0) { type = "Speeding up"; rule = vm > 0 ? "vₓ > 0 & aₓ > 0" : "vₓ < 0 & aₓ < 0"; }
+    else { type = "Slowing down"; rule = vm > 0 ? "vₓ > 0 & aₓ < 0" : "vₓ < 0 & aₓ > 0"; }
+    const broom = !s.contact ? "Not touching the ball" : s.F > 0 ? "Pushing to the right (+)" : "Pushing to the left (−)";
+    return { dir, type, rule, broom, vm };
+  }
+  function svgFor(s, c) {
+    const C = { v: css("--vel"), a: css("--acc"), F: css("--force"), ball: css("--ball"), ink: css("--ink") };
+    const sgn = x => (Math.abs(x) < 1e-9 ? 0 : Math.sign(x));
+    const ar = (y, d, col, lab, L = 60) => {
+      if (!d) return `<text x="58" y="${y + 4}" fill="${col}" font-size="13" font-weight="700">${lab} = 0</text>`;
+      const x1 = 30 + d * 18, x2 = 30 + d * (18 + L);
+      const hx = x2 - d * 10;
+      return `<line x1="${x1}" y1="${y}" x2="${hx}" y2="${y}" stroke="${col}" stroke-width="3.5"/>` +
+             `<polygon points="${x2},${y} ${hx},${y - 6} ${hx},${y + 6}" fill="${col}"/>` +
+             `<text x="${d > 0 ? x2 + 6 : 120}" y="${y + 4}" fill="${col}" font-size="13" font-weight="700">${lab}${d > 0 ? " > 0" : " < 0"}</text>`;
+    };
+    return `<svg viewBox="-60 0 260 70" aria-hidden="true">
+      <circle cx="30" cy="35" r="14" fill="${C.ball}" stroke="${C.ink}" stroke-width="1"/>
+      ${ar(14, sgn(c.vm), C.v, "v")}${ar(35, sgn(s.a), C.a, "a", 60 * Math.max(0.2, Math.min(1, 1 / S.m)))}${ar(57, sgn(s.F), C.F, "F")}</svg>`;
+  }
+  function cards() {
+    const A = S.answers; lastSeg = 0;
+    $("cards").innerHTML = S.segs.map(s => {
+      const c = classify(s);
+      const dirTxt = c.dir === "none" ? "Not moving" : `Moving in the ${c.dir} direction`;
+      const body = A ? `<dl>
+          <dt>Broom</dt><dd>${c.broom}${s.contact ? `, F = ${sig(s.F)} N` : ", F = 0"}</dd>
+          <dt>Motion</dt><dd>${dirTxt}<br>${c.type}: ${c.rule}</dd>
+          <dt>Numbers</dt><dd>vₓ: ${sig(s.v0)} → ${sig(s.v0 + s.a * s.dt)} m/s<br>aₓ = F/m = ${sig(s.a)} m/s²</dd></dl>${svgFor(s, c)}`
+        : `<p class="hidden">Hidden. Describe the broom, the motion and the vectors on your worksheet, then turn answers back on to check.</p>`;
+      const extra = s.kind === "reverse" ? " · after the direction change" : "";
+      return `<div class="card ${s.contact ? "on" : ""}" data-n="${s.n}"><h3>Segment ${s.n}</h3>
+        <div class="time">t = ${sig(s.t0)} s to ${sig(s.t0 + s.dt)} s${extra}</div>${body}</div>`;
+    }).join("");
+  }
+
+  // ---------- drawing helpers ----------
+  function fit(cv) {
+    const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(r.width * d)), h = Math.max(1, Math.round(r.height * d));
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const ctx = cv.getContext("2d"); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, r.width, r.height);
+    ctx.font = "12px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    return { ctx, w: r.width, h: r.height };
+  }
+  function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+    return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
+  function ticks(lo, hi, n) { if (hi - lo <= 0) return [lo]; const st = niceStep((hi - lo) / n), out = [];
+    for (let v = Math.ceil(lo / st - 1e-9) * st; v <= hi + 1e-9; v += st) out.push(Math.round(v / st) * st); return out; }
+  const tl = v => minus(String(Number((Math.abs(v) < 1e-9 ? 0 : v).toPrecision(6))));
+  function arrow(ctx, x1, y1, x2, y2, color, lw = 3) {
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy); if (L < 2) return;
+    const ux = dx / L, uy = dy / L, hs = Math.min(12, L * 0.6);
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2 - ux * hs * 0.8, y2 - uy * hs * 0.8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - ux * hs - uy * hs * 0.5, y2 - uy * hs + ux * hs * 0.5);
+    ctx.lineTo(x2 - ux * hs + uy * hs * 0.5, y2 - uy * hs - ux * hs * 0.5); ctx.closePath(); ctx.fill();
+  }
+  function stats() {
+    let lo = 0, hi = 0, vmax = 0;
+    for (let i = 0; i <= 400; i++) { const s = at(S.T * i / 400); lo = Math.min(lo, s.x); hi = Math.max(hi, s.x); vmax = Math.max(vmax, Math.abs(s.v)); }
+    return { lo, hi, vmax: Math.max(vmax, 0.2), Fmax: Math.max(S.F1, S.F2, 1) };
+  }
+
+  // ---------- motion panel ----------
+  function drawMotion() {
+    const { ctx, w, h } = fit($("motion"));
+    const C = { ink: css("--ink"), muted: css("--muted"), vel: css("--vel"), acc: css("--acc"), F: css("--force"),
+      wood: css("--wood"), wood2: css("--wood2"), ball: css("--ball") };
+    const st = stats(), now = at(S.t);
+    let lo = st.lo, hi = st.hi; const pad = Math.max(0.05 * (hi - lo), 1); lo -= pad; hi += pad;
+    const padL = 104, padR = 24, fy = h - 76, k = (w - padL - padR) / (hi - lo), P = x => padL + (x - lo) * k;
+    // floor
+    ctx.fillStyle = C.wood; ctx.fillRect(P(lo), fy, P(hi) - P(lo), h - fy - 26);
+    ctx.strokeStyle = C.wood2; ctx.lineWidth = 1;
+    for (let yy = fy + 10; yy < h - 26; yy += 10) { ctx.beginPath(); ctx.moveTo(P(lo), yy); ctx.lineTo(P(hi), yy); ctx.stroke(); }
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(P(lo), fy); ctx.lineTo(P(hi), fy); ctx.stroke();
+    ctx.fillStyle = C.muted; ctx.textAlign = "center";
+    for (const s of ticks(lo, hi, 9)) { ctx.beginPath(); ctx.moveTo(P(s), h - 26); ctx.lineTo(P(s), h - 21); ctx.stroke(); ctx.fillText(tl(s), P(s), h - 8); }
+    ctx.textAlign = "left"; ctx.fillText("x (m)", 8, h - 8);
+    // motion map: dots every step, green when pushed, rows by direction
+    const step = [0.1, 0.2, 0.25, 0.5, 1].find(s => S.T / s <= 60) || 1;
+    for (let t = 0; t <= S.t + 1e-9; t += step) {
+      const s = at(t), row = Math.abs(s.v) < 1e-6 ? 0 : s.v > 0 ? 1 : 2;
+      const y = fy + 12 + row * 13;
+      ctx.beginPath(); ctx.arc(P(s.x), y, 4, 0, 7);
+      if (s.seg.contact) { ctx.fillStyle = C.F; ctx.fill(); } else { ctx.fillStyle = C.ink; ctx.globalAlpha = 0.45; ctx.fill(); ctx.globalAlpha = 1; }
+    }
+    ctx.fillStyle = C.ink; ctx.textAlign = "right"; ctx.font = "11px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    ctx.fillText("at rest", padL - 8, fy + 16); ctx.fillText("moving right →", padL - 8, fy + 29); ctx.fillText("moving left ←", padL - 8, fy + 42);
+    ctx.textAlign = "left"; ctx.fillStyle = C.muted;
+    ctx.fillText(`dots every ${step} s · green dots = broom pushing`, 8, 40);
+    ctx.fillText(`a and F share one scale (1 m/s² = 1 N long), so the a arrow = F arrow ÷ ${sig(S.m)} kg`, 8, 56);
+    // ball
+    const bx = P(now.x), r = 14, by = fy - r;
+    const spin = (now.x / 0.7) % (2 * Math.PI);
+    ctx.fillStyle = C.ball; ctx.strokeStyle = C.ink; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(bx, by, r, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.65)";
+    for (const [dx, dy] of [[-4, -4], [3, -6], [0, 2]]) {
+      const c = Math.cos(spin), s = Math.sin(spin);
+      ctx.beginPath(); ctx.arc(bx + dx * c - dy * s, by + dx * s + dy * c, 1.8, 0, 7); ctx.fill();
+    }
+    // broom, on the side it pushes from
+    if (now.seg.contact && Math.abs(now.F) > 0) {
+      const side = now.F > 0 ? -1 : 1;                  // pushing right -> broom on the left of the ball
+      const tipX = bx + side * (r + 2), tipY = by + 4;
+      ctx.strokeStyle = "#8d6e63"; ctx.lineWidth = 4; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(tipX + side * 10, tipY - 6); ctx.lineTo(tipX + side * 52, tipY - 80); ctx.stroke();
+      ctx.fillStyle = "#d4a017"; ctx.beginPath();
+      ctx.moveTo(tipX + side * 6, tipY - 14); ctx.lineTo(tipX + side * 18, tipY - 8);
+      ctx.lineTo(tipX + side * 8, tipY + 10); ctx.lineTo(tipX - side * 2, tipY + 6); ctx.closePath(); ctx.fill();
+    }
+    // vectors
+    // one shared scale for force (N) and acceleration (m/s²): the a arrow is the F arrow divided by m
+    const kv = 110 / st.vmax, kFA = 100 / Math.max(st.Fmax, st.Fmax / S.m);
+    const Lv = now.v * kv, La = now.a * kFA, LF = now.F * kFA;
+    arrow(ctx, bx, by - 30, bx + Lv, by - 30, C.vel);
+    arrow(ctx, bx, by - 52, bx + La, by - 52, C.acc);
+    arrow(ctx, bx, by - 74, bx + LF, by - 74, C.F);
+    ctx.font = "bold 12px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.textAlign = "left";
+    const tag = (val, sym, unit, col, y, len) => {
+      const z = Math.abs(val) < 1e-6; ctx.fillStyle = col;
+      const txt = z ? `${sym} = 0` : `${sym} = ${sig(val)} ${unit}`, tw = ctx.measureText(txt).width;
+      let left = !z && len < 0, xEnd = bx + (z ? 0 : len);
+      if (!left && xEnd + 8 + tw > w - 4) { left = true; xEnd = Math.min(bx, xEnd); }   // flip if it would run off the right edge
+      if (left && xEnd - 8 - tw < 4) { left = false; xEnd = Math.max(bx, xEnd); }       // or off the left edge
+      ctx.textAlign = left ? "right" : "left";
+      ctx.fillText(txt, xEnd + (left ? -8 : 8), y);
+    };
+    tag(now.v, "v", "m/s", C.vel, by - 26, Lv);
+    tag(now.a, "a", "m/s²", C.acc, by - 48, La);
+    tag(now.F, "F", "N", C.F, by - 70, LF);
+    ctx.textAlign = "left";
+    // legend + time
+    ctx.textAlign = "right"; ctx.font = "bold 13px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    arrow(ctx, w - 64, 16, w - 40, 16, C.vel, 2.5); ctx.fillStyle = C.vel; ctx.fillText("v", w - 14, 20);
+    arrow(ctx, w - 64, 34, w - 40, 34, C.acc, 2.5); ctx.fillStyle = C.acc; ctx.fillText("a", w - 14, 38);
+    arrow(ctx, w - 64, 52, w - 40, 52, C.F, 2.5); ctx.fillStyle = C.F; ctx.fillText("F", w - 14, 56);
+    ctx.textAlign = "left"; ctx.fillStyle = C.ink; ctx.font = "bold 14px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    ctx.fillText(`t = ${S.t.toFixed(2)} s · Segment ${now.seg.n}`, 8, 20);
+  }
+
+  // ---------- graphs ----------
+  function drawGraph(id, key, color, label) {
+    const { ctx, w, h } = fit($(id));
+    const muted = css("--muted"), line = css("--line"), ink = css("--ink"), band = css("--band"), dcol = css("--data"), Fc = css("--force");
+    const L = 58, R = key === "a" ? 56 : 14, Tp = 18, B = 24, pw = w - L - R, ph = h - Tp - B;
+    const showData = S.overlay && key !== "a";
+    const Tmax = S.overlay ? Math.max(S.T, DATA[DATA.length - 1][0]) : S.T;   // same time axis on all three graphs
+    let mn = 0, mx = 0;
+    for (let i = 0; i <= 400; i++) { const v = at(S.T * i / 400)[key]; mn = Math.min(mn, v); mx = Math.max(mx, v); }
+    if (showData) for (const [, v] of (key === "x" ? DATA : DV)) { mn = Math.min(mn, v); mx = Math.max(mx, v); }
+    if (key === "a") { mn = Math.min(mn, -0.5); mx = Math.max(mx, 0.5); }
+    const pd = Math.max(0.12 * (mx - mn), 0.2), lo = mn - pd, hi = mx + pd;
+    const X = t => L + (t / Tmax) * pw, Yv = v => Tp + (hi - v) / (hi - lo) * ph;
+    // segment bands + numbers
+    S.segs.forEach((s, i) => {
+      if (i % 2 === 0) { ctx.fillStyle = band; ctx.fillRect(X(s.t0), Tp, X(s.t0 + s.dt) - X(s.t0), ph); }
+      ctx.fillStyle = s.contact ? Fc : muted; ctx.textAlign = "center"; ctx.font = "bold 12px 'Atkinson Hyperlegible', system-ui, sans-serif";
+      ctx.fillText(String(s.n), (X(s.t0) + X(s.t0 + s.dt)) / 2, Tp - 5);
+    });
+    ctx.font = "12px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    ctx.lineWidth = 1; ctx.strokeStyle = line; ctx.fillStyle = muted; ctx.textAlign = "center";
+    for (const tv of ticks(0, Tmax, 10)) { ctx.beginPath(); ctx.moveTo(X(tv), Tp); ctx.lineTo(X(tv), Tp + ph); ctx.stroke(); ctx.fillText(tl(tv), X(tv), h - 7); }
+    ctx.textAlign = "right";
+    for (const vv of ticks(lo, hi, 4)) { ctx.beginPath(); ctx.moveTo(L, Yv(vv)); ctx.lineTo(L + pw, Yv(vv)); ctx.stroke(); ctx.fillText(tl(vv), L - 6, Yv(vv) + 4); }
+    if (key === "a") {        // force axis on the right: F = m a
+      ctx.fillStyle = Fc; ctx.textAlign = "left";
+      for (const vv of ticks(lo, hi, 4)) ctx.fillText(tl(Number((vv * S.m).toPrecision(3))), L + pw + 6, Yv(vv) + 4);
+      ctx.save(); ctx.translate(w - 8, Tp + ph / 2); ctx.rotate(Math.PI / 2); ctx.textAlign = "center"; ctx.fillText("F (N)", 0, 0); ctx.restore();
+    }
+    ctx.strokeStyle = muted; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(L, Yv(0)); ctx.lineTo(L + pw, Yv(0)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(L, Tp); ctx.lineTo(L, Tp + ph); ctx.stroke();
+    ctx.save(); ctx.translate(14, Tp + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.fillStyle = color; ctx.fillText(label, 0, 0); ctx.restore();
+    // segment boundaries
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = muted; ctx.globalAlpha = 0.6;
+    for (const s of S.segs.slice(1)) { ctx.beginPath(); ctx.moveTo(X(s.t0), Tp); ctx.lineTo(X(s.t0), Tp + ph); ctx.stroke(); }
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+    // video data
+    if (showData) { ctx.fillStyle = dcol;
+      for (const [t, v] of (key === "x" ? DATA : DV)) { ctx.beginPath(); ctx.arc(X(t), Yv(v), 2.8, 0, 7); ctx.fill(); } }
+    // model curve, segment by segment
+    const seg = (s, tEnd, alpha) => {
+      const tB = Math.min(tEnd, s.t0 + s.dt); if (tB <= s.t0) return;
+      ctx.strokeStyle = color; ctx.globalAlpha = alpha; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.beginPath();
+      for (let i = 0; i <= 60; i++) { const t = s.t0 + (tB - s.t0) * i / 60, tau = t - s.t0;
+        const v = key === "x" ? s.x0 + s.v0 * tau + 0.5 * s.a * tau * tau : key === "v" ? s.v0 + s.a * tau : s.a;
+        i ? ctx.lineTo(X(t), Yv(v)) : ctx.moveTo(X(t), Yv(v)); }
+      ctx.stroke(); ctx.globalAlpha = 1;
+    };
+    if (S.ghost) S.segs.forEach(s => seg(s, S.T, 0.22));
+    S.segs.forEach(s => seg(s, S.t, 1));
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = ink; ctx.globalAlpha = 0.5; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(X(S.t), Tp); ctx.lineTo(X(S.t), Tp + ph); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    const s = at(S.t); ctx.fillStyle = color; ctx.beginPath(); ctx.arc(X(S.t), Yv(s[key]), 5.5, 0, 7); ctx.fill();
+  }
+
+  function draw() {
+    drawMotion();
+    drawGraph("gX", "x", css("--pos"), "x (m)");
+    drawGraph("gV", "v", css("--vel"), "vₓ (m/s)");
+    drawGraph("gA", "a", css("--acc"), "aₓ (m/s²)");
+    const s = at(S.t);
+    $("rt").textContent = S.t.toFixed(2); $("rs").textContent = s.seg.n; $("rx").textContent = sig(s.x);
+    $("rv").textContent = sig(s.v); $("ra").textContent = sig(s.a); $("rF").textContent = sig(s.F);
+    $("scrub").value = S.T ? S.t / S.T : 0; updPlay();
+    if (s.seg.n !== lastSeg) { document.querySelectorAll(".card").forEach(c => c.classList.toggle("cur", +c.dataset.n === s.seg.n)); lastSeg = s.seg.n; }
+  }
+  let last = 0;
+  function loop(now) {
+    if (!S.playing) return;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    S.t = Math.min(S.T, S.t + dt * S.speed); if (S.t >= S.T) S.playing = false;
+    draw(); if (S.playing) requestAnimationFrame(loop);
+  }
+  new ResizeObserver(() => draw()).observe(document.querySelector(".stagecol"));
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { cards(); draw(); });
+  changed();
+  if (document.fonts) document.fonts.ready.then(draw);
+})();
+</script>
+</body>
+</html>
