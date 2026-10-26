@@ -99,6 +99,17 @@ video { width: 100%; border-radius: 8px; background: #000; display: block; }
 .card svg { display: block; margin-top: 6px; width: 100%; max-width: 260px; height: 70px; }
 .hidden { color: var(--muted); font-style: italic; }
 .note { font-size: 0.9rem; color: var(--muted); border-left: 3px solid var(--line); padding: 2px 0 2px 10px; margin: 6px 0 0; }
+
+/* value box + draggable time line (shared across the labs) */
+.graph .head { display: block; }
+.graph .eqrow { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px 8px; margin-top: 4px; }
+.graph .eqrow .eq { flex: 1; min-width: 0; margin-top: 0; text-align: left; font-size: 0.9rem; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.graph .eqrow .eq .gen { opacity: 0.75; }
+.graph .val { flex: none; order: 2; margin-left: auto; text-align: right; border: 1.5px solid currentColor; border-radius: 7px;
+  padding: 1px 6px; font-weight: 700; line-height: 1.3; font-size: 0.8rem; font-variant-numeric: tabular-nums; min-width: 6.4em; }
+.graph.p .val { color: var(--pos); } .graph.v .val { color: var(--vel); } .graph.a .val { color: var(--acc); }
+.graph canvas { cursor: ew-resize; touch-action: pan-y; }
+.graph canvas:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
 </style>
 </head>
 <body>
@@ -186,9 +197,9 @@ video { width: 100%; border-radius: 8px; background: #000; display: block; }
       </div>
     </div>
 
-    <div class="panel graph p"><h3>Position x vs. time</h3><canvas id="gX"></canvas></div>
-    <div class="panel graph v"><h3>Velocity vₓ vs. time</h3><canvas id="gV"></canvas></div>
-    <div class="panel graph a"><h3>Acceleration aₓ vs. time <span>· broom force F = m·aₓ</span></h3><canvas id="gA"></canvas></div>
+    <div class="panel graph p"><h3>Position x vs. time</h3><div class="eqrow"><div class="val" id="valP"></div><div class="eq" id="eqP"></div></div><canvas id="gX"></canvas></div>
+    <div class="panel graph v"><h3>Velocity vₓ vs. time</h3><div class="eqrow"><div class="val" id="valV"></div><div class="eq" id="eqV"></div></div><canvas id="gV"></canvas></div>
+    <div class="panel graph a"><h3>Acceleration aₓ vs. time <span>· broom force F = m·aₓ</span></h3><div class="eqrow"><div class="val" id="valA"></div><div class="eq" id="eqA"></div></div><canvas id="gA"></canvas></div>
 
     <div class="panel segs">
       <h2>The segments</h2>
@@ -280,7 +291,7 @@ video { width: 100%; border-radius: 8px; background: #000; display: block; }
     $(k).addEventListener("change", h); if ($(k + "R")) $(k + "R").addEventListener("input", h);
   }
   $("examples").addEventListener("change", e => { const ex = EX[e.target.value]; if (!ex) return; Object.assign(S, ex); changed(); $("examples").value = e.target.value; });
-  $("answers").addEventListener("change", e => { S.answers = e.target.checked; cards(); });
+  $("answers").addEventListener("change", e => { S.answers = e.target.checked; cards(); draw(); });
   $("overlay").addEventListener("change", e => { S.overlay = e.target.checked; draw(); });
   $("ghost").addEventListener("change", e => { S.ghost = e.target.checked; draw(); });
   $("speed").addEventListener("change", e => S.speed = parseFloat(e.target.value));
@@ -508,6 +519,7 @@ video { width: 100%; border-radius: 8px; background: #000; display: block; }
     S.segs.forEach(s => seg(s, S.t, 1));
     ctx.setLineDash([4, 4]); ctx.strokeStyle = ink; ctx.globalAlpha = 0.5; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(X(S.t), Tp); ctx.lineTo(X(S.t), Tp + ph); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    { const hx = X(S.t); ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(hx - 7, Tp - 10); ctx.lineTo(hx + 7, Tp - 10); ctx.lineTo(hx, Tp - 1); ctx.closePath(); ctx.fill(); }
     const s = at(S.t); ctx.fillStyle = color; ctx.beginPath(); ctx.arc(X(S.t), Yv(s[key]), 5.5, 0, 7); ctx.fill();
   }
 
@@ -516,6 +528,20 @@ video { width: 100%; border-radius: 8px; background: #000; display: block; }
     drawGraph("gX", "x", css("--pos"), "x (m)");
     drawGraph("gV", "v", css("--vel"), "vₓ (m/s)");
     drawGraph("gA", "a", css("--acc"), "aₓ (m/s²)");
+    { const q = "x", sb = q === "y" ? "ᵧ" : "ₓ", s = at(S.t), Pp = s.seg, A = S.answers;
+      const par = (n, u) => `(${sig(n)} ${u})`, cst = (n, u) => (n < 0 ? `(${sig(n)} ${u})` : `${sig(n)} ${u}`);
+      const head = `<span style="color:${s.seg.contact ? "var(--force)" : "var(--muted)"};font-weight:700">Segment ${s.seg.n}${s.seg.contact ? " (broom pushing)" : " (no contact)"}</span> · Δt measured from t = ${sig(Pp.t0)} s`;
+      const zero = Math.abs(Pp.a) < 1e-12;
+      const ex = !A ? (zero ? `${q} = v₀Δt + ${q}₀` : `${q} = ½aΔt² + v₀Δt + ${q}₀`)
+        : zero ? `${q} = ${par(Pp.v0, "m/s")}Δt + ${cst(Pp.x0, "m")}` : `${q} = ½${par(Pp.a, "m/s²")}Δt² + ${par(Pp.v0, "m/s")}Δt + ${cst(Pp.x0, "m")}`;
+      const ev = !A ? `v${sb} = aΔt + v₀` : `v${sb} = ${par(Pp.a, "m/s²")}Δt + ${cst(Pp.v0, "m/s")}`;
+      const ea = !A ? "aₓ = F/m" : (Pp.contact ? `aₓ = F/m = ${sig(Pp.F)} N / ${sig(S.m)} kg = ${sig(Pp.a)} m/s²` : "aₓ = 0 m/s² (no push, F = 0)");
+      $("eqP").innerHTML = `<div class="gen">${head}</div><div>${ex}</div>`;
+      $("eqV").innerHTML = `<div class="gen">${head}</div><div>${ev}</div>`;
+      $("eqA").innerHTML = `<div class="gen">${head}</div><div>${ea}</div>`;
+      const tt = `t = ${S.t.toFixed(2)} s<br>`;
+      $("valP").innerHTML = tt + `${q} = ${sig(s.x)} m`; $("valV").innerHTML = tt + `v${sb} = ${sig(s.v)} m/s`;
+      $("valA").innerHTML = tt + `a${sb} = ${sig(s.a)} m/s²`; }
     const s = at(S.t);
     $("rt").textContent = S.t.toFixed(2); $("rs").textContent = s.seg.n; $("rx").textContent = sig(s.x);
     $("rv").textContent = sig(s.v); $("ra").textContent = sig(s.a); $("rF").textContent = sig(s.F);
@@ -529,6 +555,29 @@ video { width: 100%; border-radius: 8px; background: #000; display: block; }
     S.t = Math.min(S.T, S.t + dt * S.speed); if (S.t >= S.T) S.playing = false;
     draw(); if (S.playing) requestAnimationFrame(loop);
   }
+  // drag (or click) on a graph to set the time; arrow keys step the time when a graph has focus
+  function makeDraggable(ids, toTime) {
+    ids.forEach(id => {
+      const cv = $(id); if (!cv) return; let dragging = false;
+      cv.tabIndex = 0;
+      const h = cv.closest(".graph").querySelector("h3");
+      cv.setAttribute("aria-label", (h ? h.textContent : "Graph") + ". Drag or use the arrow keys to change the time.");
+      const set = e => { S.playing = false; S.t = Math.max(0, Math.min(S.T, toTime(cv, e.clientX))); draw(); };
+      cv.addEventListener("pointerdown", e => { dragging = true; cv.setPointerCapture(e.pointerId); set(e); });
+      cv.addEventListener("pointermove", e => { if (dragging) set(e); });
+      const stop = () => { dragging = false; };
+      cv.addEventListener("pointerup", stop); cv.addEventListener("pointercancel", stop);
+      cv.addEventListener("keydown", e => {
+        const step = e.shiftKey ? 0.25 : 0.05;
+        if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+          e.preventDefault(); S.playing = false; S.t = Math.max(0, Math.min(S.T, S.t + (e.key === "ArrowRight" ? step : -step))); draw();
+        } else if (e.key === "Home" || e.key === "End") { e.preventDefault(); S.playing = false; S.t = e.key === "Home" ? 0 : S.T; draw(); }
+      });
+    });
+  }
+  const frac = (cv, cx, L, R) => { const r = cv.getBoundingClientRect(); return (cx - r.left - L) / (r.width - L - R); };
+  makeDraggable(["gX", "gV", "gA"], (cv, cx) => { const Tmax = S.overlay ? Math.max(S.T, DATA[DATA.length - 1][0]) : S.T;
+    return frac(cv, cx, 58, cv.id === "gA" ? 56 : 14) * Tmax; });
   new ResizeObserver(() => draw()).observe(document.querySelector(".stagecol"));
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { cards(); draw(); });
   changed();

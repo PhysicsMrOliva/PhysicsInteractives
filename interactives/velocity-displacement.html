@@ -88,6 +88,17 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 .live b { color: var(--vel); }
 .sqrt { white-space: nowrap; }
 .sqrt .rad { border-top: 1.6px solid currentColor; padding: 0 2px 0 1px; margin-left: 1px; }
+
+/* value box + draggable time line (shared across the labs) */
+.graph .head { display: block; }
+.graph .eqrow { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px 8px; margin-top: 4px; }
+.graph .eqrow .eq { flex: 1; min-width: 0; margin-top: 0; text-align: left; font-size: 0.9rem; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.graph .eqrow .eq .gen { opacity: 0.75; }
+.graph .val { flex: none; order: 2; margin-left: auto; text-align: right; border: 1.5px solid currentColor; border-radius: 7px;
+  padding: 1px 6px; font-weight: 700; line-height: 1.3; font-size: 0.8rem; font-variant-numeric: tabular-nums; min-width: 6.4em; }
+.graph.p .val { color: var(--pos); } .graph.v .val { color: var(--vel); } .graph.a .val { color: var(--acc); }
+.graph canvas { cursor: ew-resize; touch-action: pan-y; }
+.graph canvas:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
 </style>
 </head>
 <body>
@@ -147,7 +158,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
     </div>
 
     <div class="panel graph">
-      <h3 id="gtitle">Velocity vs. displacement</h3>
+      <div class="eqrow" style="margin:0 0 8px"><h3 id="gtitle" style="flex:1;margin:0">Velocity vs. displacement</h3><div class="val" id="valG" style="color:var(--vel)"></div></div>
       <div class="eqs" id="eqs"></div>
       <canvas id="graph" aria-label="Graph of velocity against displacement"></canvas>
       <div class="live" id="live"></div>
@@ -322,6 +333,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
     ctx.strokeStyle = vel; ctx.lineWidth = 3.5; if (S.t > 0) path(dx);
     ctx.setLineDash([4, 4]); ctx.strokeStyle = ink; ctx.globalAlpha = 0.5; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(Xp(dx), Tp); ctx.lineTo(Xp(dx), Tp + ph); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    { const hx = Xp(dx); ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(hx - 7, Tp - 10); ctx.lineTo(hx + 7, Tp - 10); ctx.lineTo(hx, Tp - 1); ctx.closePath(); ctx.fill(); }
     ctx.fillStyle = vel; ctx.beginPath(); ctx.arc(Xp(dx), Yp(fy(dx)), 6, 0, 7); ctx.fill();
     if (dx > S.D * 0.7) {
       ctx.fillStyle = vel; ctx.textAlign = "right"; ctx.font = "13px 'Atkinson Hyperlegible', system-ui, sans-serif";
@@ -332,6 +344,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 
   function draw() {
     drawMotion(); drawGraph(); liveText();
+    $("valG").innerHTML = `Δx = ${f2(X(S.t))} m<br>` + (S.square ? `v² = ${f2(V(S.t) ** 2)} m²/s²` : `v = ${f2(V(S.t))} m/s`);
     $("rt").textContent = f2(S.t); $("rx").textContent = f2(X(S.t)); $("rv").textContent = f2(V(S.t)); $("ra").textContent = f2(S.a);
     $("scrub").value = S.T ? S.t / S.T : 0; updPlay();
   }
@@ -342,6 +355,29 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
     S.t = Math.min(S.T, S.t + dt * S.speed); if (S.t >= S.T) S.playing = false;
     draw(); if (S.playing) requestAnimationFrame(loop);
   }
+  // drag (or click) on a graph to set the time; arrow keys step the time when a graph has focus
+  function makeDraggable(ids, toTime) {
+    ids.forEach(id => {
+      const cv = $(id); if (!cv) return; let dragging = false;
+      cv.tabIndex = 0;
+      const h = cv.closest(".graph").querySelector("h3");
+      cv.setAttribute("aria-label", (h ? h.textContent : "Graph") + ". Drag or use the arrow keys to change the time.");
+      const set = e => { S.playing = false; S.t = Math.max(0, Math.min(S.T, toTime(cv, e.clientX))); draw(); };
+      cv.addEventListener("pointerdown", e => { dragging = true; cv.setPointerCapture(e.pointerId); set(e); });
+      cv.addEventListener("pointermove", e => { if (dragging) set(e); });
+      const stop = () => { dragging = false; };
+      cv.addEventListener("pointerup", stop); cv.addEventListener("pointercancel", stop);
+      cv.addEventListener("keydown", e => {
+        const step = e.shiftKey ? 0.25 : 0.05;
+        if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+          e.preventDefault(); S.playing = false; S.t = Math.max(0, Math.min(S.T, S.t + (e.key === "ArrowRight" ? step : -step))); draw();
+        } else if (e.key === "Home" || e.key === "End") { e.preventDefault(); S.playing = false; S.t = e.key === "Home" ? 0 : S.T; draw(); }
+      });
+    });
+  }
+  const frac = (cv, cx, L, R) => { const r = cv.getBoundingClientRect(); return (cx - r.left - L) / (r.width - L - R); };
+  makeDraggable(["graph"], (cv, cx) => { const dx = Math.max(0, Math.min(S.D, frac(cv, cx, 62, 16) * S.D * 1.03));
+    return (-S.v0 + Math.sqrt(S.v0 * S.v0 + 2 * S.a * dx)) / S.a; });
   new ResizeObserver(() => draw()).observe(document.querySelector(".stage"));
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
   changed();

@@ -102,7 +102,18 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 .graph { padding: 10px 12px 8px; }
 .graph h3 { margin: 0; font-size: 0.98rem; }
 .graph.p h3 { color: var(--pos); } .graph.v h3 { color: var(--vel); } .graph.a h3 { color: var(--acc); }
-.graph canvas { height: 150px; margin-top: 4px; }
+.graph canvas { height: 160px; margin-top: 4px; cursor: ew-resize; touch-action: pan-y; }
+.graph canvas:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.graph .eq { font-size: 0.9rem; line-height: 1.4; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.graph .eqrow { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px 8px; margin-top: 4px; }
+.graph .eqrow .eq { flex: 1; min-width: 0; margin-top: 0; }
+.graph .eqrow .val { order: 2; margin-left: auto; text-align: right; }   /* value box on the right, after the equations */
+.graph .val { flex: none; border: 1.5px solid currentColor; border-radius: 7px; padding: 1px 6px; font-weight: 700; line-height: 1.3;
+  font-size: 0.8rem; font-variant-numeric: tabular-nums; min-width: 6.4em; }
+.graph.p .val { color: var(--pos); } .graph.v .val { color: var(--vel); } .graph.a .val { color: var(--acc); }
+.graph .eq .gen { opacity: 0.75; }
+.graph.p .eq { color: var(--pos); } .graph.v .eq { color: var(--vel); } .graph.a .eq { color: var(--acc); }
+.keynote { font-size: 0.9rem; color: var(--muted); margin: -6px 0 0; }
 .key { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.9rem; color: var(--muted); }
 .key span { display: inline-flex; align-items: center; gap: 6px; }
 .key .sw { width: 22px; height: 12px; background: var(--shade); border: 1px solid var(--line); }
@@ -192,18 +203,19 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
       <span><i class="sw"></i>not part of this problem</span>
       <span><i class="gh"></i>rest of the full parabola</span>
     </div>
+    <p class="keynote">In the graph equations, Δt is the time since this problem’s launch, and x₀ and y₀ are where it launches on the full parabola. The box above each graph gives that graph’s value at the current time, marked by the dashed line. Drag the dashed line on any graph, or click anywhere on a graph, to change the time.</p>
     <div class="cols">
       <div class="col">
         <h2>Horizontal <span>(the same for every problem)</span></h2>
-        <div class="panel graph p"><h3>Horizontal position x vs. t</h3><canvas id="gX"></canvas></div>
-        <div class="panel graph v"><h3>Velocity vₓ vs. t</h3><canvas id="gVX"></canvas></div>
-        <div class="panel graph a"><h3>Acceleration aₓ vs. t</h3><canvas id="gAX"></canvas></div>
+        <div class="panel graph p"><h3>Horizontal position x vs. t</h3><div class="eqrow"><div class="val" id="valX"></div><div class="eq" id="eqX"></div></div><canvas id="gX"></canvas></div>
+        <div class="panel graph v"><h3>Velocity vₓ vs. t</h3><div class="eqrow"><div class="val" id="valVX"></div><div class="eq" id="eqVX"></div></div><canvas id="gVX"></canvas></div>
+        <div class="panel graph a"><h3>Acceleration aₓ vs. t</h3><div class="eqrow"><div class="val" id="valAX"></div><div class="eq" id="eqAX"></div></div><canvas id="gAX"></canvas></div>
       </div>
       <div class="col">
         <h2>Vertical <span>(some portion of the full curve)</span></h2>
-        <div class="panel graph p"><h3>Vertical position y vs. t</h3><canvas id="gY"></canvas></div>
-        <div class="panel graph v"><h3>Velocity vᵧ vs. t</h3><canvas id="gVY"></canvas></div>
-        <div class="panel graph a"><h3>Acceleration aᵧ vs. t</h3><canvas id="gAY"></canvas></div>
+        <div class="panel graph p"><h3>Vertical position y vs. t</h3><div class="eqrow"><div class="val" id="valY"></div><div class="eq" id="eqY"></div></div><canvas id="gY"></canvas></div>
+        <div class="panel graph v"><h3>Velocity vᵧ vs. t</h3><div class="eqrow"><div class="val" id="valVY"></div><div class="eq" id="eqVY"></div></div><canvas id="gVY"></canvas></div>
+        <div class="panel graph a"><h3>Acceleration aᵧ vs. t</h3><div class="eqrow"><div class="val" id="valAY"></div><div class="eq" id="eqAY"></div></div><canvas id="gAY"></canvas></div>
       </div>
     </div>
   </section>
@@ -298,7 +310,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
   function landKind() { return P.yf < 1e-9 ? { name: "Land on ground", col: "--mLandGround" } : { name: "Land on a cliff", col: "--mLandCliff" }; }
 
   function text() {
-    $("warn").textContent = P.warn;
+    $("warn").textContent = P.warn; graphEqs();
     const L = launchKind(), E = landKind(), A = S.answers;
     $("ptitle").textContent = `${L.name}, ${E.name.toLowerCase()}`;
     $("tags").innerHTML = `<span class="tag"><i style="background:var(${L.col})"></i>${L.name}</span>` +
@@ -331,6 +343,19 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
       `Δy = ½(−9.81 m/s²)Δt² + (${sig(P.vy0)} m/s)Δt &nbsp;&nbsp; vᵧf = (−9.81 m/s²)Δt + ${P.vy0 < 0 ? "(" + sig(P.vy0) + " m/s)" : sig(P.vy0) + " m/s"}</div>` +
       `<div class="blk"><h3>Results</h3>Δt = ${hv(P.T, "s")} &nbsp;·&nbsp; Δx = ${hv(P.vx * P.T, "m")} &nbsp;·&nbsp; vᵧf = ${hv(vyf, "m/s")}` +
       `<br>landing speed = ${hv(vf, "m/s")} at ${A ? sig(angf) + "°" : '<span class="q">?</span>'} below the horizontal</div>`;
+  }
+
+  // ---------- equations above each graph ----------
+  function graphEqs() {
+    const par = (n, u) => `(${sig(n)} ${u})`, cst = (n, u) => (n < 0 ? `(${sig(n)} ${u})` : `${sig(n)} ${u}`);
+    const set = (id, gen, num) => { $(id).innerHTML = `<div class="gen">${gen}</div><div>${num}</div>`; };
+    const xL = xFull(P.tauL);
+    set("eqX", "x = ½aₓΔt² + v₀ₓΔt + x₀", `x = ½(0 m/s²)Δt² + ${par(P.vx, "m/s")}Δt + ${cst(xL, "m")}`);
+    set("eqVX", "vₓ = aₓΔt + v₀ₓ", `vₓ = (0 m/s²)Δt + ${cst(P.vx, "m/s")}`);
+    set("eqAX", "aₓ = constant", "aₓ = 0 m/s²");
+    set("eqY", "y = ½aᵧΔt² + v₀ᵧΔt + y₀", `y = ½(−9.81 m/s²)Δt² + ${par(P.vy0, "m/s")}Δt + ${cst(S.y0, "m")}`);
+    set("eqVY", "vᵧ = aᵧΔt + v₀ᵧ", `vᵧ = (−9.81 m/s²)Δt + ${cst(P.vy0, "m/s")}`);
+    set("eqAY", "aᵧ = constant", "aᵧ = −9.81 m/s²");
   }
 
   // ---------- drawing helpers ----------
@@ -441,7 +466,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
   }
 
   // ---------- graphs (full-parabola time axis, shaded outside this problem) ----------
-  function drawGraph(id, fn, color, label, lo, hi, vertical) {
+  function drawGraph(id, fn, color, label, lo, hi, vertical, sym, unit) {
     const { ctx, w, h } = fit($(id));
     const muted = css("--muted"), line = css("--line"), ink = css("--ink"), shade = css("--shade"), ghost = css("--ghost");
     const L = 54, R = 12, Tp = 12, B = 24, pw = w - L - R, ph = h - Tp - B, T = P.tauG;
@@ -472,12 +497,17 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
     if (S.t > 0) { ctx.strokeStyle = color; ctx.lineWidth = 3.5; seg(P.tauL, tauNow); }
     ctx.setLineDash([4, 4]); ctx.strokeStyle = ink; ctx.globalAlpha = 0.5; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(Xp(tauNow), Tp); ctx.lineTo(Xp(tauNow), Tp + ph); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    // drag handle at the top of the time line
+    const hx = Xp(tauNow); ctx.fillStyle = ink;
+    ctx.beginPath(); ctx.moveTo(hx - 7, Tp - 10); ctx.lineTo(hx + 7, Tp - 10); ctx.lineTo(hx, Tp - 1); ctx.closePath(); ctx.fill();
     // markers
     const Lc = css(launchKind().col), Ec = css(landKind().col);
     marker(ctx, Xp(P.tauL), Yp(fn(P.tauL)), Lc, 5.5);
     marker(ctx, Xp(P.tauE), Yp(fn(P.tauE)), Ec, 5.5);
     if (vertical && Math.abs(P.vy0) > 1e-6 && P.tauTop > P.tauL && P.tauTop < P.tauE) marker(ctx, Xp(P.tauTop), Yp(fn(P.tauTop)), css("--mTop"), 5);
     ctx.fillStyle = color; ctx.beginPath(); ctx.arc(Xp(tauNow), Yp(fn(tauNow)), 4.5, 0, 7); ctx.fill();
+    // value at the current time, shown in the box above the graph
+    $(id.replace("g", "val")).innerHTML = `Δt = ${S.t.toFixed(2)} s<br>${sym} = ${sig(fn(tauNow))} ${unit}`;
   }
 
   function draw() {
@@ -485,12 +515,12 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
     const P_ = css("--pos"), V = css("--vel"), A = css("--acc");
     const xm = xFull(P.tauG), ym = P.ytopFull;
     const vm = Math.max(Math.abs(P.vx), Math.abs(vyFull(0)), 1) * 1.15;
-    drawGraph("gX", xFull, P_, "x (m)", -0.08 * xm, xm * 1.08, false);
-    drawGraph("gY", yFull, P_, "y (m)", -0.1 * ym, ym * 1.15, true);
-    drawGraph("gVX", () => P.vx, V, "vₓ (m/s)", -vm, vm, false);
-    drawGraph("gVY", vyFull, V, "vᵧ (m/s)", -vm, vm, true);
-    drawGraph("gAX", () => 0, A, "aₓ (m/s²)", -12.5, 4, false);
-    drawGraph("gAY", () => -G, A, "aᵧ (m/s²)", -12.5, 4, true);
+    drawGraph("gX", xFull, P_, "x (m)", -0.08 * xm, xm * 1.08, false, "x", "m");
+    drawGraph("gY", yFull, P_, "y (m)", -0.1 * ym, ym * 1.15, true, "y", "m");
+    drawGraph("gVX", () => P.vx, V, "vₓ (m/s)", -vm, vm, false, "vₓ", "m/s");
+    drawGraph("gVY", vyFull, V, "vᵧ (m/s)", -vm, vm, true, "vᵧ", "m/s");
+    drawGraph("gAX", () => 0, A, "aₓ (m/s²)", -12.5, 4, false, "aₓ", "m/s²");
+    drawGraph("gAY", () => -G, A, "aᵧ (m/s²)", -12.5, 4, true, "aᵧ", "m/s²");
     $("rt").textContent = S.t.toFixed(2); $("rx").textContent = sig(P.vx * S.t); $("ry").textContent = sig(yAt(S.t));
     $("rvx").textContent = sig(P.vx); $("rvy").textContent = sig(vyAt(S.t));
     $("scrub").value = P.T ? S.t / P.T : 0; updPlay();
@@ -499,6 +529,28 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
   function loop(now) { if (!S.playing) return; const dt = Math.min(0.05, (now - last) / 1000); last = now;
     S.t = Math.min(P.T, S.t + dt * S.speed); if (S.t >= P.T) S.playing = false; draw(); if (S.playing) requestAnimationFrame(loop); }
   new ResizeObserver(() => draw()).observe(document.querySelector(".stage"));
+  // drag (or click) on any graph to set the time; arrow keys work when a graph has focus
+  ["gX", "gVX", "gAX", "gY", "gVY", "gAY"].forEach(id => {
+    const cv = $(id); let dragging = false;
+    cv.tabIndex = 0;
+    cv.setAttribute("aria-label", cv.closest(".graph").querySelector("h3").textContent + ". Drag or use the arrow keys to change the time.");
+    const setFrom = e => {
+      const r = cv.getBoundingClientRect(), L = 54, pw = r.width - 54 - 12;
+      const tau = (e.clientX - r.left - L) / pw * P.tauG;
+      S.playing = false; S.t = Math.max(0, Math.min(P.T, tau - P.tauL)); draw();
+    };
+    cv.addEventListener("pointerdown", e => { dragging = true; cv.setPointerCapture(e.pointerId); setFrom(e); });
+    cv.addEventListener("pointermove", e => { if (dragging) setFrom(e); });
+    const stop = () => { dragging = false; };
+    cv.addEventListener("pointerup", stop); cv.addEventListener("pointercancel", stop);
+    cv.addEventListener("keydown", e => {
+      const step = e.shiftKey ? 0.25 : 0.05;
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        e.preventDefault(); S.playing = false;
+        S.t = Math.max(0, Math.min(P.T, S.t + (e.key === "ArrowRight" ? step : -step))); draw();
+      } else if (e.key === "Home" || e.key === "End") { e.preventDefault(); S.playing = false; S.t = e.key === "Home" ? 0 : P.T; draw(); }
+    });
+  });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
   Object.assign(S, EX.cg); $("examples").value = "cg";
   changed(); $("examples").value = "cg";
