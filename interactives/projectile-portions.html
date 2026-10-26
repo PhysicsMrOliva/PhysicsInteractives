@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Projectile problems: one parabola</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  --bg: #eaf1ee; --grid: #d3e0da; --panel: #ffffff; --ink: #15232b; --muted: #56666e; --line: #c4d3cc;
+  --pos: #23913a; --vel: #d22b2b; --acc: #1f6fb4;
+  --mGround: #22c55e; --mCliff: #3b82f6; --mTop: #d946ef; --mLandCliff: #f59e0b; --mLandGround: #facc15;
+  --shade: rgba(120, 130, 136, 0.18); --ghost: #9aa4aa;
+  --fill: #e8dcc8; --ground: #8a4b1c; --cliff: #cdbfa8; --ball: #5b6166;
+  --btn: #15232b; --btn-ink: #ffffff; --focus: #1f6fb4;
+  font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42;
+    --pos: #4cc76a; --vel: #ff6b6b; --acc: #5aa9ff;
+    --shade: rgba(160, 170, 176, 0.16); --ghost: #6b7780;
+    --fill: #2f2a22; --ground: #c98a55; --cliff: #4a4236; --ball: #9aa3a9;
+    --btn: #e5eef0; --btn-ink: #0f171b; --focus: #5aa9ff;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42;
+  --pos: #4cc76a; --vel: #ff6b6b; --acc: #5aa9ff;
+  --shade: rgba(160, 170, 176, 0.16); --ghost: #6b7780;
+  --fill: #2f2a22; --ground: #c98a55; --cliff: #4a4236; --ball: #9aa3a9;
+  --btn: #e5eef0; --btn-ink: #0f171b; --focus: #5aa9ff;
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+*, *::before, *::after { box-sizing: inherit; }
+body {
+  margin: 0; color: var(--ink); background-color: var(--bg); line-height: 1.45;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+header { max-width: 1320px; margin: 0 auto; padding: 28px 20px 8px; }
+h1 { font-size: clamp(1.6rem, 3.4vw, 2.4rem); margin: 0 0 4px; letter-spacing: -0.01em; }
+header .back { display: inline-block; margin-bottom: 10px; color: var(--ink); font-weight: 700; }
+header p { margin: 0; color: var(--muted); max-width: 80ch; }
+.layout { max-width: 1320px; margin: 0 auto; padding: 16px 20px 40px; display: grid;
+  grid-template-columns: 310px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.controls { padding: 16px; }
+.controls h2 { font-size: 1rem; margin: 0 0 8px; }
+label.block { font-weight: 700; display: block; margin: 0 0 4px; font-size: 0.95rem; }
+select { font: inherit; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--ink); margin-bottom: 14px; }
+.field { margin: 0 0 12px; }
+.field .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.field label { font-weight: 700; font-size: 0.95rem; }
+.unit { color: var(--muted); font-size: 0.9rem; }
+.field input[type=number] { width: 70px; font: inherit; padding: 2px 6px; border: 1px solid var(--line);
+  border-radius: 6px; background: var(--panel); color: var(--ink); text-align: right; }
+.field input[type=range] { width: 100%; margin: 5px 0 0; accent-color: var(--ink); }
+.hint { font-size: 0.88rem; color: var(--muted); margin: -4px 0 10px; }
+.warn { color: #b42318; font-weight: 700; font-size: 0.92rem; margin: 0 0 10px; }
+.warn:empty { display: none; }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: 0.95rem; margin: 0 0 8px; }
+.check input { margin-top: 4px; }
+.stage { display: grid; gap: 14px; min-width: 0; }
+.motion { padding: 12px; }
+canvas { display: block; width: 100%; }
+#motion { height: 380px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+button { font: inherit; font-weight: 700; border: 2px solid var(--btn); background: var(--btn); color: var(--btn-ink);
+  border-radius: 8px; padding: 6px 14px; cursor: pointer; min-width: 84px; }
+button.ghost { background: transparent; color: var(--ink); }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.scrub { flex: 1 1 200px; display: flex; align-items: center; gap: 8px; }
+.scrub input { flex: 1; accent-color: var(--ink); }
+.readouts { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 8px; font-variant-numeric: tabular-nums; }
+.readouts .p { color: var(--pos); } .readouts .v { color: var(--vel); }
+.summary { padding: 14px 16px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 16px; }
+@media (max-width: 760px) { .summary { grid-template-columns: 1fr; } }
+.summary h2 { margin: 0 0 6px; font-size: 1.2rem; }
+.summary .kind { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 8px; }
+.tag { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; padding: 2px 10px 2px 6px; border-radius: 99px; border: 1px solid var(--line); }
+.tag i { width: 14px; height: 14px; border-radius: 50%; display: inline-block; border: 1px solid rgba(0,0,0,0.35); }
+.cond { font-size: 1.05rem; line-height: 1.7; font-variant-numeric: tabular-nums; }
+.cond .why { color: var(--muted); font-style: italic; }
+.eqs { font-variant-numeric: tabular-nums; line-height: 1.65; }
+.eqs h3 { margin: 0 0 2px; font-size: 1rem; }
+.eqs .gen { color: var(--muted); }
+.eqs .blk { margin-bottom: 8px; }
+.q { color: #b42318; font-weight: 700; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 1100px) { .cols { grid-template-columns: 1fr; } }
+.col { display: grid; gap: 12px; align-content: start; }
+.col h2 { margin: 2px 0 0; font-size: 1.15rem; }
+.col h2 span { color: var(--muted); font-weight: 400; font-size: 0.95rem; }
+.graph { padding: 10px 12px 8px; }
+.graph h3 { margin: 0; font-size: 0.98rem; }
+.graph.p h3 { color: var(--pos); } .graph.v h3 { color: var(--vel); } .graph.a h3 { color: var(--acc); }
+.graph canvas { height: 150px; margin-top: 4px; }
+.key { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.9rem; color: var(--muted); }
+.key span { display: inline-flex; align-items: center; gap: 6px; }
+.key .sw { width: 22px; height: 12px; background: var(--shade); border: 1px solid var(--line); }
+.key .gh { width: 22px; border-top: 2px dashed var(--ghost); }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../interactives.html">Back to Interactives</a>
+  <h1>Projectile problems: one parabola</h1>
+  <p>Every projectile problem is a piece of the same full parabola, the one that launches and lands at ground level. The launch and landing heights only change which piece you keep. The shaded parts are on the full parabola but aren’t part of this problem.</p>
+</header>
+
+<main class="layout">
+  <aside class="panel controls" aria-label="Settings">
+    <label class="block" for="examples">Load a problem type</label>
+    <select id="examples">
+      <option value="">Choose…</option>
+      <optgroup label="Pieces of one parabola: 20 m/s at 60° from the ground">
+        <option value="gg">Launch from ground, land on ground</option>
+        <option value="gc">Launch from ground, land on a cliff</option>
+        <option value="cg">Launch from a cliff, land on ground</option>
+        <option value="tg">Horizontal launch from the top, land on ground</option>
+        <option value="cc">Launch from a cliff, land on a cliff</option>
+      </optgroup>
+    </select>
+
+    <h2>This problem’s launch</h2>
+    <div class="field">
+      <div class="top"><label for="v0r" id="v0lab" style="color:var(--vel)">Launch speed v₀</label>
+        <span><input type="number" id="v0n" aria-labelledby="v0lab"> <span class="unit">m/s</span></span></div>
+      <input type="range" id="v0r" aria-labelledby="v0lab" min="1" max="30" step="0.1" style="accent-color:var(--vel)">
+    </div>
+    <div class="field">
+      <div class="top"><label for="thr" id="thlab">Launch angle θ</label>
+        <span><input type="number" id="thn" aria-labelledby="thlab"> <span class="unit">°</span></span></div>
+      <input type="range" id="thr" aria-labelledby="thlab" min="-45" max="85" step="0.5">
+    </div>
+    <p class="hint">0° from above the ground is a horizontal launch from the top.</p>
+    <div class="field">
+      <div class="top"><label for="y0r" id="y0lab" style="color:var(--pos)">Launch height y₀</label>
+        <span><input type="number" id="y0n" aria-labelledby="y0lab"> <span class="unit">m</span></span></div>
+      <input type="range" id="y0r" aria-labelledby="y0lab" min="0" max="40" step="0.1" style="accent-color:var(--pos)">
+    </div>
+    <div class="field">
+      <div class="top"><label for="yfr" id="yflab" style="color:var(--pos)">Landing height y<sub>f</sub></label>
+        <span><input type="number" id="yfn" aria-labelledby="yflab"> <span class="unit">m</span></span></div>
+      <input type="range" id="yfr" aria-labelledby="yflab" min="0" max="40" step="0.1" style="accent-color:var(--pos)">
+    </div>
+    <p class="hint">A height of 0 m is the ground. Anything higher is a cliff or building.</p>
+    <p class="warn" id="warn"></p>
+
+    <label class="check"><input type="checkbox" id="answers" checked> Show solved values (turn off so students can solve first)</label>
+    <label class="check"><input type="checkbox" id="ghostDots" checked> Show dots on the shaded parts of the parabola</label>
+  </aside>
+
+  <section class="stage">
+    <div class="panel motion">
+      <canvas id="motion" aria-label="The full parabola with this problem’s piece highlighted"></canvas>
+      <div class="toolbar">
+        <button id="play">Play</button>
+        <button id="restart" class="ghost">Restart</button>
+        <select id="speed" aria-label="Playback speed" style="width:auto;margin:0">
+          <option value="1">1× speed</option><option value="0.5">½× speed</option><option value="0.25">¼× speed</option>
+        </select>
+        <div class="scrub"><label for="scrub" class="unit">time</label><input type="range" id="scrub" min="0" max="1" step="0.001" value="0"></div>
+      </div>
+      <div class="readouts">
+        <span>t = <b id="rt">0.00</b> s <span class="unit">(since launch)</span></span>
+        <span class="p">Δx = <b id="rx">0</b> m</span>
+        <span class="p">y = <b id="ry">0</b> m</span>
+        <span class="v">vₓ = <b id="rvx">0</b> m/s</span>
+        <span class="v">vᵧ = <b id="rvy">0</b> m/s</span>
+      </div>
+    </div>
+
+    <div class="panel summary">
+      <div>
+        <h2 id="ptitle">This problem</h2>
+        <div class="kind" id="tags"></div>
+        <div class="cond" id="cond"></div>
+      </div>
+      <div class="eqs" id="eqs"></div>
+    </div>
+
+    <div class="key" aria-hidden="true">
+      <span><i class="sw"></i>not part of this problem</span>
+      <span><i class="gh"></i>rest of the full parabola</span>
+    </div>
+    <div class="cols">
+      <div class="col">
+        <h2>Horizontal <span>(the same for every problem)</span></h2>
+        <div class="panel graph p"><h3>Horizontal position x vs. t</h3><canvas id="gX"></canvas></div>
+        <div class="panel graph v"><h3>Velocity vₓ vs. t</h3><canvas id="gVX"></canvas></div>
+        <div class="panel graph a"><h3>Acceleration aₓ vs. t</h3><canvas id="gAX"></canvas></div>
+      </div>
+      <div class="col">
+        <h2>Vertical <span>(some portion of the full curve)</span></h2>
+        <div class="panel graph p"><h3>Vertical position y vs. t</h3><canvas id="gY"></canvas></div>
+        <div class="panel graph v"><h3>Velocity vᵧ vs. t</h3><canvas id="gVY"></canvas></div>
+        <div class="panel graph a"><h3>Acceleration aᵧ vs. t</h3><canvas id="gAY"></canvas></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const G = 9.81;
+  const $ = id => document.getElementById(id);
+  // presets: all pieces of the same full parabola (20 m/s at 60° from the ground)
+  const FULL = { v: 20, th: 60 };
+  const fvx = FULL.v * Math.cos(FULL.th * Math.PI / 180), fvy = FULL.v * Math.sin(FULL.th * Math.PI / 180);
+  const launchAt = (h, rising) => { // launch conditions at height h on the full parabola
+    const vy = (rising ? 1 : -1) * Math.sqrt(Math.max(0, fvy * fvy - 2 * G * h));
+    return { v0: Math.hypot(fvx, vy), th: Math.atan2(vy, fvx) * 180 / Math.PI, y0: h };
+  };
+  const ytopFull = fvy * fvy / (2 * G);
+  const EX = {
+    gg: { ...launchAt(0, true), yf: 0 },
+    gc: { ...launchAt(0, true), yf: 8 },
+    cg: { ...launchAt(8, true), yf: 0 },
+    tg: { v0: fvx, th: 0, y0: ytopFull, yf: 0 },
+    cc: { ...launchAt(6, true), yf: 10 }
+  };
+  const r1 = n => Math.round(n * 10) / 10;
+  const S = { v0: 20, th: 60, y0: 0, yf: 0, t: 0, playing: false, speed: 1, answers: true, ghostDots: true };
+
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const minus = s => s.replace(/-/g, "−");
+  const sig = n => { if (!isFinite(n)) return "—"; if (Math.abs(n) < 5e-4) return "0";
+    let s = Math.abs(n) >= 1000 ? Math.round(n).toString() : n.toPrecision(3); if (s.includes("e")) s = String(Number(n.toPrecision(3))); return minus(s); };
+
+  // ---------- physics ----------
+  let P = {};
+  function compute() {
+    const th = S.th * Math.PI / 180, vx = S.v0 * Math.cos(th), vy0 = S.v0 * Math.sin(th);
+    const ytop = S.y0 + (vy0 > 0 ? vy0 * vy0 / (2 * G) : 0);
+    const disc0 = vy0 * vy0 + 2 * G * S.y0;
+    const ta = (vy0 - Math.sqrt(disc0)) / G;          // full parabola leaves the ground (≤ 0, before launch)
+    const tg = (vy0 + Math.sqrt(disc0)) / G;          // full parabola returns to the ground
+    let warn = "", yf = S.yf;
+    const ymaxReach = vy0 > 0 ? ytop : S.y0;
+    if (yf > ymaxReach + 1e-9) { warn = `It never gets as high as ${sig(yf)} m, so it lands back on the ground instead.`; yf = 0; }
+    let tE = (vy0 + Math.sqrt(Math.max(0, vy0 * vy0 + 2 * G * (S.y0 - yf)))) / G;
+    if (tE < 1e-6) { warn = "It starts at that height, so pick a lower landing height."; yf = 0; tE = tg; }
+    const tTop = vy0 / G;                             // may be before launch (negative) if thrown downward
+    P = { vx, vy0, ytop: S.y0 + Math.max(vy0, 0) * 0 + (vy0 * vy0) / (2 * G) * (vy0 > 0 ? 1 : 0), ytopFull: S.y0 + vy0 * vy0 / (2 * G),
+          ta, tg, tE, tTop, yf, warn,
+          // full-parabola frame: tau = t - ta, x measured from where the full parabola leaves the ground
+          tauL: -ta, tauE: tE - ta, tauG: tg - ta, tauTop: tTop - ta };
+    P.T = tE;
+  }
+  const yAt = t => S.y0 + P.vy0 * t - 0.5 * G * t * t;     // t = time since this problem's launch
+  const vyAt = t => P.vy0 - G * t;
+  const xFull = tau => P.vx * tau;
+  const yFull = tau => yAt(tau - P.tauL);
+  const vyFull = tau => vyAt(tau - P.tauL);
+
+  // ---------- controls ----------
+  const pairs = { v0: ["v0r", "v0n"], th: ["thr", "thn"], y0: ["y0r", "y0n"], yf: ["yfr", "yfn"] };
+  function minAngle() { return S.y0 > 0 ? -45 : 1; }
+  function sync() { for (const k in pairs) for (const id of pairs[k]) if (document.activeElement !== $(id)) $(id).value = r1(S[k]);
+    for (const id of pairs.th) $(id).min = minAngle(); }
+  function changed() { S.th = Math.max(minAngle(), Math.min(85, S.th)); compute(); S.t = 0; S.playing = false; sync(); text(); draw(); }
+  for (const k in pairs) {
+    const [r, n] = pairs[k];
+    const h = e => { const v = parseFloat(e.target.value); if (isNaN(v)) return;
+      const el = $(r); S[k] = Math.min(+el.max, Math.max(+el.min, v)); $("examples").value = ""; changed(); };
+    $(r).addEventListener("input", h); $(n).addEventListener("change", h);
+  }
+  $("examples").addEventListener("change", e => { const ex = EX[e.target.value]; if (!ex) return;
+    Object.assign(S, { v0: ex.v0, th: ex.th, y0: ex.y0, yf: ex.yf }); changed(); $("examples").value = e.target.value; });
+  $("answers").addEventListener("change", e => { S.answers = e.target.checked; text(); });
+  $("ghostDots").addEventListener("change", e => { S.ghostDots = e.target.checked; draw(); });
+  $("speed").addEventListener("change", e => S.speed = parseFloat(e.target.value));
+  $("play").addEventListener("click", () => { if (S.t >= P.T - 1e-9) S.t = 0; S.playing = !S.playing; updPlay();
+    if (S.playing) { last = performance.now(); requestAnimationFrame(loop); } });
+  $("restart").addEventListener("click", () => { S.t = 0; draw(); });
+  $("scrub").addEventListener("input", e => { S.playing = false; S.t = parseFloat(e.target.value) * P.T; draw(); });
+  document.addEventListener("keydown", e => {
+    if (e.code === "Space" && !/INPUT|SELECT|BUTTON/.test(document.activeElement.tagName)) { e.preventDefault(); $("play").click(); }
+  });
+  function updPlay() { $("play").textContent = S.playing ? "Pause" : (S.t >= P.T - 1e-9 && S.t > 0 ? "Replay" : "Play"); }
+
+  // ---------- classification (matches the slides) ----------
+  function launchKind() {
+    if (S.y0 < 1e-9) return { name: "Launch from ground", col: "--mGround" };
+    if (Math.abs(P.vy0) < 1e-6) return { name: "Horizontal launch from the top", col: "--mTop" };
+    if (P.vy0 > 0) return { name: "Launch from a cliff", col: "--mCliff" };
+    return { name: "Launch downward from a cliff", col: "--mCliff" };
+  }
+  function landKind() { return P.yf < 1e-9 ? { name: "Land on ground", col: "--mLandGround" } : { name: "Land on a cliff", col: "--mLandCliff" }; }
+
+  function text() {
+    $("warn").textContent = P.warn;
+    const L = launchKind(), E = landKind(), A = S.answers;
+    $("ptitle").textContent = `${L.name}, ${E.name.toLowerCase()}`;
+    $("tags").innerHTML = `<span class="tag"><i style="background:var(${L.col})"></i>${L.name}</span>` +
+      `<span class="tag"><i style="background:var(${E.col})"></i>${E.name}</span>`;
+    const dy = P.yf - S.y0;
+    let why;
+    if (S.y0 < 1e-9 && P.yf < 1e-9) why = "rising and falling";
+    else if (Math.abs(P.vy0) < 1e-6 && S.y0 > 0) why = "falling only";
+    else if (dy > 1e-9) why = "lands above its starting height";
+    else if (dy < -1e-9) why = "lands below its starting height";
+    else why = "lands at its starting height";
+    const top = P.vy0 > 1e-6 ? S.y0 + P.vy0 * P.vy0 / (2 * G) : S.y0;
+    const ord = (() => {
+      if (Math.abs(P.vy0) < 1e-6 && S.y0 > 0) return "y<sub>top</sub> = y₀";
+      if (P.vy0 < 0) return "y₀ is past the top (thrown downward)";
+      const a = [["y<sub>top</sub>", top], ["y₀", S.y0], ["y<sub>f</sub>", P.yf]].sort((p, q) => q[1] - p[1]);
+      return a.map((p, i) => p[0] + (i < a.length - 1 ? (Math.abs(p[1] - a[i + 1][1]) < 1e-9 ? " = " : " > ") : "")).join("");
+    })();
+    const hv = (v, u) => A ? `${sig(v)} ${u}` : '<span class="q">?</span>';
+    $("cond").innerHTML =
+      `y₀ = ${sig(S.y0)} m<br>y<sub>f</sub> = ${sig(P.yf)} m<br>` +
+      `Δy = ${A ? sig(dy) + " m" : (Math.abs(dy) < 1e-9 ? "0 m" : (dy > 0 ? "> 0" : "< 0"))} <span class="why">(${why})</span><br>` +
+      `${ord}` + (P.vy0 > 1e-6 ? `, &nbsp;y<sub>top</sub> = ${hv(top, "m")}` : "");
+    const vyf = vyAt(P.T), vf = Math.hypot(P.vx, vyf), angf = Math.atan2(-vyf, P.vx) * 180 / Math.PI;
+    $("eqs").innerHTML =
+      `<div class="blk"><h3>Launch velocity for this problem</h3>v₀ₓ = v₀ cos θ = ${sig(P.vx)} m/s &nbsp;·&nbsp; v₀ᵧ = v₀ sin θ = ${sig(P.vy0)} m/s</div>` +
+      `<div class="blk"><h3>Horizontal</h3><div class="gen">Δx = ½aₓΔt² + v₀ₓΔt &nbsp;&nbsp; vₓf = aₓΔt + v₀ₓ</div>` +
+      `Δx = ½(0 m/s²)Δt² + (${sig(P.vx)} m/s)Δt &nbsp;&nbsp; vₓf = (0 m/s²)Δt + ${sig(P.vx)} m/s</div>` +
+      `<div class="blk"><h3>Vertical</h3><div class="gen">Δy = ½aᵧΔt² + v₀ᵧΔt &nbsp;&nbsp; vᵧf = aᵧΔt + v₀ᵧ</div>` +
+      `Δy = ½(−9.81 m/s²)Δt² + (${sig(P.vy0)} m/s)Δt &nbsp;&nbsp; vᵧf = (−9.81 m/s²)Δt + ${P.vy0 < 0 ? "(" + sig(P.vy0) + " m/s)" : sig(P.vy0) + " m/s"}</div>` +
+      `<div class="blk"><h3>Results</h3>Δt = ${hv(P.T, "s")} &nbsp;·&nbsp; Δx = ${hv(P.vx * P.T, "m")} &nbsp;·&nbsp; vᵧf = ${hv(vyf, "m/s")}` +
+      `<br>landing speed = ${hv(vf, "m/s")} at ${A ? sig(angf) + "°" : '<span class="q">?</span>'} below the horizontal</div>`;
+  }
+
+  // ---------- drawing helpers ----------
+  function fit(cv) {
+    const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(r.width * d)), h = Math.max(1, Math.round(r.height * d));
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const ctx = cv.getContext("2d"); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, r.width, r.height);
+    ctx.font = "12px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    return { ctx, w: r.width, h: r.height };
+  }
+  function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+    return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
+  function ticks(lo, hi, n) { if (hi - lo <= 0) return [lo]; const st = niceStep((hi - lo) / n), out = [];
+    for (let v = Math.ceil(lo / st - 1e-9) * st; v <= hi + 1e-9; v += st) out.push(Math.round(v / st) * st); return out; }
+  const tl = v => minus(String(Number((Math.abs(v) < 1e-9 ? 0 : v).toPrecision(6))));
+  function arrow(ctx, x1, y1, x2, y2, color, lw = 3, dash = null) {
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy); if (L < 2) return;
+    const ux = dx / L, uy = dy / L, hs = Math.min(12, L * 0.6);
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw; ctx.lineCap = "round";
+    if (dash) ctx.setLineDash(dash);
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2 - ux * hs * 0.8, y2 - uy * hs * 0.8); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - ux * hs - uy * hs * 0.5, y2 - uy * hs + ux * hs * 0.5);
+    ctx.lineTo(x2 - ux * hs + uy * hs * 0.5, y2 - uy * hs - ux * hs * 0.5); ctx.closePath(); ctx.fill();
+  }
+  function marker(ctx, x, y, col, r = 6) {
+    ctx.fillStyle = col; ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); ctx.stroke();
+  }
+  const dotStep = () => [0.05, 0.1, 0.2, 0.25, 0.5].find(s => P.tauG / s <= 30) || 0.5;
+
+  // ---------- motion panel ----------
+  function drawMotion() {
+    const { ctx, w, h } = fit($("motion"));
+    const C = { ink: css("--ink"), muted: css("--muted"), pos: css("--pos"), vel: css("--vel"), acc: css("--acc"),
+      ghost: css("--ghost"), fill: css("--fill"), ground: css("--ground"), cliff: css("--cliff"), ball: css("--ball"),
+      L: css(launchKind().col), E: css(landKind().col), top: css("--mTop") };
+    const xEnd = xFull(P.tauG), ytop = P.ytopFull;
+    const padL = 84, padR = 34, padT = 60, padB = 64;
+    const k = Math.min((w - padL - padR) / Math.max(xEnd, 1), (h - padT - padB) / Math.max(ytop, 1));
+    const ox = padL, oy = h - padB, X = x => ox + x * k, Y = y => oy - y * k;
+    // ground
+    ctx.fillStyle = C.fill; ctx.fillRect(0, oy, w, h - oy);
+    ctx.strokeStyle = C.ground; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(w, oy); ctx.stroke();
+    // cliffs under the launch and landing points
+    const xL = xFull(P.tauL), xE = xFull(P.tauE);
+    ctx.fillStyle = C.cliff; ctx.strokeStyle = C.muted; ctx.lineWidth = 1.2;
+    if (S.y0 > 1e-9) { const x1 = Math.max(0, X(xL) - 70); ctx.fillRect(x1, Y(S.y0), X(xL) - x1, oy - Y(S.y0)); ctx.strokeRect(x1, Y(S.y0), X(xL) - x1, oy - Y(S.y0)); }
+    if (P.yf > 1e-9) { const x2 = Math.min(w, X(xE) + 80); ctx.fillRect(X(xE), Y(P.yf), x2 - X(xE), oy - Y(P.yf)); ctx.strokeRect(X(xE), Y(P.yf), x2 - X(xE), oy - Y(P.yf)); }
+    // axes ticks
+    ctx.fillStyle = C.muted; ctx.strokeStyle = C.muted; ctx.lineWidth = 1; ctx.textAlign = "center";
+    for (const xv of ticks(0, (w - padL - 10) / k, 9)) { ctx.beginPath(); ctx.moveTo(X(xv), oy); ctx.lineTo(X(xv), oy + 5); ctx.stroke(); ctx.fillText(tl(xv), X(xv), oy + 34); }
+    ctx.textAlign = "right"; ctx.fillText("x (m)", w - 6, oy + 50);
+    for (const yv of ticks(0, ytop * 1.05, 5)) { ctx.beginPath(); ctx.moveTo(ox - 5, Y(yv)); ctx.lineTo(ox, Y(yv)); ctx.stroke(); ctx.fillText(tl(yv), ox - 40, Y(yv) + 4); }
+    ctx.save(); ctx.translate(14, oy - (oy - padT) / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.fillText("y (m)", 0, 0); ctx.restore();
+    ctx.globalAlpha = 0.35; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, padT - 30); ctx.stroke(); ctx.globalAlpha = 1;
+    // full parabola (ghost) and this problem's piece
+    const path = (a, b) => { ctx.beginPath(); for (let i = 0; i <= 160; i++) { const tau = a + (b - a) * i / 160;
+      const p = [X(xFull(tau)), Y(yFull(tau))]; i ? ctx.lineTo(...p) : ctx.moveTo(...p); } ctx.stroke(); };
+    ctx.strokeStyle = C.ghost; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); path(0, P.tauG); ctx.setLineDash([]);
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.globalAlpha = 0.85; path(P.tauL, P.tauE); ctx.globalAlpha = 1;
+    // dots: ghost (hollow) on the whole parabola, solid on this problem's piece up to now
+    const st = dotStep(), tauNow = P.tauL + S.t;
+    for (let tau = 0; tau <= P.tauG + 1e-9; tau += st) {
+      const inPiece = tau >= P.tauL - 1e-9 && tau <= P.tauE + 1e-9;
+      const px = X(xFull(tau)), py = Y(yFull(tau));
+      if (inPiece && tau <= tauNow + 1e-9) {
+        ctx.fillStyle = C.pos; ctx.globalAlpha = 0.75; ctx.beginPath(); ctx.arc(px, py, 4, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+        ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.arc(px, oy + 15, 3.5, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.arc(vyFull(tau) > 1e-9 ? ox - 26 : ox - 13, py, 3.5, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+      } else if (S.ghostDots && !inPiece) {
+        ctx.strokeStyle = C.ghost; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(px, py, 3.5, 0, 7); ctx.stroke();
+      }
+    }
+    ctx.fillStyle = C.pos; ctx.textAlign = "left"; ctx.font = "11px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    ctx.fillText("x shadow", 4, oy + 19); ctx.textAlign = "center"; ctx.fillText("↑ ↓", ox - 19, padT - 16);
+    // markers: launch, top, landing
+    ctx.font = "bold 12px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    const lab = (txt, x, y, col, dx = 10, dy = -10, align = "left") => { ctx.textAlign = align; ctx.fillStyle = col; ctx.fillText(txt, x + dx, y + dy); };
+    const topIn = P.tauTop >= P.tauL - 1e-9 && P.tauTop <= P.tauE + 1e-9;
+    if (P.tauTop > 0 && P.tauTop < P.tauG) {
+      const tx = X(xFull(P.tauTop)), ty = Y(P.ytopFull);
+      ctx.strokeStyle = C.muted; ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.moveTo(tx, ty - 12); ctx.lineTo(tx, oy); ctx.stroke(); ctx.setLineDash([]);
+      const launchAtTop = S.y0 > 1e-9 && Math.abs(P.vy0) < 1e-6;
+      if (!launchAtTop) lab("TOP", tx, ty, C.muted, 0, -16, "center");
+      if (topIn && Math.abs(P.vy0) > 1e-6) marker(ctx, tx, ty, C.top, 5);
+    }
+    marker(ctx, X(xL), Y(S.y0), C.L, 7);
+    marker(ctx, X(xE), Y(P.yf), C.E, 7);
+    lab(S.y0 > 1e-9 && Math.abs(P.vy0) < 1e-6 ? "launch at the TOP" : "launch", X(xL), Y(S.y0), C.ink, -10, -12, "right");
+    lab("land", X(xE), Y(P.yf), C.ink, 10, -12, "left");
+    // ball + vectors
+    const t = S.t, bx = X(xFull(tauNow)), by = Y(yAt(t)), vy = vyAt(t);
+    ctx.fillStyle = C.ball; ctx.strokeStyle = C.ink; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(bx, by, 8, 0, 7); ctx.fill(); ctx.stroke();
+    const vmax = Math.max(Math.abs(P.vx), Math.abs(P.vy0), Math.abs(vyAt(P.T)), 1), kv = 70 / vmax;
+    arrow(ctx, bx, by, bx + P.vx * kv, by, C.vel);
+    arrow(ctx, bx, by, bx, by - vy * kv, C.vel);
+    arrow(ctx, bx, by, bx + P.vx * kv, by - vy * kv, C.vel, 2, [5, 4]);
+    arrow(ctx, bx + 14, by + 10, bx + 14, by + 56, C.acc);
+    // legend
+    ctx.font = "bold 13px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.textAlign = "right";
+    arrow(ctx, w - 96, 18, w - 72, 18, C.vel, 2.5); ctx.fillStyle = C.vel; ctx.fillText("vₓ, vᵧ", w - 10, 22);
+    arrow(ctx, w - 96, 38, w - 72, 38, C.vel, 2, [5, 4]); ctx.fillText("v (total)", w - 10, 42);
+    arrow(ctx, w - 96, 58, w - 72, 58, C.acc, 2.5); ctx.fillStyle = C.acc; ctx.fillText("a = g", w - 10, 62);
+    ctx.textAlign = "left"; ctx.fillStyle = C.ink; ctx.font = "bold 14px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    ctx.fillText(`t = ${S.t.toFixed(2)} s`, 10, 20);
+  }
+
+  // ---------- graphs (full-parabola time axis, shaded outside this problem) ----------
+  function drawGraph(id, fn, color, label, lo, hi, vertical) {
+    const { ctx, w, h } = fit($(id));
+    const muted = css("--muted"), line = css("--line"), ink = css("--ink"), shade = css("--shade"), ghost = css("--ghost");
+    const L = 54, R = 12, Tp = 12, B = 24, pw = w - L - R, ph = h - Tp - B, T = P.tauG;
+    const Xp = tau => L + (tau / T) * pw, Yp = v => Tp + (hi - v) / (hi - lo) * ph;
+    ctx.lineWidth = 1; ctx.strokeStyle = line; ctx.fillStyle = muted; ctx.textAlign = "center";
+    for (const tv of ticks(0, T, 7)) { ctx.beginPath(); ctx.moveTo(Xp(tv), Tp); ctx.lineTo(Xp(tv), Tp + ph); ctx.stroke(); ctx.fillText(tl(tv), Xp(tv), h - 7); }
+    ctx.textAlign = "right";
+    for (const vv of ticks(lo, hi, 4)) { ctx.beginPath(); ctx.moveTo(L, Yp(vv)); ctx.lineTo(L + pw, Yp(vv)); ctx.stroke(); ctx.fillText(tl(vv), L - 6, Yp(vv) + 4); }
+    ctx.strokeStyle = muted; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(L, Yp(0)); ctx.lineTo(L + pw, Yp(0)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(L, Tp); ctx.lineTo(L, Tp + ph); ctx.stroke();
+    ctx.save(); ctx.translate(13, Tp + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.fillStyle = color; ctx.fillText(label, 0, 0); ctx.restore();
+    // shaded: not part of this problem
+    ctx.fillStyle = shade;
+    if (P.tauL > 1e-6) ctx.fillRect(L, Tp, Xp(P.tauL) - L, ph);
+    if (P.tauE < T - 1e-6) ctx.fillRect(Xp(P.tauE), Tp, L + pw - Xp(P.tauE), ph);
+    // TOP line on vertical graphs
+    if (vertical && P.tauTop > 0 && P.tauTop < T) {
+      ctx.setLineDash([3, 4]); ctx.strokeStyle = muted; ctx.beginPath(); ctx.moveTo(Xp(P.tauTop), Tp); ctx.lineTo(Xp(P.tauTop), Tp + ph); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = muted; ctx.textAlign = "center"; ctx.fillText("TOP", Xp(P.tauTop), Tp + 10);
+    }
+    const seg = (a, b) => { ctx.beginPath(); for (let i = 0; i <= 120; i++) { const tau = a + (b - a) * i / 120;
+      i ? ctx.lineTo(Xp(tau), Yp(fn(tau))) : ctx.moveTo(Xp(tau), Yp(fn(tau))); } ctx.stroke(); };
+    ctx.lineCap = "round";
+    ctx.strokeStyle = ghost; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); seg(0, T); ctx.setLineDash([]);
+    ctx.strokeStyle = color; ctx.globalAlpha = 0.25; ctx.lineWidth = 3.5; seg(P.tauL, P.tauE); ctx.globalAlpha = 1;
+    const tauNow = P.tauL + S.t;
+    if (S.t > 0) { ctx.strokeStyle = color; ctx.lineWidth = 3.5; seg(P.tauL, tauNow); }
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = ink; ctx.globalAlpha = 0.5; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(Xp(tauNow), Tp); ctx.lineTo(Xp(tauNow), Tp + ph); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    // markers
+    const Lc = css(launchKind().col), Ec = css(landKind().col);
+    marker(ctx, Xp(P.tauL), Yp(fn(P.tauL)), Lc, 5.5);
+    marker(ctx, Xp(P.tauE), Yp(fn(P.tauE)), Ec, 5.5);
+    if (vertical && Math.abs(P.vy0) > 1e-6 && P.tauTop > P.tauL && P.tauTop < P.tauE) marker(ctx, Xp(P.tauTop), Yp(fn(P.tauTop)), css("--mTop"), 5);
+    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(Xp(tauNow), Yp(fn(tauNow)), 4.5, 0, 7); ctx.fill();
+  }
+
+  function draw() {
+    drawMotion();
+    const P_ = css("--pos"), V = css("--vel"), A = css("--acc");
+    const xm = xFull(P.tauG), ym = P.ytopFull;
+    const vm = Math.max(Math.abs(P.vx), Math.abs(vyFull(0)), 1) * 1.15;
+    drawGraph("gX", xFull, P_, "x (m)", -0.08 * xm, xm * 1.08, false);
+    drawGraph("gY", yFull, P_, "y (m)", -0.1 * ym, ym * 1.15, true);
+    drawGraph("gVX", () => P.vx, V, "vₓ (m/s)", -vm, vm, false);
+    drawGraph("gVY", vyFull, V, "vᵧ (m/s)", -vm, vm, true);
+    drawGraph("gAX", () => 0, A, "aₓ (m/s²)", -12.5, 4, false);
+    drawGraph("gAY", () => -G, A, "aᵧ (m/s²)", -12.5, 4, true);
+    $("rt").textContent = S.t.toFixed(2); $("rx").textContent = sig(P.vx * S.t); $("ry").textContent = sig(yAt(S.t));
+    $("rvx").textContent = sig(P.vx); $("rvy").textContent = sig(vyAt(S.t));
+    $("scrub").value = P.T ? S.t / P.T : 0; updPlay();
+  }
+  let last = 0;
+  function loop(now) { if (!S.playing) return; const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    S.t = Math.min(P.T, S.t + dt * S.speed); if (S.t >= P.T) S.playing = false; draw(); if (S.playing) requestAnimationFrame(loop); }
+  new ResizeObserver(() => draw()).observe(document.querySelector(".stage"));
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+  Object.assign(S, EX.cg); $("examples").value = "cg";
+  changed(); $("examples").value = "cg";
+  if (document.fonts) document.fonts.ready.then(draw);
+})();
+</script>
+</body>
+</html>
