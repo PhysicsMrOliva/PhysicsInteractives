@@ -105,6 +105,10 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 .graph.p .val { color: var(--pos); } .graph.v .val { color: var(--vel); } .graph.a .val { color: var(--acc); }
 .graph canvas { cursor: ew-resize; touch-action: pan-y; }
 .graph canvas:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+
+.inwarn { color: #b42318; font-weight: 700; font-size: 0.92rem; margin: 0 0 12px; }
+.inwarn:empty { display: none; }
+@media (prefers-color-scheme: dark) { .inwarn { color: #ff8a80; } }
 </style>
 </head>
 <body>
@@ -143,6 +147,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
       <input type="range" id="y0r" aria-labelledby="y0lab" min="0" max="40" step="0.5" style="accent-color:var(--pos)">
     </div>
     <p class="comp" id="comp"></p>
+    <p class="inwarn" id="inwarn" role="status" aria-live="polite"></p>
     <p class="note">x₀ = 0 m. Gravity only, no air resistance: aₓ = 0 m/s² and aᵧ = −9.81 m/s². The run ends when the ball lands.</p>
 
     <fieldset>
@@ -223,8 +228,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
   // ---------- controls ----------
   const pairs = { v0: ["v0r", "v0n"], th: ["thr", "thn"], y0: ["y0r", "y0n"] };
   function limits() {
-    for (const id of pairs.th) { $(id).min = minAngle(); $(id).max = 90; }
-    $("v0n").min = 1; $("v0n").max = 30; $("y0n").min = 0; $("y0n").max = 40;
+    $("thr").min = minAngle(); $("thr").max = 90;          // sliders only; typed values are free
   }
   function sync() {
     for (const k in pairs) for (const id of pairs[k]) $(id).value = r2(S[k]);
@@ -239,14 +243,24 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
       `angle = tan⁻¹(|vᵧ| / vₓ) = <b class="ang">${ang.toFixed(1)}°</b> below the horizontal`;
   }
   function changed() {
-    S.th = Math.max(minAngle(), Math.min(90, S.th));
+    $("inwarn").textContent = "";
     S.T = landTime(); S.t = 0; S.playing = false;
     limits(); sync(); text(); draw();
+  }
+  function check(k, v) {
+    const n = { ...S, [k]: v };
+    if (!(n.v0 > 0)) return "The launch speed must be greater than 0.";
+    if (n.y0 < 0) return "The launch height can’t be below the ground (y₀ ≥ 0).";
+    if (n.th > 90 || n.th < -90) return "Use a launch angle between −90° and 90°.";
+    if (n.y0 === 0 && n.th <= 0) return "From ground level, aim above 0° so the ball leaves the ground.";
+    return "";
   }
   for (const k in pairs) {
     const [r, n] = pairs[k];
     const h = e => { const v = parseFloat(e.target.value); if (isNaN(v)) return;
-      const el = $(r); S[k] = Math.min(parseFloat(el.max), Math.max(parseFloat(el.min), v));
+      const msg = check(k, v);
+      if (msg) { $("inwarn").textContent = msg; if (e.type === "change" || e.target.type === "range") e.target.value = +(+S[k]).toFixed(3); return; }
+      S[k] = v;
       $("examples").value = ""; changed(); };
     $(r).addEventListener("input", h); $(n).addEventListener("change", h);
   }

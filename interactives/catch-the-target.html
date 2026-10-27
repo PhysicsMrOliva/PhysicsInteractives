@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Catch the target: projectile collisions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  --bg: #eaf1ee; --grid: #d3e0da; --panel: #ffffff; --ink: #15232b; --muted: #56666e; --line: #c4d3cc;
+  --pos: #23913a; --vel: #d22b2b; --acc: #1f6fb4;
+  --net: #e07b00; --tgt: #7a3fe0; --hit: #1a7f37; --miss: #b42318;
+  --sky: #eef6fb; --cliff: #b5652b; --cliff2: #95501f; --road: #3a3f44; --fill: #e8dcc8;
+  --btn: #15232b; --btn-ink: #ffffff; --focus: #1f6fb4;
+  font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42;
+    --pos: #4cc76a; --vel: #ff6b6b; --acc: #5aa9ff;
+    --net: #ffa53d; --tgt: #b28cff; --hit: #4cc76a; --miss: #ff8a80;
+    --sky: #14222a; --cliff: #8a4a1e; --cliff2: #6e3a17; --road: #2a2f33; --fill: #2f2a22;
+    --btn: #e5eef0; --btn-ink: #0f171b; --focus: #5aa9ff;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42;
+  --pos: #4cc76a; --vel: #ff6b6b; --acc: #5aa9ff;
+  --net: #ffa53d; --tgt: #b28cff; --hit: #4cc76a; --miss: #ff8a80;
+  --sky: #14222a; --cliff: #8a4a1e; --cliff2: #6e3a17; --road: #2a2f33; --fill: #2f2a22;
+  --btn: #e5eef0; --btn-ink: #0f171b; --focus: #5aa9ff;
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+*, *::before, *::after { box-sizing: inherit; }
+body {
+  margin: 0; color: var(--ink); background-color: var(--bg); line-height: 1.45;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+header { max-width: 1320px; margin: 0 auto; padding: 28px 20px 8px; }
+h1 { font-size: clamp(1.6rem, 3.4vw, 2.4rem); margin: 0 0 4px; letter-spacing: -0.01em; }
+header .back { display: inline-block; margin-bottom: 10px; color: var(--ink); font-weight: 700; }
+header p { margin: 0; color: var(--muted); max-width: 82ch; }
+.layout { max-width: 1320px; margin: 0 auto; padding: 16px 20px 40px; display: grid;
+  grid-template-columns: 320px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 920px) { .layout { grid-template-columns: 1fr; } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.controls { padding: 16px; }
+label.block { font-weight: 700; display: block; margin: 0 0 4px; font-size: 0.95rem; }
+select { font: inherit; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--ink); margin-bottom: 14px; }
+fieldset { border: 2px solid var(--line); border-radius: 10px; padding: 8px 12px 2px; margin: 0 0 12px; }
+fieldset legend { font-weight: 700; padding: 0 6px; }
+fieldset.net { border-color: var(--net); } fieldset.net legend { color: var(--net); }
+fieldset.tgt { border-color: var(--tgt); } fieldset.tgt legend { color: var(--tgt); }
+.field { margin: 0 0 10px; }
+.field .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.field label { font-weight: 700; font-size: 0.93rem; }
+.unit { color: var(--muted); font-size: 0.88rem; }
+.field input[type=number] { width: 78px; font: inherit; padding: 2px 6px; border: 1px solid var(--line);
+  border-radius: 6px; background: var(--panel); color: var(--ink); text-align: right; }
+.field input[type=range] { width: 100%; margin: 4px 0 0; accent-color: var(--ink); }
+fieldset.net input[type=range] { accent-color: var(--net); } fieldset.tgt input[type=range] { accent-color: var(--tgt); }
+.planets { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
+.planets button { min-width: 0; padding: 4px 10px; font-size: 0.9rem; background: transparent; color: var(--ink); }
+.planets button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: 0.95rem; margin: 0 0 8px; }
+.check input { margin-top: 4px; }
+.warn { color: var(--miss); font-weight: 700; font-size: 0.92rem; margin: 0 0 10px; }
+.task { margin: -6px 0 14px; padding: 8px 10px; border-left: 4px solid var(--miss); background: var(--sky); border-radius: 0 6px 6px 0; font-size: 0.93rem; }
+.task:empty { display: none; }
+.field.unknown { outline: 2px dashed var(--miss); outline-offset: 3px; border-radius: 6px; }
+.field.unknown label::after { content: " ?"; color: var(--miss); font-weight: 700; }
+.warn:empty { display: none; }
+.stage { display: grid; gap: 14px; min-width: 0; }
+.motion { padding: 12px; }
+canvas { display: block; width: 100%; }
+#scene { height: 400px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+button { font: inherit; font-weight: 700; border: 2px solid var(--btn); background: var(--btn); color: var(--btn-ink);
+  border-radius: 8px; padding: 6px 14px; cursor: pointer; min-width: 84px; }
+button.ghost { background: transparent; color: var(--ink); }
+button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.scrub { flex: 1 1 200px; display: flex; align-items: center; gap: 8px; }
+.scrub input { flex: 1; accent-color: var(--ink); }
+.result { margin-top: 10px; padding: 10px 14px; border-radius: 10px; font-weight: 700; font-size: 1.1rem; border: 2px solid var(--line); }
+.result.hit { border-color: var(--hit); color: var(--hit); }
+.result.miss { border-color: var(--miss); color: var(--miss); }
+.result.wait { color: var(--muted); font-weight: 400; font-size: 1rem; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 1100px) { .cols { grid-template-columns: 1fr; } }
+.graph { padding: 10px 12px 8px; }
+.graph h3 { margin: 0; font-size: 0.98rem; }
+.graph.p h3 { color: var(--pos); } .graph.v h3 { color: var(--vel); }
+.graph canvas { height: 170px; margin-top: 4px; cursor: ew-resize; touch-action: pan-y; }
+.eqrow { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px 8px; margin-top: 4px; }
+.eqrow .eq { flex: 1; min-width: 0; font-size: 0.88rem; line-height: 1.45; font-variant-numeric: tabular-nums; }
+.eqrow .val { flex: none; margin-left: auto; text-align: right; border: 1.5px solid var(--line); border-radius: 7px;
+  padding: 1px 6px; font-weight: 700; line-height: 1.35; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.c-net { color: var(--net); } .c-tgt { color: var(--tgt); }
+.legend { display: flex; flex-wrap: wrap; gap: 18px; font-size: 0.92rem; font-weight: 700; }
+.legend span::before { content: ""; display: inline-block; width: 22px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 6px; background: currentColor; }
+.solve { padding: 14px 16px; }
+.solve h2 { margin: 0 0 4px; font-size: 1.15rem; }
+.solve .sub { color: var(--muted); margin: 0 0 10px; }
+.solve ol { margin: 0; padding-left: 1.3em; line-height: 1.75; font-variant-numeric: tabular-nums; }
+.solve .need { margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+.solve .need div { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.solve .need b { color: var(--tgt); }
+.hidden { color: var(--muted); font-style: italic; }
+
+.inwarn { color: #b42318; font-weight: 700; font-size: 0.92rem; margin: 0 0 12px; }
+.inwarn:empty { display: none; }
+@media (prefers-color-scheme: dark) { .inwarn { color: #ff8a80; } }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../interactives.html">Back to Interactives</a>
+  <h1>Catch the target: projectile collisions</h1>
+  <p>A cannon on a cliff fires a net while a target moves along the road below. Choose the settings, press Launch, and see whether the net lands on the target. The net catches the target if it lands within the net’s reach (±1.0 m).</p>
+</header>
+
+<main class="layout">
+  <aside class="panel controls" aria-label="Settings">
+    <label class="block" for="levels">Load a level</label>
+    <select id="levels">
+      <option value="free">Free play</option>
+      <option value="L1">Level 1: stationary target (find its position)</option>
+      <option value="L2">Level 2: moving target (find its speed)</option>
+      <option value="L3">Level 3: accelerating target (find its acceleration)</option>
+      <option value="L4">Level 4: angled launch (find the target’s position)</option>
+      <option value="L5">Level 5: angled launch, moving target (find its speed)</option>
+      <option value="L6">Level 6: angled launch, target speeds up from rest (find its acceleration)</option>
+      <option value="L7">Level 7: angled launch, target with x₀, v₀ and a (find its acceleration)</option>
+      <option value="L8">Level 8: target drives toward the cliff and slows (find its position)</option>
+      <option value="L9">Level 9: moving, accelerating target (find the launch speed)</option>
+    </select>
+    <p class="task" id="task"></p>
+
+    <fieldset class="net"><legend>Projectile (net) controls</legend>
+      <div class="field"><div class="top"><label for="h">Cliff height</label><span><input type="number" id="h" step="any"> <span class="unit">m</span></span></div>
+        <input type="range" id="hR" min="0" max="200" step="0.5" aria-label="Cliff height slider"></div>
+      <div class="field"><div class="top"><label for="th">Launch angle</label><span><input type="number" id="th" step="any"> <span class="unit">°</span></span></div>
+        <input type="range" id="thR" min="-45" max="85" step="0.5" aria-label="Launch angle slider"></div>
+      <div class="field"><div class="top"><label for="v">Launch speed</label><span><input type="number" id="v" step="any"> <span class="unit">m/s</span></span></div>
+        <input type="range" id="vR" min="0" max="60" step="0.1" aria-label="Launch speed slider"></div>
+    </fieldset>
+
+    <fieldset class="tgt"><legend>Target controls</legend>
+      <div class="field"><div class="top"><label for="x0">Initial position</label><span><input type="number" id="x0" step="any"> <span class="unit">m</span></span></div>
+        <input type="range" id="x0R" min="-50" max="300" step="0.1" aria-label="Initial position slider"></div>
+      <div class="field"><div class="top"><label for="u">Initial speed</label><span><input type="number" id="u" step="any"> <span class="unit">m/s</span></span></div>
+        <input type="range" id="uR" min="-30" max="60" step="0.1" aria-label="Initial speed slider"></div>
+      <div class="field"><div class="top"><label for="a">Acceleration</label><span><input type="number" id="a" step="any"> <span class="unit">m/s²</span></span></div>
+        <input type="range" id="aR" min="-10" max="10" step="0.05" aria-label="Acceleration slider"></div>
+    </fieldset>
+
+    <label class="block">Free-fall acceleration</label>
+    <div class="planets" role="group" aria-label="Free-fall acceleration">
+      <button type="button" data-ay="-9.81">Earth</button><button type="button" data-ay="-1.62">Moon</button>
+      <button type="button" data-ay="-3.71">Mars</button><button type="button" data-ay="-24.79">Jupiter</button>
+    </div>
+    <div class="field"><div class="top"><label for="g">aᵧ</label><span><input type="number" id="g" step="any"> <span class="unit">m/s²</span></span></div></div>
+    <p class="warn" id="warn"></p>
+    <p class="inwarn" id="inwarn" role="status" aria-live="polite"></p>
+
+    <label class="check"><input type="checkbox" id="trail" checked> Show dots every 0.25 s: the net with its horizontal and vertical shadows, and the target</label>
+    <label class="check"><input type="checkbox" id="solution"> Show the solution (for checking work)</label>
+  </aside>
+
+  <section class="stage">
+    <div class="panel motion">
+      <canvas id="scene" aria-label="The cliff, the cannon, the net and the target"></canvas>
+      <div class="toolbar">
+        <button id="play">Launch</button>
+        <button id="restart" class="ghost">Reset</button>
+        <select id="speed" aria-label="Playback speed" style="width:auto;margin:0">
+          <option value="2">2× speed</option><option value="1" selected>1× speed</option>
+          <option value="0.5">½× speed</option><option value="0.25">¼× speed</option>
+        </select>
+        <div class="scrub"><label for="scrub" class="unit">time</label><input type="range" id="scrub" min="0" max="1" step="any" value="0"></div>
+      </div>
+      <div class="result wait" id="result" role="status" aria-live="polite">Press Launch to fire the net.</div>
+    </div>
+
+    <div class="legend" aria-hidden="true"><span class="c-net">Net (projectile)</span><span class="c-tgt">Target</span></div>
+    <div class="cols">
+      <div class="panel graph p"><h3>Horizontal position x vs. t (both)</h3>
+        <div class="eqrow"><div class="eq" id="eqX"></div><div class="val" id="valX"></div></div><canvas id="gX"></canvas></div>
+      <div class="panel graph p"><h3>Vertical position y vs. t</h3>
+        <div class="eqrow"><div class="eq" id="eqY"></div><div class="val" id="valY"></div></div><canvas id="gY"></canvas></div>
+      <div class="panel graph v"><h3>Horizontal velocity vₓ vs. t (both)</h3>
+        <div class="eqrow"><div class="eq" id="eqVX"></div><div class="val" id="valVX"></div></div><canvas id="gVX"></canvas></div>
+      <div class="panel graph v"><h3>Vertical velocity vᵧ vs. t</h3>
+        <div class="eqrow"><div class="eq" id="eqVY"></div><div class="val" id="valVY"></div></div><canvas id="gVY"></canvas></div>
+    </div>
+
+    <div class="panel solve">
+      <h2>Solution</h2>
+      <p class="sub">The net and the target must be at the same x at the moment the net reaches the ground.</p>
+      <div id="sol"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const REACH = 1.0;                              // net catches within ±1.0 m
+  const LEVELS = {
+    free: { h: 45, th: 0, v: 16, x0: 40, u: 0, a: 0, g: 9.81 },
+    L1:   { h: 45, th: 0, v: 16, x0: 0,  u: 0, a: 0, g: 9.81 },     // find x0
+    L2:   { h: 90, th: 0, v: 30, x0: 50, u: 0, a: 0, g: 9.81 },     // find u
+    L3:   { h: 120, th: 0, v: 20, x0: 50, u: 0, a: 0, g: 9.81 },    // find a
+    L4:   { h: 120, th: 40, v: 32, x0: 0, u: 20, a: 0, g: 9.81 },   // find x0
+    L5:   { h: 60, th: 30, v: 25, x0: 20, u: 0, a: 0, g: 9.81 },    // find u   (17.6 m/s)
+    L6:   { h: 80, th: 35, v: 28, x0: 30, u: 0, a: 0, g: 9.81 },    // find a   (5.98 m/s²)
+    L7:   { h: 100, th: 45, v: 30, x0: 40, u: 8, a: 0, g: 9.81 },   // find a   (2.13 m/s²)
+    L8:   { h: 50, th: 20, v: 35, x0: 0, u: -15, a: 1.5, g: 9.81 }, // find x0  (206 m)
+    L9:   { h: 75, th: 25, v: 0, x0: 60, u: 10, a: 1.0, g: 9.81 }   // find v   (26.6 m/s)
+  };
+  const TASK = {
+    free: [null, ""],
+    L1: ["x0", "<b>Level 1 · Stationary target.</b> Where must the target sit so the net lands on it? Find its initial position."],
+    L2: ["u", "<b>Level 2 · Moving target.</b> The target starts at 50 m. Find the constant speed that puts it under the net."],
+    L3: ["a", "<b>Level 3 · Accelerating target.</b> The target starts from rest at 50 m. Find its acceleration."],
+    L4: ["x0", "<b>Level 4 · Angled launch.</b> The net is fired at 40° and the target drives at 20 m/s. Find where the target starts."],
+    L5: ["u", "<b>Level 5 · Angled launch, moving target.</b> The target starts at 20 m. Find its constant speed."],
+    L6: ["a", "<b>Level 6 · Angled launch, target speeds up from rest.</b> The target starts at 30 m. Find its acceleration."],
+    L7: ["a", "<b>Level 7 · Angled launch, target already moving.</b> The target starts at 40 m moving at 8 m/s. Find the acceleration it needs."],
+    L8: ["x0", "<b>Level 8 · Target drives toward the cliff.</b> It moves at −15 m/s and slows down with a = +1.5 m/s². Find where it starts."],
+    L9: ["v", "<b>Level 9 · Find the launch speed.</b> The target starts at 60 m, moving at 10 m/s and speeding up at 1.0 m/s². The net is fired at 25°. How fast must it be launched? (Hint: write t in terms of v₀, or try values and refine.)"]
+  };
+  function showTask(lv) {
+    const [f, txt] = TASK[lv] || TASK.free;
+    $("task").innerHTML = txt;
+    document.querySelectorAll(".field.unknown").forEach(el => el.classList.remove("unknown"));
+    if (f) $(f).closest(".field").classList.add("unknown");
+  }
+  const S = Object.assign({ t: 0, playing: false, speed: 1, trail: true, solution: false, launched: false }, LEVELS.free);
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const minus = s => s.replace(/-/g, "−");
+  const sig = n => { if (!isFinite(n)) return "—"; if (Math.abs(n) < 5e-4) return "0";
+    let s = Math.abs(n) >= 1000 ? Math.round(n).toString() : n.toPrecision(3); if (s.includes("e")) s = String(Number(n.toPrecision(3))); return minus(s); };
+  const par = (n, u) => `(${sig(n)} ${u})`, cst = (n, u) => (n < 0 ? `(${sig(n)} ${u})` : `${sig(n)} ${u}`);
+
+  // ---------- physics ----------
+  let P = {};
+  function compute() {
+    const th = S.th * Math.PI / 180, vx = S.v * Math.cos(th), vy = S.v * Math.sin(th), g = S.g;
+    const disc = vy * vy + 2 * g * S.h;
+    let T = (vy + Math.sqrt(Math.max(0, disc))) / g, warn = "";
+    if (!(T > 1e-6)) { T = 1; warn = "The net never leaves the ground. Raise the cliff or aim upward."; }
+    const xLand = vx * T, xT = S.x0 + S.u * T + 0.5 * S.a * T * T, gap = xLand - xT;
+    P = { vx, vy, g, T, xLand, xT, gap, hit: Math.abs(gap) <= REACH, warn };
+  }
+  // launch speed that makes the catch (found numerically: scan for a sign change, then bisect)
+  function gapFor(v) {
+    const th = S.th * Math.PI / 180, vx = v * Math.cos(th), vy = v * Math.sin(th), g = S.g;
+    const T = (vy + Math.sqrt(Math.max(0, vy * vy + 2 * g * S.h))) / g;
+    if (!(T > 1e-6)) return NaN;
+    return vx * T - (S.x0 + S.u * T + 0.5 * S.a * T * T);
+  }
+  function solveLaunchSpeed() {
+    let pv = 0.1, prev = gapFor(pv);
+    for (let v = 0.2; v <= 200; v += 0.1) {
+      const gp = gapFor(v);
+      if (isFinite(prev) && isFinite(gp) && prev * gp <= 0) {
+        let lo = pv, hi = v;
+        for (let i = 0; i < 50; i++) { const m = (lo + hi) / 2; if (gapFor(lo) * gapFor(m) <= 0) hi = m; else lo = m; }
+        return (lo + hi) / 2;
+      }
+      prev = gp; pv = v;
+    }
+    return null;
+  }
+  const netX = t => P.vx * t, netY = t => S.h + P.vy * t - 0.5 * P.g * t * t, netVy = t => P.vy - P.g * t;
+  const tgtX = t => S.x0 + S.u * t + 0.5 * S.a * t * t, tgtV = t => S.u + S.a * t;
+
+  // ---------- controls ----------
+  const keys = ["h", "th", "v", "x0", "u", "a"];
+  function check(k, v) {
+    if (k === "h" && v < 0) return "The cliff height can’t be below the ground (0 m).";
+    if (k === "v" && v < 0) return "The launch speed can’t be negative.";
+    if (k === "th" && (v > 90 || v < -90)) return "Use a launch angle between −90° and 90°.";
+    return "";
+  }
+  function sync() {
+    for (const k of keys) { if (document.activeElement !== $(k)) $(k).value = Number(S[k].toFixed(3)); if (document.activeElement !== $(k + "R")) $(k + "R").value = S[k]; }
+    if (document.activeElement !== $("g")) $("g").value = -S.g;          // shown as aᵧ (negative: downward)
+    document.querySelectorAll(".planets button").forEach(b => b.setAttribute("aria-pressed", String(Math.abs(-b.dataset.ay - S.g) < 1e-9)));
+  }
+  function changed() { $("inwarn").textContent = ""; compute(); S.t = 0; S.playing = false; S.launched = false; sync(); text(); draw(); }
+  for (const k of keys) {
+    const h = e => { const v = parseFloat(e.target.value); if (isNaN(v)) return;
+      const msg = check(k, v);
+      if (msg) { $("inwarn").textContent = msg; if (e.type === "change" || e.target.type === "range") e.target.value = +(+S[k]).toFixed(3); return; }
+      S[k] = v; changed(); };
+    $(k).addEventListener("input", h); $(k).addEventListener("change", h); $(k + "R").addEventListener("input", h);
+  }
+  // the aᵧ box takes a negative value (downward); internally S.g holds its size
+  $("g").addEventListener("input", e => { const val = parseFloat(e.target.value); if (isNaN(val)) return;
+    if (!(val < 0)) { $("inwarn").textContent = "aᵧ must be negative: free-fall acceleration points down."; return; }
+    S.g = -val; changed(); });
+  document.querySelectorAll(".planets button").forEach(b => b.addEventListener("click", () => { S.g = -b.dataset.ay; changed(); }));
+  $("levels").addEventListener("change", e => { Object.assign(S, LEVELS[e.target.value]); showTask(e.target.value); changed(); });
+  $("trail").addEventListener("change", e => { S.trail = e.target.checked; draw(); });
+  $("solution").addEventListener("change", e => { S.solution = e.target.checked; text(); });
+  $("speed").addEventListener("change", e => S.speed = parseFloat(e.target.value));
+  $("play").addEventListener("click", () => {
+    if (S.t >= P.T - 1e-9) S.t = 0;
+    S.playing = !S.playing; S.launched = true; updPlay();
+    if (S.playing) { last = performance.now(); requestAnimationFrame(loop); }
+  });
+  $("restart").addEventListener("click", () => { S.t = 0; S.playing = false; S.launched = false; draw(); });
+  $("scrub").addEventListener("input", e => { S.playing = false; S.launched = true; S.t = parseFloat(e.target.value) * P.T; draw(); });
+  document.addEventListener("keydown", e => {
+    if (e.code === "Space" && !/INPUT|SELECT|BUTTON|CANVAS/.test(document.activeElement.tagName)) { e.preventDefault(); $("play").click(); }
+  });
+  function updPlay() { $("play").textContent = S.playing ? "Pause" : (S.t >= P.T - 1e-9 && S.t > 0 ? "Launch again" : (S.t > 0 ? "Resume" : "Launch")); }
+
+  // ---------- text ----------
+  function text() {
+    $("warn").textContent = P.warn;
+    $("eqX").innerHTML = `<div class="c-net">net: x = ${par(P.vx, "m/s")}t</div>` +
+      `<div class="c-tgt">target: x = ½${par(S.a, "m/s²")}t² + ${par(S.u, "m/s")}t + ${cst(S.x0, "m")}</div>`;
+    $("eqY").innerHTML = `<div class="c-net">net: y = ½(−${sig(P.g)} m/s²)t² + ${par(P.vy, "m/s")}t + ${sig(S.h)} m</div><div class="c-tgt">target: y = 0 (on the road)</div>`;
+    $("eqVX").innerHTML = `<div class="c-net">net: vₓ = ${sig(P.vx)} m/s (constant)</div>` +
+      `<div class="c-tgt">target: vₓ = ${par(S.a, "m/s²")}t + ${cst(S.u, "m/s")}</div>`;
+    $("eqVY").innerHTML = `<div class="c-net">net: vᵧ = (−${sig(P.g)} m/s²)t + ${cst(P.vy, "m/s")}</div><div class="c-tgt">target: vᵧ = 0</div>`;
+    if (!S.solution) { $("sol").innerHTML = `<p class="hidden">Hidden. Work the problem on your worksheet, then turn on “Show the solution” to check.</p>`; return; }
+    const T = P.T, g = P.g;
+    const needX0 = P.xLand - S.u * T - 0.5 * S.a * T * T;
+    const needU = (P.xLand - S.x0 - 0.5 * S.a * T * T) / T;
+    const needA = 2 * (P.xLand - S.x0 - S.u * T) / (T * T);
+    const needV = solveLaunchSpeed();
+    $("sol").innerHTML = `<ol>
+      <li><b>Launch components:</b> v₀ₓ = v₀ cos θ = ${sig(P.vx)} m/s, v₀ᵧ = v₀ sin θ = ${sig(P.vy)} m/s</li>
+      <li><b>Time in the air</b> (net reaches y = 0): 0 = ½(−${sig(g)} m/s²)t² + ${par(P.vy, "m/s")}t + ${sig(S.h)} m &nbsp;→&nbsp; t = <b>${sig(T)} s</b></li>
+      <li><b>Where the net lands:</b> x = v₀ₓt = ${par(P.vx, "m/s")}(${sig(T)} s) = <b>${sig(P.xLand)} m</b></li>
+      <li><b>Where the target is then:</b> x = ½${par(S.a, "m/s²")}(${sig(T)} s)² + ${par(S.u, "m/s")}(${sig(T)} s) + ${cst(S.x0, "m")} = <b>${sig(P.xT)} m</b></li>
+      <li><b>Catch condition:</b> x<sub>net</sub> = x<sub>target</sub> at t = ${sig(T)} s. ${P.hit ? "These settings catch the target." : `They are ${sig(Math.abs(P.gap))} m apart, so the net misses.`}</li></ol>
+      <div class="need">
+        <div>To catch it by changing only the <b>initial position</b>:<br>x₀ = x<sub>land</sub> − v₀t − ½at² = <b>${sig(needX0)} m</b></div>
+        <div>…only the <b>initial speed</b>:<br>v₀ = (x<sub>land</sub> − x₀ − ½at²) / t = <b>${sig(needU)} m/s</b></div>
+        <div>…only the <b>acceleration</b>:<br>a = 2(x<sub>land</sub> − x₀ − v₀t) / t² = <b>${sig(needA)} m/s²</b></div>
+        <div>…only the net’s <b>launch speed</b>:<br>${needV === null ? "<b>no launch speed works</b> at this angle" : `v₀ = <b>${sig(needV)} m/s</b>`}<br><span class="hidden">(t depends on v₀, so this one is solved numerically)</span></div>
+      </div>`;
+  }
+
+  // ---------- drawing helpers ----------
+  function fit(cv) {
+    const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(r.width * d)), h = Math.max(1, Math.round(r.height * d));
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const ctx = cv.getContext("2d"); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, r.width, r.height);
+    ctx.font = "12px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    return { ctx, w: r.width, h: r.height };
+  }
+  function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+    return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
+  function ticks(lo, hi, n) { if (hi - lo <= 0) return [lo]; const st = niceStep((hi - lo) / n), out = [];
+    for (let v = Math.ceil(lo / st - 1e-9) * st; v <= hi + 1e-9; v += st) out.push(Math.round(v / st) * st); return out; }
+  const tl = v => minus(String(Number((Math.abs(v) < 1e-9 ? 0 : v).toPrecision(6))));
+  function arrow(ctx, x1, y1, x2, y2, color, lw = 2.5) {
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy); if (L < 2) return;
+    const ux = dx / L, uy = dy / L, hs = Math.min(10, L * 0.6);
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2 - ux * hs * 0.8, y2 - uy * hs * 0.8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x2 - ux * hs - uy * hs * 0.5, y2 - uy * hs + ux * hs * 0.5);
+    ctx.lineTo(x2 - ux * hs + uy * hs * 0.5, y2 - uy * hs - ux * hs * 0.5); ctx.closePath(); ctx.fill();
+  }
+
+  // ---------- scene ----------
+  function drawNet(ctx, x, y, r, col, landed) {
+    ctx.save(); ctx.translate(x, y);
+    ctx.strokeStyle = col; ctx.lineWidth = 1.4;
+    if (landed) {                                  // spread out on the ground
+      ctx.beginPath(); ctx.moveTo(-r * 1.6, 0); ctx.quadraticCurveTo(0, -r * 1.6, r * 1.6, 0); ctx.stroke();
+      for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(i * r * 0.5, 0); ctx.lineTo(i * r * 0.3, -r * 1.1 + Math.abs(i) * r * 0.25); ctx.stroke(); }
+    } else {
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.stroke();
+      ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.clip();
+      for (let i = -r; i <= r; i += 4) { ctx.beginPath(); ctx.moveTo(i, -r); ctx.lineTo(i + r, r); ctx.stroke(); ctx.beginPath(); ctx.moveTo(i, r); ctx.lineTo(i + r, -r); ctx.stroke(); }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+  function drawTarget(ctx, x, y, dir, col, ink) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1);
+    ctx.fillStyle = col; ctx.strokeStyle = ink; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.roundRect(-16, -20, 32, 13, 3); ctx.fill(); ctx.stroke();               // cart body
+    ctx.fillStyle = ink; for (const wx of [-10, 10]) { ctx.beginPath(); ctx.arc(wx, -5, 5, 0, 7); ctx.fill(); }
+    ctx.strokeStyle = ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-10, -20); ctx.lineTo(-10, -44); ctx.stroke(); // flag pole
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(2, -38, 9, 0, 7); ctx.fill();                 // bullseye flag
+    ctx.fillStyle = "#d22b2b"; ctx.beginPath(); ctx.arc(2, -38, 6.5, 0, 7); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(2, -38, 4, 0, 7); ctx.fill();
+    ctx.fillStyle = "#d22b2b"; ctx.beginPath(); ctx.arc(2, -38, 1.8, 0, 7); ctx.fill();
+    ctx.restore();
+  }
+  function drawScene() {
+    const { ctx, w, h } = fit($("scene"));
+    const C = { ink: css("--ink"), muted: css("--muted"), net: css("--net"), tgt: css("--tgt"), sky: css("--sky"),
+      cliff: css("--cliff"), cliff2: css("--cliff2"), road: css("--road"), vel: css("--vel"), hit: css("--hit"), miss: css("--miss") };
+    // world range
+    let xmin = -0.12 * Math.max(P.xLand, 30) - 6, xmax = Math.max(P.xLand, 10);
+    for (let i = 0; i <= 60; i++) { const xt = tgtX(P.T * i / 60); xmin = Math.min(xmin, xt - 5); xmax = Math.max(xmax, xt); }
+    xmax += Math.max(8, 0.08 * (xmax - xmin));
+    let ymax = S.h; if (P.vy > 0) ymax = Math.max(ymax, S.h + P.vy * P.vy / (2 * P.g)); ymax = Math.max(ymax, 10);
+    const padL = 84, padR = 16, padT = 36, padB = 68;
+    const k = Math.min((w - padL - padR) / (xmax - xmin), (h - padT - padB) / ymax);   // equal scale
+    const X = x => padL + (x - xmin) * k, Y = y => h - padB - y * k;
+    ctx.fillStyle = C.sky; ctx.fillRect(0, 0, w, h - padB);
+    // road
+    ctx.fillStyle = C.road; ctx.fillRect(0, Y(0), w, 14);
+    ctx.strokeStyle = "#f2c94c"; ctx.setLineDash([14, 10]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, Y(0) + 7); ctx.lineTo(w, Y(0) + 7); ctx.stroke(); ctx.setLineDash([]);
+    // axis ticks under the road
+    ctx.fillStyle = C.muted; ctx.textAlign = "center";
+    for (const xv of ticks(xmin, xmax, 10)) ctx.fillText(tl(xv), X(xv), Y(0) + 46);
+    ctx.textAlign = "right"; ctx.fillText("x (m)", w - 4, Y(0) + 62);
+    // cliff
+    const cw = Math.max(36, 0.08 * (xmax - xmin) * k);
+    if (S.h > 0) {
+      ctx.fillStyle = C.cliff; ctx.fillRect(X(0) - cw, Y(S.h), cw, Y(0) - Y(S.h));
+      ctx.fillStyle = C.cliff2; for (let yy = Y(S.h) + 14; yy < Y(0); yy += 22) ctx.fillRect(X(0) - cw, yy, cw, 3);
+    }
+    ctx.textAlign = "right"; ctx.fillStyle = C.muted;
+    for (const yv of ticks(0, ymax, 5)) ctx.fillText(tl(yv) + " m", 44, Y(yv) + 4);
+    // cannon at the cliff edge
+    const th = S.th * Math.PI / 180, cx = X(0) - 10, cy = Y(S.h) - 10;
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(-th);
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.roundRect(-6, -6, 34, 12, 5); ctx.fill(); ctx.restore();
+    ctx.fillStyle = C.muted; ctx.beginPath(); ctx.arc(cx, cy + 4, 7, 0, 7); ctx.fill();
+    // predicted path (faint) and dots
+    ctx.strokeStyle = C.net; ctx.globalAlpha = 0.35; ctx.setLineDash([4, 5]); ctx.lineWidth = 1.5; ctx.beginPath();
+    for (let i = 0; i <= 120; i++) { const t = P.T * i / 120; const p = [X(netX(t)), Y(netY(t))]; i ? ctx.lineTo(...p) : ctx.moveTo(...p); }
+    ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    if (S.trail) for (let t = 0; t <= S.t + 1e-9; t += 0.25) {
+      ctx.globalAlpha = 0.7; ctx.fillStyle = C.net; ctx.beginPath(); ctx.arc(X(netX(t)), Y(netY(t)), 3.2, 0, 7); ctx.fill();
+      ctx.globalAlpha = 0.55;
+      ctx.beginPath(); ctx.arc(X(netX(t)), Y(0) + 23, 3, 0, 7); ctx.fill();                    // x shadow, below the road
+      ctx.beginPath(); ctx.arc(netVy(t) > 1e-9 ? 56 : 70, Y(netY(t)), 3, 0, 7); ctx.fill();    // y shadow: up | down columns
+      ctx.fillStyle = C.tgt; ctx.beginPath(); ctx.arc(X(tgtX(t)), Y(0) - 2, 3, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+    }
+    if (S.trail) {
+      ctx.globalAlpha = 1; ctx.fillStyle = C.net; ctx.font = "bold 11px 'Atkinson Hyperlegible', system-ui, sans-serif";
+      ctx.textAlign = "center"; ctx.fillText("↑", 56, 20); ctx.fillText("↓", 70, 20);
+      ctx.textAlign = "left"; ctx.font = "11px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.fillText("x shadow", 4, Y(0) + 27);
+      ctx.font = "12px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    }
+    // target + net
+    const done = S.t >= P.T - 1e-9 && S.launched;
+    const tx = X(tgtX(S.t)), dir = tgtV(S.t) < -1e-9 ? -1 : 1;
+    drawTarget(ctx, tx, Y(0), dir, C.tgt, C.ink);
+    const nx = X(netX(S.t)), ny = Y(netY(S.t)), r = 7;
+    drawNet(ctx, nx, done ? Y(0) : ny, done ? 11 : r, C.net, done);
+    if (!done && S.t > 0) {
+      const kv = 2.2; arrow(ctx, nx, ny, nx + P.vx * kv, ny - netVy(S.t) * kv, C.vel, 2);
+    }
+    // reach zone at the landing spot
+    ctx.strokeStyle = C.net; ctx.globalAlpha = 0.5; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(X(P.xLand - REACH), Y(0) - 1); ctx.lineTo(X(P.xLand + REACH), Y(0) - 1); ctx.stroke(); ctx.globalAlpha = 1;
+    // result
+    ctx.font = "bold 14px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.textAlign = "left"; ctx.fillStyle = C.ink;
+    ctx.fillText(`t = ${S.t.toFixed(2)} s`, 92, 20);
+    if (done) {
+      ctx.textAlign = "center"; ctx.font = "bold 20px 'Atkinson Hyperlegible', system-ui, sans-serif";
+      ctx.fillStyle = P.hit ? C.hit : C.miss; ctx.fillText(P.hit ? "CAUGHT!" : "MISSED", nx, Y(0) - 60);
+    }
+  }
+
+  // ---------- graphs ----------
+  function drawGraph(id, series, lo, hi, label) {
+    const { ctx, w, h } = fit($(id));
+    const muted = css("--muted"), line = css("--line"), ink = css("--ink");
+    const L = 54, R = 12, Tp = 12, B = 24, pw = w - L - R, ph = h - Tp - B, T = P.T;
+    const Xp = t => L + (t / T) * pw, Yp = v => Tp + (hi - v) / (hi - lo) * ph;
+    ctx.lineWidth = 1; ctx.strokeStyle = line; ctx.fillStyle = muted; ctx.textAlign = "center";
+    for (const tv of ticks(0, T, 8)) { ctx.beginPath(); ctx.moveTo(Xp(tv), Tp); ctx.lineTo(Xp(tv), Tp + ph); ctx.stroke(); ctx.fillText(tl(tv), Xp(tv), h - 7); }
+    ctx.textAlign = "right";
+    for (const vv of ticks(lo, hi, 4)) { ctx.beginPath(); ctx.moveTo(L, Yp(vv)); ctx.lineTo(L + pw, Yp(vv)); ctx.stroke(); ctx.fillText(tl(vv), L - 6, Yp(vv) + 4); }
+    ctx.strokeStyle = muted; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(L, Yp(0)); ctx.lineTo(L + pw, Yp(0)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(L, Tp); ctx.lineTo(L, Tp + ph); ctx.stroke();
+    ctx.save(); ctx.translate(13, Tp + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.fillStyle = ink; ctx.fillText(label, 0, 0); ctx.restore();
+    // landing time
+    ctx.setLineDash([3, 4]); ctx.strokeStyle = muted; ctx.beginPath(); ctx.moveTo(Xp(T), Tp); ctx.lineTo(Xp(T), Tp + ph); ctx.stroke(); ctx.setLineDash([]);
+    const path = (fn, t1) => { ctx.beginPath(); for (let i = 0; i <= 160; i++) { const t = Math.min(t1, T * i / 160);
+      i ? ctx.lineTo(Xp(t), Yp(fn(t))) : ctx.moveTo(Xp(t), Yp(fn(t))); if (t >= t1) break; } ctx.stroke(); };
+    ctx.lineCap = "round";
+    for (const s of series) {
+      ctx.strokeStyle = s.col; ctx.globalAlpha = 0.25; ctx.lineWidth = 3; path(s.fn, T); ctx.globalAlpha = 1;
+      if (S.t > 0) { ctx.lineWidth = 3; path(s.fn, S.t); }
+    }
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = ink; ctx.globalAlpha = 0.5; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(Xp(S.t), Tp); ctx.lineTo(Xp(S.t), Tp + ph); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    { const hx = Xp(S.t); ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(hx - 7, Tp - 10); ctx.lineTo(hx + 7, Tp - 10); ctx.lineTo(hx, Tp - 1); ctx.closePath(); ctx.fill(); }
+    for (const s of series) { ctx.fillStyle = s.col; ctx.beginPath(); ctx.arc(Xp(S.t), Yp(s.fn(S.t)), 4.5, 0, 7); ctx.fill(); }
+  }
+  function draw() {
+    drawScene();
+    const N = css("--net"), Tg = css("--tgt");
+    let xlo = Infinity, xhi = -Infinity, vlo = 0, vhi = 0;
+    for (let i = 0; i <= 100; i++) { const t = P.T * i / 100; for (const v of [netX(t), tgtX(t)]) { xlo = Math.min(xlo, v); xhi = Math.max(xhi, v); }
+      vlo = Math.min(vlo, P.vx, tgtV(t), netVy(t)); vhi = Math.max(vhi, P.vx, tgtV(t), netVy(t)); }
+    xlo = Math.min(xlo, 0); const xp = Math.max(2, 0.08 * (xhi - xlo)), vp = Math.max(1, 0.1 * (vhi - vlo));
+    let ytop = S.h; if (P.vy > 0) ytop = S.h + P.vy * P.vy / (2 * P.g);
+    drawGraph("gX", [{ fn: netX, col: N }, { fn: tgtX, col: Tg }], xlo - xp, xhi + xp, "x (m)");
+    drawGraph("gY", [{ fn: netY, col: N }, { fn: () => 0, col: Tg }], -0.08 * Math.max(ytop, 5), Math.max(ytop, 5) * 1.1, "y (m)");
+    drawGraph("gVX", [{ fn: () => P.vx, col: N }, { fn: tgtV, col: Tg }], vlo - vp, vhi + vp, "vₓ (m/s)");
+    drawGraph("gVY", [{ fn: netVy, col: N }, { fn: () => 0, col: Tg }], vlo - vp, vhi + vp, "vᵧ (m/s)");
+    const t = S.t, tt = `t = ${t.toFixed(2)} s<br>`;
+    $("valX").innerHTML = tt + `<span class="c-net">${sig(netX(t))} m</span> · <span class="c-tgt">${sig(tgtX(t))} m</span>`;
+    $("valY").innerHTML = tt + `<span class="c-net">y = ${sig(netY(t))} m</span>`;
+    $("valVX").innerHTML = tt + `<span class="c-net">${sig(P.vx)}</span> · <span class="c-tgt">${sig(tgtV(t))}</span> m/s`;
+    $("valVY").innerHTML = tt + `<span class="c-net">vᵧ = ${sig(netVy(t))} m/s</span>`;
+    // result banner
+    const done = S.t >= P.T - 1e-9 && S.launched, R = $("result");
+    if (!done) { R.className = "result wait"; R.textContent = S.t > 0 ? `In the air… the net lands at t = ${sig(P.T)} s.` : "Press Launch to fire the net."; }
+    else if (P.hit) { R.className = "result hit"; R.textContent = `Caught! The net landed ${sig(Math.abs(P.gap))} m from the target (within ±${REACH} m) at t = ${sig(P.T)} s.`; }
+    else { R.className = "result miss"; R.textContent = `Missed by ${sig(Math.abs(P.gap))} m: the net landed ${P.gap > 0 ? "ahead of" : "behind"} the target at t = ${sig(P.T)} s.`; }
+    $("scrub").value = P.T ? S.t / P.T : 0; updPlay();
+  }
+
+  let last = 0;
+  function loop(now) { if (!S.playing) return; const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    S.t = Math.min(P.T, S.t + dt * S.speed); if (S.t >= P.T) S.playing = false; draw(); if (S.playing) requestAnimationFrame(loop); }
+
+  // drag (or click) on a graph to set the time; arrow keys step when a graph has focus
+  ["gX", "gY", "gVX", "gVY"].forEach(id => {
+    const cv = $(id); let dragging = false; cv.tabIndex = 0;
+    cv.setAttribute("aria-label", cv.closest(".graph").querySelector("h3").textContent + ". Drag or use the arrow keys to change the time.");
+    const set = e => { const r = cv.getBoundingClientRect(); S.playing = false; S.launched = true;
+      S.t = Math.max(0, Math.min(P.T, (e.clientX - r.left - 54) / (r.width - 66) * P.T)); draw(); };
+    cv.addEventListener("pointerdown", e => { dragging = true; cv.setPointerCapture(e.pointerId); set(e); });
+    cv.addEventListener("pointermove", e => { if (dragging) set(e); });
+    cv.addEventListener("pointerup", () => dragging = false); cv.addEventListener("pointercancel", () => dragging = false);
+    cv.addEventListener("keydown", e => {
+      const step = e.shiftKey ? 0.25 : 0.05;
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); S.playing = false; S.launched = true;
+        S.t = Math.max(0, Math.min(P.T, S.t + (e.key === "ArrowRight" ? step : -step))); draw(); }
+      else if (e.key === "Home" || e.key === "End") { e.preventDefault(); S.playing = false; S.launched = true; S.t = e.key === "Home" ? 0 : P.T; draw(); }
+    });
+  });
+  new ResizeObserver(() => draw()).observe(document.querySelector(".stage"));
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+  changed();
+  if (document.fonts) document.fonts.ready.then(draw);
+})();
+</script>
+</body>
+</html>

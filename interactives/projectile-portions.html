@@ -73,6 +73,7 @@ select { font: inherit; width: 100%; padding: 6px 8px; border-radius: 6px; borde
 canvas { display: block; width: 100%; }
 #motion { height: 380px; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+button:disabled { opacity: 0.4; cursor: default; }
 button { font: inherit; font-weight: 700; border: 2px solid var(--btn); background: var(--btn); color: var(--btn-ink);
   border-radius: 8px; padding: 6px 14px; cursor: pointer; min-width: 84px; }
 button.ghost { background: transparent; color: var(--ink); }
@@ -118,6 +119,10 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 .key span { display: inline-flex; align-items: center; gap: 6px; }
 .key .sw { width: 22px; height: 12px; background: var(--shade); border: 1px solid var(--line); }
 .key .gh { width: 22px; border-top: 2px dashed var(--ghost); }
+
+.inwarn { color: #b42318; font-weight: 700; font-size: 0.92rem; margin: 0 0 12px; }
+.inwarn:empty { display: none; }
+@media (prefers-color-scheme: dark) { .inwarn { color: #ff8a80; } }
 </style>
 </head>
 <body>
@@ -165,6 +170,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
     </div>
     <p class="hint">A height of 0 m is the ground. Anything higher is a cliff or building.</p>
     <p class="warn" id="warn"></p>
+    <p class="inwarn" id="inwarn" role="status" aria-live="polite"></p>
 
     <label class="check"><input type="checkbox" id="answers" checked> Show solved values (turn off so students can solve first)</label>
     <label class="check"><input type="checkbox" id="ghostDots" checked> Show dots on the shaded parts of the parabola</label>
@@ -176,10 +182,11 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
       <div class="toolbar">
         <button id="play">Play</button>
         <button id="restart" class="ghost">Restart</button>
+        <button id="toTop" class="ghost" title="Jump to the top, where vᵧ = 0">Top (vᵧ = 0)</button>
         <select id="speed" aria-label="Playback speed" style="width:auto;margin:0">
           <option value="1">1× speed</option><option value="0.5">½× speed</option><option value="0.25">¼× speed</option>
         </select>
-        <div class="scrub"><label for="scrub" class="unit">time</label><input type="range" id="scrub" min="0" max="1" step="0.001" value="0"></div>
+        <div class="scrub"><label for="scrub" class="unit">time</label><input type="range" id="scrub" min="0" max="1" step="any" value="0"></div>
       </div>
       <div class="readouts">
         <span>t = <b id="rt">0.00</b> s <span class="unit">(since launch)</span></span>
@@ -278,12 +285,22 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
   const pairs = { v0: ["v0r", "v0n"], th: ["thr", "thn"], y0: ["y0r", "y0n"], yf: ["yfr", "yfn"] };
   function minAngle() { return S.y0 > 0 ? -45 : 1; }
   function sync() { for (const k in pairs) for (const id of pairs[k]) if (document.activeElement !== $(id)) $(id).value = r1(S[k]);
-    for (const id of pairs.th) $(id).min = minAngle(); }
-  function changed() { S.th = Math.max(minAngle(), Math.min(85, S.th)); compute(); S.t = 0; S.playing = false; sync(); text(); draw(); }
+    $("thr").min = minAngle(); }
+  function changed() { $("inwarn").textContent = ""; compute(); S.t = 0; S.playing = false; sync(); text(); draw(); }
+  function check(k, v) {
+    const n = { ...S, [k]: v };
+    if (!(n.v0 > 0)) return "The launch speed must be greater than 0.";
+    if (n.y0 < 0 || n.yf < 0) return "Heights can’t be below the ground (0 m).";
+    if (n.th > 90 || n.th < -90) return "Use a launch angle between −90° and 90°.";
+    if (n.y0 === 0 && n.th <= 0) return "From ground level, aim above 0° so the ball leaves the ground.";
+    return "";
+  }
   for (const k in pairs) {
     const [r, n] = pairs[k];
     const h = e => { const v = parseFloat(e.target.value); if (isNaN(v)) return;
-      const el = $(r); S[k] = Math.min(+el.max, Math.max(+el.min, v)); $("examples").value = ""; changed(); };
+      const msg = check(k, v);
+      if (msg) { $("inwarn").textContent = msg; if (e.type === "change" || e.target.type === "range") e.target.value = +(+S[k]).toFixed(3); return; }
+      S[k] = v; $("examples").value = ""; changed(); };
     $(r).addEventListener("input", h); $(n).addEventListener("change", h);
   }
   $("examples").addEventListener("change", e => { const ex = EX[e.target.value]; if (!ex) return;
@@ -294,7 +311,8 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
   $("play").addEventListener("click", () => { if (S.t >= P.T - 1e-9) S.t = 0; S.playing = !S.playing; updPlay();
     if (S.playing) { last = performance.now(); requestAnimationFrame(loop); } });
   $("restart").addEventListener("click", () => { S.t = 0; draw(); });
-  $("scrub").addEventListener("input", e => { S.playing = false; S.t = parseFloat(e.target.value) * P.T; draw(); });
+  $("toTop").addEventListener("click", () => { const tp = topT(); if (tp === null) return; S.playing = false; S.t = tp; draw(); });
+  $("scrub").addEventListener("input", e => { S.playing = false; S.t = snapTop(parseFloat(e.target.value) * P.T, 0.015 * P.T); draw(); });
   document.addEventListener("keydown", e => {
     if (e.code === "Space" && !/INPUT|SELECT|BUTTON/.test(document.activeElement.tagName)) { e.preventDefault(); $("play").click(); }
   });
@@ -346,6 +364,10 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
   }
 
   // ---------- equations above each graph ----------
+  // time of the top (vᵧ = 0) within this problem, or null if the problem doesn't pass through it
+  function topT() { const tp = P.vy0 / G; return (tp > 1e-6 && tp < P.T - 1e-6) ? tp : null; }
+  function snapTop(t, tol) { const tp = topT(); return (tp !== null && Math.abs(t - tp) <= tol) ? tp : t; }
+
   function graphEqs() {
     const par = (n, u) => `(${sig(n)} ${u})`, cst = (n, u) => (n < 0 ? `(${sig(n)} ${u})` : `${sig(n)} ${u}`);
     const set = (id, gen, num) => { $(id).innerHTML = `<div class="gen">${gen}</div><div>${num}</div>`; };
@@ -524,6 +546,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
     $("rt").textContent = S.t.toFixed(2); $("rx").textContent = sig(P.vx * S.t); $("ry").textContent = sig(yAt(S.t));
     $("rvx").textContent = sig(P.vx); $("rvy").textContent = sig(vyAt(S.t));
     $("scrub").value = P.T ? S.t / P.T : 0; updPlay();
+    $("toTop").disabled = topT() === null;
   }
   let last = 0;
   function loop(now) { if (!S.playing) return; const dt = Math.min(0.05, (now - last) / 1000); last = now;
@@ -537,7 +560,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
     const setFrom = e => {
       const r = cv.getBoundingClientRect(), L = 54, pw = r.width - 54 - 12;
       const tau = (e.clientX - r.left - L) / pw * P.tauG;
-      S.playing = false; S.t = Math.max(0, Math.min(P.T, tau - P.tauL)); draw();
+      S.playing = false; S.t = snapTop(Math.max(0, Math.min(P.T, tau - P.tauL)), 8 / pw * P.tauG); draw();
     };
     cv.addEventListener("pointerdown", e => { dragging = true; cv.setPointerCapture(e.pointerId); setFrom(e); });
     cv.addEventListener("pointermove", e => { if (dragging) setFrom(e); });
@@ -547,7 +570,8 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
       const step = e.shiftKey ? 0.25 : 0.05;
       if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
         e.preventDefault(); S.playing = false;
-        S.t = Math.max(0, Math.min(P.T, S.t + (e.key === "ArrowRight" ? step : -step))); draw();
+        const nt = Math.max(0, Math.min(P.T, S.t + (e.key === "ArrowRight" ? step : -step))), tp = topT();
+        S.t = (tp !== null && (S.t - tp) * (nt - tp) < 0) ? tp : nt; draw();   // stop at the top instead of stepping past it
       } else if (e.key === "Home" || e.key === "End") { e.preventDefault(); S.playing = false; S.t = e.key === "Home" ? 0 : P.T; draw(); }
     });
   });

@@ -110,6 +110,10 @@ video { width: 100%; border-radius: 8px; background: #000; display: block; }
 .graph.p .val { color: var(--pos); } .graph.v .val { color: var(--vel); } .graph.a .val { color: var(--acc); }
 .graph canvas { cursor: ew-resize; touch-action: pan-y; }
 .graph canvas:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+
+.inwarn { color: #b42318; font-weight: 700; font-size: 0.92rem; margin: 0 0 12px; }
+.inwarn:empty { display: none; }
+@media (prefers-color-scheme: dark) { .inwarn { color: #ff8a80; } }
 </style>
 </head>
 <body>
@@ -130,44 +134,45 @@ video { width: 100%; border-radius: 8px; background: #000; display: block; }
     </select>
 
     <div class="row"><div class="top"><label for="m">Ball mass m</label>
-      <span><input type="number" id="m" min="1" max="10" step="0.1"> <span class="unit">kg</span></span></div></div>
+      <span><input type="number" id="m" step="any"> <span class="unit">kg</span></span></div></div>
+    <p class="inwarn" id="inwarn" role="status" aria-live="polite"></p>
 
     <fieldset class="stage"><legend>1 · At rest</legend>
       <div class="row"><div class="top"><label for="tr">Wait time</label>
-        <span><input type="number" id="tr" min="0" max="10" step="0.1"> <span class="unit">s</span></span></div>
+        <span><input type="number" id="tr" step="any"> <span class="unit">s</span></span></div>
         <input type="range" id="trR" min="0" max="10" step="0.1"></div>
     </fieldset>
 
     <fieldset class="stage push"><legend>2 · Push to start (to the right)</legend>
       <div class="row f"><div class="top"><label for="F1">Broom force F</label>
-        <span><input type="number" id="F1" min="0" max="40" step="0.1"> <span class="unit">N →</span></span></div>
+        <span><input type="number" id="F1" step="any"> <span class="unit">N →</span></span></div>
         <input type="range" id="F1R" min="0" max="40" step="0.1"></div>
       <div class="row"><div class="top"><label for="d1">Push time</label>
-        <span><input type="number" id="d1" min="0.1" max="10" step="0.1"> <span class="unit">s</span></span></div>
+        <span><input type="number" id="d1" step="any"> <span class="unit">s</span></span></div>
         <input type="range" id="d1R" min="0.1" max="10" step="0.1"></div>
       <p class="calc" id="c1"></p>
     </fieldset>
 
     <fieldset class="stage"><legend>3 · No contact (coasting)</legend>
       <div class="row"><div class="top"><label for="D">Coasting distance</label>
-        <span><input type="number" id="D" min="0" max="60" step="0.5"> <span class="unit">m</span></span></div>
+        <span><input type="number" id="D" step="any"> <span class="unit">m</span></span></div>
         <input type="range" id="DR" min="0" max="60" step="0.5"></div>
       <p class="calc" id="c2"></p>
     </fieldset>
 
     <fieldset class="stage push"><legend>4–5 · Push the other way (to the left)</legend>
       <div class="row f"><div class="top"><label for="F2">Broom force F</label>
-        <span><input type="number" id="F2" min="0" max="40" step="0.1"> <span class="unit">N ←</span></span></div>
+        <span><input type="number" id="F2" step="any"> <span class="unit">N ←</span></span></div>
         <input type="range" id="F2R" min="0" max="40" step="0.1"></div>
       <div class="row"><div class="top"><label for="d2">Push time</label>
-        <span><input type="number" id="d2" min="0.1" max="15" step="0.1"> <span class="unit">s</span></span></div>
+        <span><input type="number" id="d2" step="any"> <span class="unit">s</span></span></div>
         <input type="range" id="d2R" min="0.1" max="15" step="0.1"></div>
       <p class="calc" id="c3"></p>
     </fieldset>
 
     <fieldset class="stage"><legend>6 · No contact again</legend>
       <div class="row"><div class="top"><label for="d3">Coast time</label>
-        <span><input type="number" id="d3" min="0" max="10" step="0.1"> <span class="unit">s</span></span></div>
+        <span><input type="number" id="d3" step="any"> <span class="unit">s</span></span></div>
         <input type="range" id="d3R" min="0" max="10" step="0.1"></div>
     </fieldset>
 
@@ -284,10 +289,18 @@ video { width: 100%; border-radius: 8px; background: #000; display: block; }
       : isFinite(S.tStop) && Math.abs(S.tStop - S.d2) < 0.05 ? "stops just as the push ends"
       : `slows down but doesn’t stop (it would need ${isFinite(S.tStop) ? sig(S.tStop) + " s" : "a push"})`);
   }
-  function changed() { build(); S.t = 0; S.playing = false; sync(); cards(); draw(); }
+  function changed() { $("inwarn").textContent = ""; build(); S.t = 0; S.playing = false; sync(); cards(); draw(); }
+  function check(k, v) {
+    if (k === "m" && !(v > 0)) return "The mass must be greater than 0 (a = F/m).";
+    if ((k === "F1" || k === "F2") && v < 0) return "Enter the size of the force. Its direction is set by the section (→ or ←).";
+    if (v < 0) return "Times and distances can’t be negative.";
+    return "";
+  }
   for (const k of keys) {
     const h = e => { const v = parseFloat(e.target.value); if (isNaN(v)) return;
-      const el = $(k); S[k] = Math.min(+el.max, Math.max(+el.min, v)); $("examples").value = ""; changed(); };
+      const msg = check(k, v);
+      if (msg) { $("inwarn").textContent = msg; if (e.type === "change" || e.target.type === "range") e.target.value = +(+S[k]).toFixed(3); return; }
+      S[k] = v; $("examples").value = ""; changed(); };
     $(k).addEventListener("change", h); if ($(k + "R")) $(k + "R").addEventListener("input", h);
   }
   $("examples").addEventListener("change", e => { const ex = EX[e.target.value]; if (!ex) return; Object.assign(S, ex); changed(); $("examples").value = e.target.value; });

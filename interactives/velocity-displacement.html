@@ -99,6 +99,10 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 .graph.p .val { color: var(--pos); } .graph.v .val { color: var(--vel); } .graph.a .val { color: var(--acc); }
 .graph canvas { cursor: ew-resize; touch-action: pan-y; }
 .graph canvas:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+
+.inwarn { color: #b42318; font-weight: 700; font-size: 0.92rem; margin: 0 0 12px; }
+.inwarn:empty { display: none; }
+@media (prefers-color-scheme: dark) { .inwarn { color: #ff8a80; } }
 </style>
 </head>
 <body>
@@ -120,20 +124,21 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
     </select>
     <div class="field">
       <div class="top"><label for="ar" id="alab" style="color:var(--acc)">Acceleration a</label>
-        <span><input type="number" id="an" aria-labelledby="alab" min="0.1" max="2" step="0.05"> <span class="unit">m/s²</span></span></div>
+        <span><input type="number" id="an" aria-labelledby="alab" step="any"> <span class="unit">m/s²</span></span></div>
       <input type="range" id="ar" aria-labelledby="alab" min="0.1" max="2" step="0.05" style="accent-color:var(--acc)">
     </div>
     <div class="field">
       <div class="top"><label for="vr" id="vlab" style="color:var(--vel)">Start velocity v₀</label>
-        <span><input type="number" id="vn" aria-labelledby="vlab" min="0" max="2" step="0.1"> <span class="unit">m/s</span></span></div>
+        <span><input type="number" id="vn" aria-labelledby="vlab" step="any"> <span class="unit">m/s</span></span></div>
       <input type="range" id="vr" aria-labelledby="vlab" min="0" max="2" step="0.1" style="accent-color:var(--vel)">
     </div>
     <div class="field">
       <div class="top"><label for="dr" id="dlab" style="color:var(--pos)">Distance Δx</label>
-        <span><input type="number" id="dn" aria-labelledby="dlab" min="0.5" max="3" step="0.1"> <span class="unit">m</span></span></div>
+        <span><input type="number" id="dn" aria-labelledby="dlab" step="any"> <span class="unit">m</span></span></div>
       <input type="range" id="dr" aria-labelledby="dlab" min="0.5" max="3" step="0.1" style="accent-color:var(--pos)">
     </div>
     <p class="note">The fan blows air to the left, so the thrust pushes the cart to the right. The cart starts at x₀ = 0 m, so its position equals its displacement Δx.</p>
+    <p class="inwarn" id="inwarn" role="status" aria-live="polite"></p>
     <label class="check"><input type="checkbox" id="square"> Plot v² instead of v (a straight line with slope 2a)</label>
     <label class="check"><input type="checkbox" id="ghost"> Show the full graph faintly (for checking predictions)</label>
   </aside>
@@ -184,11 +189,19 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
   // ---------- controls ----------
   const pairs = { a: ["ar", "an"], v0: ["vr", "vn"], D: ["dr", "dn"] };
   function sync() { for (const k in pairs) for (const id of pairs[k]) $(id).value = r2(S[k]); }
-  function changed() { S.T = runTime(); S.t = 0; S.playing = false; sync(); text(); draw(); }
+  function changed() { $("inwarn").textContent = ""; S.T = runTime(); S.t = 0; S.playing = false; sync(); text(); draw(); }
+  function check(k, v) {
+    if (k === "a" && !(v > 0)) return "The acceleration must be greater than 0 (the fan speeds the cart up).";
+    if (k === "v0" && v < 0) return "The starting velocity can’t be negative here (the cart moves to the right).";
+    if (k === "D" && !(v > 0)) return "The distance must be greater than 0.";
+    return "";
+  }
   for (const k in pairs) {
     const [r, nm] = pairs[k];
     const h = e => { const v = parseFloat(e.target.value); if (isNaN(v)) return;
-      const el = $(r); S[k] = Math.min(+el.max, Math.max(+el.min, v)); $("examples").value = ""; changed(); };
+      const msg = check(k, v);
+      if (msg) { $("inwarn").textContent = msg; if (e.type === "change" || e.target.type === "range") e.target.value = +(+S[k]).toFixed(3); return; }
+      S[k] = v; $("examples").value = ""; changed(); };
     $(r).addEventListener("input", h); $(nm).addEventListener("change", h);
   }
   $("examples").addEventListener("change", e => { const ex = EX[e.target.value]; if (!ex) return;

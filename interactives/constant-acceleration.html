@@ -126,6 +126,10 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 .graph.p .val { color: var(--pos); } .graph.v .val { color: var(--vel); } .graph.a .val { color: var(--acc); }
 .graph canvas { cursor: ew-resize; touch-action: pan-y; }
 .graph canvas:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+
+.inwarn { color: #b42318; font-weight: 700; font-size: 0.92rem; margin: 0 0 12px; }
+.inwarn:empty { display: none; }
+@media (prefers-color-scheme: dark) { .inwarn { color: #ff8a80; } }
 </style>
 </head>
 <body>
@@ -171,6 +175,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
       <input type="range" id="ar" aria-labelledby="alab">
     </div>
     <p class="note" id="note"></p>
+    <p class="inwarn" id="inwarn" role="status" aria-live="polite"></p>
     <div class="field">
       <div class="top"><label for="Tr" id="Tlab">Run time</label>
         <span><input type="number" id="Tn" aria-labelledby="Tlab"> <span class="unit">s</span></span></div>
@@ -254,11 +259,11 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
     } else if (S.a !== 0 && S.v0 * S.a < 0) {
       T = 2 * Math.abs(S.v0 / S.a);
     } else T = 3;
-    return Math.min(10, Math.max(0.5, T));
+    return Math.min(60, Math.max(0.5, T));
   }
   function maxT() {
-    if (S.scn === "free") { const tg = groundTime(); if (tg > 0.3 && isFinite(tg)) return Math.min(10, tg); }
-    return 10;
+    if (S.scn === "free") { const tg = groundTime(); if (tg > 0.3 && isFinite(tg)) return Math.min(60, tg); }
+    return 60;
   }
 
   // ---------- controls ----------
@@ -268,7 +273,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
     for (const k in pairs) {
       const [lo, hi, st] = L[k];
       for (const id of pairs[k]) {
-        const el = $(id); el.min = lo; el.max = hi; el.step = st;
+        const el = $(id); if (el.type === "range") { el.min = lo; el.max = hi; } el.step = el.type === "range" ? st : "any";
         el.disabled = (k === "a" && S.scn === "free");
       }
     }
@@ -282,16 +287,24 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
     $("Tr").max = maxT(); $("Tr").value = S.T; $("Tn").value = S.T;
   }
   function onParamChange(keepT) {
+    $("inwarn").textContent = "";
     if (!keepT) S.T = autoT();
     S.T = Math.floor(Math.min(S.T, maxT()) * 100 + 1e-6) / 100;
     S.t = 0; S.playing = false;
     syncInputs(); updateText(); draw();
   }
+  // only physical limits apply to typed values; the sliders keep their classroom ranges
+  function check(k, v) {
+    if (S.scn === "ramp" && k === "a" && Math.abs(v) > G) return `On a frictionless ramp, |a| can’t be more than ${G} m/s² (a vertical drop).`;
+    if (S.scn === "free" && k === "x0" && v < 0) return "The starting height can’t be below the ground (y₀ ≥ 0).";
+    return "";
+  }
   for (const k in pairs) {
     const [rId, nId] = pairs[k];
     const handler = e => {
       let v = parseFloat(e.target.value); if (isNaN(v)) return;
-      const [lo, hi] = LIM[S.scn][k]; v = Math.min(hi, Math.max(lo, v));
+      const msg = check(k, v);
+      if (msg) { $("inwarn").textContent = msg; if (e.type === "change" || e.target.type === "range") e.target.value = +(+S[k]).toFixed(3); return; }
       S[k] = v; onParamChange(false);
     };
     $(rId).addEventListener("input", handler);

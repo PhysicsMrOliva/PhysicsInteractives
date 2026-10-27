@@ -281,10 +281,10 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
   }
   function compute() {
     const r1 = endTime(S.x0, S.v0, S.a1, S.e1, S.e1v);
-    const p1 = { x0: S.x0, v0: S.v0, a: S.a1, dt: Math.min(r1.dt, 120), t0: 0 };
+    const p1 = { x0: S.x0, v0: S.v0, a: S.a1, dt: Math.min(r1.dt, 600), t0: 0 };
     p1.xf = p1.x0 + p1.v0 * p1.dt + 0.5 * p1.a * p1.dt ** 2; p1.vf = p1.v0 + p1.a * p1.dt;
     const r2 = endTime(p1.xf, p1.vf, S.a2, S.e2, S.e2v);
-    const p2 = { x0: p1.xf, v0: p1.vf, a: S.a2, dt: Math.min(r2.dt, 120), t0: p1.dt };
+    const p2 = { x0: p1.xf, v0: p1.vf, a: S.a2, dt: Math.min(r2.dt, 600), t0: p1.dt };
     p2.xf = p2.x0 + p2.v0 * p2.dt + 0.5 * p2.a * p2.dt ** 2; p2.vf = p2.v0 + p2.a * p2.dt;
     S.parts = [p1, p2]; S.T = p1.dt + p2.dt; S.warn = [r1.warn || "", r2.warn || ""];
   }
