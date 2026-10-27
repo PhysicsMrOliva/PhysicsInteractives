@@ -278,8 +278,8 @@ video { width: 100%; border-radius: 8px; background: #000; display: block; }
   const keys = ["m", "tr", "F1", "d1", "D", "F2", "d2", "d3"];
   function sync() {
     for (const k of keys) {
-      if (document.activeElement !== $(k)) $(k).value = S[k];
-      if ($(k + "R") && document.activeElement !== $(k + "R")) $(k + "R").value = S[k];
+      $(k).value = S[k];
+      if ($(k + "R")) $(k + "R").value = S[k];
     }
     const a1 = S.F1 / S.m, a2 = S.F2 / S.m;
     $("c1").innerHTML = `a = F/m = ${sig(S.F1)} N / ${sig(S.m)} kg = <b>${sig(a1)} m/s²</b><br>top speed = ${sig(S.v1)} m/s`;

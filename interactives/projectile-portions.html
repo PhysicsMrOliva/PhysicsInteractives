@@ -284,7 +284,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
   // ---------- controls ----------
   const pairs = { v0: ["v0r", "v0n"], th: ["thr", "thn"], y0: ["y0r", "y0n"], yf: ["yfr", "yfn"] };
   function minAngle() { return S.y0 > 0 ? -45 : 1; }
-  function sync() { for (const k in pairs) for (const id of pairs[k]) if (document.activeElement !== $(id)) $(id).value = r1(S[k]);
+  function sync() { for (const k in pairs) for (const id of pairs[k]) $(id).value = r1(S[k]);
     $("thr").min = minAngle(); }
   function changed() { $("inwarn").textContent = ""; compute(); S.t = 0; S.playing = false; sync(); text(); draw(); }
   function check(k, v) {

@@ -140,6 +140,8 @@ button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-vi
       <option value="L7">Level 7: angled launch, target with x₀, v₀ and a (find its acceleration)</option>
       <option value="L8">Level 8: target drives toward the cliff and slows (find its position)</option>
       <option value="L9">Level 9: moving, accelerating target (find the launch speed)</option>
+      <option value="L10">Level 10: moving target (find the launch angle)</option>
+      <option value="L11">Level 11: accelerating target (find the cliff height)</option>
     </select>
     <p class="task" id="task"></p>
 
@@ -223,7 +225,9 @@ button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-vi
     L6:   { h: 80, th: 35, v: 28, x0: 30, u: 0, a: 0, g: 9.81 },    // find a   (5.98 m/s²)
     L7:   { h: 100, th: 45, v: 30, x0: 40, u: 8, a: 0, g: 9.81 },   // find a   (2.13 m/s²)
     L8:   { h: 50, th: 20, v: 35, x0: 0, u: -15, a: 1.5, g: 9.81 }, // find x0  (206 m)
-    L9:   { h: 75, th: 25, v: 0, x0: 60, u: 10, a: 1.0, g: 9.81 }   // find v   (26.6 m/s)
+    L9:   { h: 75, th: 25, v: 0, x0: 60, u: 10, a: 1.0, g: 9.81 },  // find v   (26.6 m/s)
+    L10:  { h: 40, th: 0, v: 30, x0: 90, u: 6, a: 0, g: 9.81 },     // find th  (19.1° or 42.6°)
+    L11:  { h: 0, th: 30, v: 20, x0: 30, u: 6, a: 0.5, g: 9.81 }    // find h   (10.9 m)
   };
   const TASK = {
     free: [null, ""],
@@ -235,7 +239,9 @@ button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-vi
     L6: ["a", "<b>Level 6 · Angled launch, target speeds up from rest.</b> The target starts at 30 m. Find its acceleration."],
     L7: ["a", "<b>Level 7 · Angled launch, target already moving.</b> The target starts at 40 m moving at 8 m/s. Find the acceleration it needs."],
     L8: ["x0", "<b>Level 8 · Target drives toward the cliff.</b> It moves at −15 m/s and slows down with a = +1.5 m/s². Find where it starts."],
-    L9: ["v", "<b>Level 9 · Find the launch speed.</b> The target starts at 60 m, moving at 10 m/s and speeding up at 1.0 m/s². The net is fired at 25°. How fast must it be launched? (Hint: write t in terms of v₀, or try values and refine.)"]
+    L9: ["v", "<b>Level 9 · Find the launch speed.</b> The target starts at 60 m, moving at 10 m/s and speeding up at 1.0 m/s². The net is fired at 25°. How fast must it be launched? (Hint: write t in terms of v₀, or try values and refine.)"],
+    L10: ["th", "<b>Level 10 · Find the launch angle.</b> The net leaves a 40 m cliff at 30 m/s. The target starts at 90 m and drives at 6 m/s. At what angle should the cannon aim? (There is more than one answer. Can you find both?)"],
+    L11: ["h", "<b>Level 11 · Find the cliff height.</b> The net is fired at 30° and 20 m/s. The target starts at 30 m, moving at 6 m/s and speeding up at 0.5 m/s². How tall must the cliff be? (Hint: use the horizontal motion to find the time first.)"]
   };
   function showTask(lv) {
     const [f, txt] = TASK[lv] || TASK.free;
@@ -280,10 +286,39 @@ button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-vi
     }
     return null;
   }
+  // launch angles that make the catch (scan for sign changes, then bisect); usually a low and a high angle
+  function gapTheta(thDeg) {
+    const th = thDeg * Math.PI / 180, vx = S.v * Math.cos(th), vy = S.v * Math.sin(th), g = S.g;
+    const d = vy * vy + 2 * g * S.h; if (d < 0) return NaN;
+    const T = (vy + Math.sqrt(d)) / g; if (!(T > 1e-6)) return NaN;
+    return vx * T - (S.x0 + S.u * T + 0.5 * S.a * T * T);
+  }
+  function solveAngles() {
+    const roots = []; let pt = -89.5, prev = gapTheta(pt);
+    for (let th = -89.25; th <= 89.5; th += 0.25) {
+      const gp = gapTheta(th);
+      if (isFinite(prev) && isFinite(gp) && prev * gp <= 0) {
+        let lo = pt, hi = th;
+        for (let i = 0; i < 50; i++) { const m = (lo + hi) / 2; if (gapTheta(lo) * gapTheta(m) <= 0) hi = m; else lo = m; }
+        const r = (lo + hi) / 2; if (!roots.some(q => Math.abs(q - r) < 0.05)) roots.push(r);
+      }
+      prev = gp; pt = th;
+    }
+    return roots;
+  }
+  // cliff heights that make the catch: x_net = x_target gives a quadratic for t, then h = ½gt² − v₀ᵧt
+  function solveHeights() {
+    const th = S.th * Math.PI / 180, vx = S.v * Math.cos(th), vy = S.v * Math.sin(th);
+    const A = 0.5 * S.a, B = S.u - vx, C = S.x0; let Ts = [];
+    if (Math.abs(A) < 1e-12) { if (Math.abs(B) > 1e-12) Ts = [-C / B]; }
+    else { const D = B * B - 4 * A * C; if (D >= 0) Ts = [(-B - Math.sqrt(D)) / (2 * A), (-B + Math.sqrt(D)) / (2 * A)]; }
+    return Ts.filter(T => T > 1e-6).map(T => ({ T, h: 0.5 * S.g * T * T - vy * T })).filter(o => o.h >= -1e-9).sort((p, q) => p.h - q.h);
+  }
   const netX = t => P.vx * t, netY = t => S.h + P.vy * t - 0.5 * P.g * t * t, netVy = t => P.vy - P.g * t;
   const tgtX = t => S.x0 + S.u * t + 0.5 * S.a * t * t, tgtV = t => S.u + S.a * t;
 
   // ---------- controls ----------
+  let editing = null;                     // the input currently being typed in
   const keys = ["h", "th", "v", "x0", "u", "a"];
   function check(k, v) {
     if (k === "h" && v < 0) return "The cliff height can’t be below the ground (0 m).";
@@ -292,8 +327,8 @@ button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-vi
     return "";
   }
   function sync() {
-    for (const k of keys) { if (document.activeElement !== $(k)) $(k).value = Number(S[k].toFixed(3)); if (document.activeElement !== $(k + "R")) $(k + "R").value = S[k]; }
-    if (document.activeElement !== $("g")) $("g").value = -S.g;          // shown as aᵧ (negative: downward)
+    for (const k of keys) { if (editing !== $(k)) $(k).value = Number(S[k].toFixed(3)); if (editing !== $(k + "R")) $(k + "R").value = S[k]; }
+    if (editing !== $("g")) $("g").value = -S.g;          // shown as aᵧ (negative: downward)
     document.querySelectorAll(".planets button").forEach(b => b.setAttribute("aria-pressed", String(Math.abs(-b.dataset.ay - S.g) < 1e-9)));
   }
   function changed() { $("inwarn").textContent = ""; compute(); S.t = 0; S.playing = false; S.launched = false; sync(); text(); draw(); }
@@ -301,13 +336,13 @@ button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-vi
     const h = e => { const v = parseFloat(e.target.value); if (isNaN(v)) return;
       const msg = check(k, v);
       if (msg) { $("inwarn").textContent = msg; if (e.type === "change" || e.target.type === "range") e.target.value = +(+S[k]).toFixed(3); return; }
-      S[k] = v; changed(); };
+      editing = e.type === "input" ? e.target : null; S[k] = v; changed(); editing = null; };
     $(k).addEventListener("input", h); $(k).addEventListener("change", h); $(k + "R").addEventListener("input", h);
   }
   // the aᵧ box takes a negative value (downward); internally S.g holds its size
   $("g").addEventListener("input", e => { const val = parseFloat(e.target.value); if (isNaN(val)) return;
     if (!(val < 0)) { $("inwarn").textContent = "aᵧ must be negative: free-fall acceleration points down."; return; }
-    S.g = -val; changed(); });
+    editing = e.target; S.g = -val; changed(); editing = null; });
   document.querySelectorAll(".planets button").forEach(b => b.addEventListener("click", () => { S.g = -b.dataset.ay; changed(); }));
   $("levels").addEventListener("change", e => { Object.assign(S, LEVELS[e.target.value]); showTask(e.target.value); changed(); });
   $("trail").addEventListener("change", e => { S.trail = e.target.checked; draw(); });
@@ -340,6 +375,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-vi
     const needU = (P.xLand - S.x0 - 0.5 * S.a * T * T) / T;
     const needA = 2 * (P.xLand - S.x0 - S.u * T) / (T * T);
     const needV = solveLaunchSpeed();
+    const needTh = solveAngles(), needH = solveHeights();
     $("sol").innerHTML = `<ol>
       <li><b>Launch components:</b> v₀ₓ = v₀ cos θ = ${sig(P.vx)} m/s, v₀ᵧ = v₀ sin θ = ${sig(P.vy)} m/s</li>
       <li><b>Time in the air</b> (net reaches y = 0): 0 = ½(−${sig(g)} m/s²)t² + ${par(P.vy, "m/s")}t + ${sig(S.h)} m &nbsp;→&nbsp; t = <b>${sig(T)} s</b></li>
@@ -351,6 +387,8 @@ button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-vi
         <div>…only the <b>initial speed</b>:<br>v₀ = (x<sub>land</sub> − x₀ − ½at²) / t = <b>${sig(needU)} m/s</b></div>
         <div>…only the <b>acceleration</b>:<br>a = 2(x<sub>land</sub> − x₀ − v₀t) / t² = <b>${sig(needA)} m/s²</b></div>
         <div>…only the net’s <b>launch speed</b>:<br>${needV === null ? "<b>no launch speed works</b> at this angle" : `v₀ = <b>${sig(needV)} m/s</b>`}<br><span class="hidden">(t depends on v₀, so this one is solved numerically)</span></div>
+        <div>…only the <b>launch angle</b>:<br>${needTh.length ? `θ = <b>${needTh.map(r => sig(r) + "°").join("</b> or <b>")}</b>` : "<b>no angle works</b> at this speed"}<br><span class="hidden">(solved numerically; there is often a low and a high angle)</span></div>
+        <div>…only the <b>cliff height</b>:<br>${needH.length ? `h = <b>${sig(needH[0].h)} m</b> (lands at t = ${sig(needH[0].T)} s)` + (needH.length > 1 ? `<br><span class="hidden">(a ${sig(needH[1].h)} m cliff would also work)</span>` : "") : "<b>no cliff height works</b>"}<br><span class="hidden">(x<sub>net</sub> = x<sub>target</sub> gives t, then h = −½aᵧt² − v₀ᵧt)</span></div>
       </div>`;
   }
 

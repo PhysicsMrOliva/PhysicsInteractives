@@ -312,7 +312,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
     endOptions($("e1")); endOptions($("e2"));
     $("e1").value = S.e1; $("e2").value = S.e2;
     for (const [k, id] of [["x0", "x0"], ["v0", "v0"], ["a1", "a1"], ["a2", "a2"], ["e1v", "e1v"], ["e2v", "e2v"]])
-      if (document.activeElement !== $(id)) $(id).value = S[k];
+      if (editing !== $(id)) $(id).value = S[k];
     for (const i of [1, 2]) {
       const e = S["e" + i], row = $(`e${i}v`).closest(".row");
       row.style.display = e === "stop" ? "none" : "";
@@ -326,9 +326,10 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
     compute(); S.t = 0; S.playing = false;
     syncInputs(); text(); draw();
   }
+  let editing = null;                     // the input currently being typed in
   const numIn = (id, key) => $(id).addEventListener("input", e => {
     const v = parseFloat(e.target.value); if (isNaN(v)) return;
-    S[key] = v; $("examples").value = ""; changed();
+    editing = e.target; S[key] = v; $("examples").value = ""; changed(); editing = null;
   });
   [["x0", "x0"], ["v0", "v0"], ["a1", "a1"], ["a2", "a2"], ["e1v", "e1v"], ["e2v", "e2v"]].forEach(([i, k]) => numIn(i, k));
   $("e1").addEventListener("change", e => { S.e1 = e.target.value; if (S.e1 === "time" && !(S.e1v > 0)) S.e1v = 2; $("examples").value = ""; changed(); });
