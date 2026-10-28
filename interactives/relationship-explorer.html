@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Relationship Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=STIX+Two+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#f3f6f3;
+  --panel:#ffffff;
+  --ink:#16252b;
+  --muted:#4f6269;
+  --grid:#dbe5e4;
+  --axis:#56696f;
+  --curve:#0e7c86;
+  --ptA:#16252b;
+  --ptB:#c2255c;
+  --accent:#0e7c86;
+  --accent-soft:#e0f1f1;
+  --line:#c8d5d4;
+  --ok:#1b6e3d;
+  --bad:#b4281e;
+  --serif:'STIX Two Text','Cambria','Times New Roman',Georgia,serif;
+  --sans:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0e1a1e;--panel:#15252b;--ink:#e8f0ef;--muted:#a3b7bb;--grid:#243940;--axis:#8ea5ab;
+    --curve:#4fd1c5;--ptA:#e8f0ef;--ptB:#ff7aa5;--accent:#4fd1c5;--accent-soft:#17393b;
+    --line:#2f444b;--ok:#62d68f;--bad:#ff8c80;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0e1a1e;--panel:#15252b;--ink:#e8f0ef;--muted:#a3b7bb;--grid:#243940;--axis:#8ea5ab;
+  --curve:#4fd1c5;--ptA:#e8f0ef;--ptB:#ff7aa5;--accent:#4fd1c5;--accent-soft:#17393b;
+  --line:#2f444b;--ok:#62d68f;--bad:#ff8c80;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans);-webkit-text-size-adjust:100%}
+button,input{font:inherit;color:inherit}
+.wrap{max-width:1200px;margin:0 auto;padding:18px 16px 40px}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+h1{font:600 clamp(26px,4vw,38px)/1.1 var(--serif);margin:0 0 4px;letter-spacing:-.01em}
+.sub{margin:0;color:var(--muted);max-width:60ch}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
+.seg button{border:0;background:transparent;padding:10px 16px;min-height:44px;cursor:pointer;font-weight:700;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
+.seg button+button{border-left:1.5px solid var(--line)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.layout{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:20px;align-items:start}
+.controls{order:1;display:flex;flex-direction:column;gap:14px}
+.results{order:2;display:flex;flex-direction:column;gap:14px;min-width:0}
+@media (max-width:880px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .results{order:1}.controls{order:2}
+}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.panel h2{font:700 15px/1.3 var(--sans);margin:0 0 10px}
+.rels{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rel{display:flex;align-items:center;gap:10px;text-align:left;border:1.5px solid var(--line);background:transparent;border-radius:8px;padding:8px 10px;min-height:52px;cursor:pointer}
+.rel svg{flex:none;width:44px;height:30px}
+.rel .eq{font:400 19px/1.1 var(--serif)}
+.rel .nm{display:block;font-size:13px;color:var(--muted)}
+.rel[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.scens{display:flex;flex-direction:column;gap:6px}
+.scen{text-align:left;border:1.5px solid var(--line);background:transparent;border-radius:8px;padding:9px 11px;min-height:44px;cursor:pointer}
+.scen[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.scen small{display:block;color:var(--muted)}
+.slider{display:block;margin:0 0 12px}
+.slider:last-child{margin-bottom:0}
+.slider .row{display:flex;justify-content:space-between;gap:8px;margin-bottom:2px}
+.slider .row b{font-family:var(--serif);font-size:18px;font-weight:600;white-space:nowrap}
+.slider input[type=range]{width:100%;height:32px;accent-color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{min-width:52px;min-height:44px;padding:6px 12px;border:1.5px solid var(--line);border-radius:8px;background:transparent;cursor:pointer;font:600 18px/1 var(--serif)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+.chip:disabled{opacity:.4;cursor:not-allowed}
+.kc{width:84px;min-height:44px;padding:6px 8px;border:1.5px solid var(--line);border-radius:8px;background:transparent;font-size:16px}
+.check{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.check input{width:22px;height:22px;margin:2px 0 0;accent-color:var(--accent);flex:none}
+.hint{color:var(--muted);font-size:14px;margin:6px 0 0}
+.info h2{font:600 22px/1.2 var(--serif);margin:0 0 4px}
+.info p{margin:4px 0}
+.eqbig{font:400 clamp(24px,3.4vw,32px)/1.25 var(--serif);margin:8px 0;word-break:break-word}
+.tag{display:inline-block;border:1.5px solid var(--accent);color:var(--accent);border-radius:999px;padding:0 10px;font-size:13px;font-weight:700;margin-left:8px;vertical-align:middle}
+.graph svg{display:block;width:100%;height:auto}
+.graph text{font-family:var(--sans);fill:var(--muted)}
+.ro{border-left:5px solid var(--ptB)}
+.ro .big{font:600 clamp(24px,3.6vw,34px)/1.2 var(--serif);margin:0 0 4px}
+.ro .nums{margin:0;color:var(--muted)}
+.ro .alg{margin:10px 0 0;font:400 19px/1.5 var(--serif);word-break:break-word}
+.ro .alg span{display:block}
+.predrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 0}
+.predrow label{font-weight:700}
+.predrow input{width:150px;min-height:44px;padding:6px 10px;border:1.5px solid var(--line);border-radius:8px;background:transparent;font-size:18px;font-family:var(--serif)}
+.btn{min-height:44px;padding:8px 18px;border-radius:8px;border:0;background:var(--accent);color:var(--panel);font-weight:700;cursor:pointer}
+.fb{margin:8px 0 0;font-weight:700}
+.fb.ok{color:var(--ok)}.fb.bad{color:var(--bad)}
+details.fp summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center}
+table{border-collapse:collapse;width:100%;font-size:17px}
+th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left}
+td{font-family:var(--serif)}
+tr.cur td{background:var(--accent-soft);font-weight:600}
+.scroll{overflow-x:auto}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- projectile motion mode ---------- */
+[hidden]{display:none !important}
+.pj-seg{display:flex;flex-wrap:wrap;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;margin:0 0 12px}
+.pj-seg button{flex:1 1 auto;border:0;background:transparent;padding:8px 10px;min-height:44px;cursor:pointer;font-weight:700;color:var(--muted)}
+.pj-seg button+button{border-left:1.5px solid var(--line)}
+.pj-seg button[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
+.pj-seg button:disabled{opacity:.4;cursor:default}
+.pj-lab{font-weight:700;margin:4px 0 6px;display:block}
+.pjviz svg{display:block;width:100%;height:auto}
+.pjviz text{font-family:var(--sans)}
+.pjbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px}
+.pjbar .t{font:600 18px/1 var(--serif)}
+.pjgraphs{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:1100px){.pjgraphs{grid-template-columns:1fr}}
+.pjgraphs h3{font:600 17px/1.2 var(--serif);margin:0 0 4px}
+.pjgraphs svg{display:block;width:100%;height:auto}
+.pjgraphs text{font-family:var(--sans);fill:var(--muted)}
+.pjres{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px}
+@media (max-width:620px){.pjres{grid-template-columns:1fr}}
+.pjres .big{font-size:clamp(20px,2.8vw,28px)}
+details.der summary{cursor:pointer;font-weight:700;min-height:40px;display:flex;align-items:center}
+details.der ol{margin:6px 0 0;padding-left:1.2em;font:400 18px/1.6 var(--serif)}
+.back{display:inline-block;margin:0 0 10px;color:var(--ink);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../interactives.html">Back to Interactives</a>
+  <header>
+    <div>
+      <h1>Relationship Explorer</h1>
+      <p class="sub">Pick one of the six relationships, multiply x by a factor, and see what happens to y. Switch to physics situations or projectile motion to see the same patterns in real motion.</p>
+    </div>
+    <div class="seg" role="group" aria-label="Variable names">
+      <button id="modeMath" aria-pressed="true">x and y</button>
+      <button id="modePhys" aria-pressed="false">Physics situations</button>
+      <button id="modeProj" aria-pressed="false">Projectile motion</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="controls">
+      <section class="panel" aria-labelledby="relH">
+        <h2 id="relH">1. Choose a relationship</h2>
+        <div class="rels" id="rels"></div>
+      </section>
+
+      <section class="panel" id="scenBlock" hidden aria-labelledby="scH">
+        <h2 id="scH">2. Choose a situation</h2>
+        <div class="scens" id="scens"></div>
+      </section>
+
+      <section class="panel" id="projBlock" hidden aria-labelledby="pjH">
+        <h2 id="pjH">1. Choose a projectile problem</h2>
+        <div class="scens" id="pjQs"></div>
+      </section>
+
+      <section class="panel" id="projSet" hidden aria-labelledby="pjSH">
+        <h2 id="pjSH">2. Set up the launch</h2>
+        <span class="pj-lab" id="pjTypeLab">Launch</span>
+        <div class="pj-seg" id="pjType" role="group" aria-labelledby="pjTypeLab">
+          <button data-t="horiz">Horizontal, from a cliff</button><button data-t="angled">Angled, from the ground</button>
+        </div>
+        <label class="slider" id="pjVrow"><span class="row"><span>Launch speed, v</span><b id="pjVv"></b></span><input type="range" id="pjV" min="1" max="50" step="0.5"></label>
+        <label class="slider" id="pjHrow"><span class="row"><span>Launch height, h</span><b id="pjHv"></b></span><input type="range" id="pjH" min="0.5" max="50" step="0.5"></label>
+        <label class="slider" id="pjThrow"><span class="row"><span>Launch angle, θ</span><b id="pjThv"></b></span><input type="range" id="pjTh" min="5" max="85" step="1"></label>
+        <span class="pj-lab" id="pjChgLab">Quantity to change</span>
+        <div class="pj-seg" id="pjChg" role="group" aria-labelledby="pjChgLab">
+          <button data-c="v">Launch speed v</button><button data-c="h">Launch height h</button>
+        </div>
+        <p class="hint">a<sub>y</sub> = −9.81 m/s², no air resistance. Any numbers give the same ratios.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="setH">
+        <h2 id="setH">3. Set the constants and the starting point</h2>
+        <label class="slider">
+          <span class="row"><span id="pLabel">A</span><b id="pVal">2</b></span>
+          <input type="range" id="pRange" step="0.1">
+        </label>
+        <label class="slider">
+          <span class="row"><span id="x0Label">Starting x</span><b id="x0Val">4</b></span>
+          <input type="range" id="x0Range" step="any">
+        </label>
+        <p class="hint" id="pHint"></p>
+      </section>
+
+      <section class="panel" aria-labelledby="kH">
+        <h2 id="kH">4. Multiply x by a factor</h2>
+        <div class="chips" id="chips"></div>
+        <div class="chips" style="margin-top:10px">
+          <label for="kCustom">Other factor</label>
+          <input class="kc" id="kCustom" type="number" inputmode="decimal" min="0.1" max="20" step="any" placeholder="e.g. 5">
+        </div>
+        <label class="check" style="margin-top:14px">
+          <input type="checkbox" id="predToggle">
+          <span><b>Predict first.</b> Hide the answer until you enter your prediction.</span>
+        </label>
+      </section>
+    </div>
+
+    <div class="results">
+      <section class="panel info" id="info" aria-live="polite"></section>
+      <section class="panel graph" id="graph"></section>
+      <section class="panel pjviz" id="pjViz" hidden></section>
+      <section class="panel pjgraphs" id="pjGraphs" hidden></section>
+      <section class="panel ro" id="ro" aria-live="polite"></section>
+      <section class="panel">
+        <details class="fp">
+          <summary>Check your Part 2A fingerprint table</summary>
+          <div class="scroll">
+            <table>
+              <thead><tr><th scope="col">Relationship</th><th scope="col">x × 2</th><th scope="col">x × 3</th><th scope="col">x × ½</th></tr></thead>
+              <tbody id="fp"></tbody>
+            </table>
+          </div>
+          <p class="hint">Each entry is the factor that y changes by. The row for your current relationship is highlighted.</p>
+        </details>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- data ---------- */
+var RELS=[
+  {id:'const',n:0,  eq:'y = A',    name:'Constant'},
+  {id:'lin',  n:1,  eq:'y = Ax',   name:'Direct (linear)'},
+  {id:'quad', n:2,  eq:'y = Ax²',  name:'Quadratic'},
+  {id:'inv',  n:-1, eq:'y = A/x',  name:'Inverse'},
+  {id:'invsq',n:-2, eq:'y = A/x²', name:'Inverse square'},
+  {id:'sqrt', n:0.5,eq:'y = A√x',  name:'Square root'}
+];
+
+function sc(id,ws,title,desc,eq,x,y,param,A,aSym){return {id:id,ws:ws,title:title,desc:desc,eq:eq,x:x,y:y,param:param,A:A,aSym:aSym};}
+var G={s:'aᵧ',name:'free-fall acceleration',u:'m/s²',min:-25,max:-1.6,step:0.01,def:-9.81};   /* aᵧ is negative (downward); graphs use its size |aᵧ| */
+var RAMPA={s:'a',name:'ramp acceleration',u:'m/s²',min:0.5,max:6,step:0.1,def:2};
+
+var SCEN={
+  const:[
+    sc('fall-mass','3C','Free fall: acceleration vs. mass','Drop objects of different mass (no air). Every one of them accelerates at the same rate, aᵧ = −9.81 m/s² on Earth.','|a| = |aᵧ|',
+       {s:'m',name:'mass',u:'kg',min:0,max:10,start:4},{s:'|a|',name:'size of acceleration',u:'m/s²'},G,function(p){return Math.abs(p);},'|aᵧ|'),
+    sc('run-v','3A','Constant speed: speed vs. time','A runner holds a steady pace, so the speed reading never changes.','v = constant',
+       {s:'Δt',name:'time',u:'s',min:0,max:20,start:8},{s:'v',name:'speed',u:'m/s'},{s:'v',name:'running speed',u:'m/s',min:1,max:10,step:0.1,def:4},function(p){return p;},'v')
+  ],
+  lin:[
+    sc('run-dx','3A','Running at constant speed: distance vs. time','At a steady speed, the distance covered is directly proportional to the time.','Δx = vΔt',
+       {s:'Δt',name:'time',u:'s',min:0,max:20,start:5},{s:'Δx',name:'distance',u:'m'},{s:'v',name:'running speed',u:'m/s',min:1,max:10,step:0.1,def:4},function(p){return p;},'v'),
+    sc('fall-v','3C','Free fall: speed vs. time','Dropped from rest, the speed grows by the same amount every second.','v = |aᵧ|Δt',
+       {s:'Δt',name:'time',u:'s',min:0,max:5,start:2},{s:'v',name:'speed',u:'m/s'},G,function(p){return Math.abs(p);},'|aᵧ|'),
+    sc('ramp-v','','Ball on a ramp: speed vs. time','Released from rest on a frictionless ramp, the ball speeds up steadily.','v = aΔt',
+       {s:'Δt',name:'time',u:'s',min:0,max:6,start:2},{s:'v',name:'speed',u:'m/s'},RAMPA,function(p){return p;},'a')
+  ],
+  quad:[
+    sc('fall-dy','3C','Free fall: distance fallen vs. time','The distance fallen grows with the square of the time.','d = ½|aᵧ|Δt²  (Δy = ½aᵧΔt² = −d)',
+       {s:'Δt',name:'time',u:'s',min:0,max:5,start:2},{s:'d',name:'distance fallen',u:'m'},G,function(p){return Math.abs(p)/2;},'½|aᵧ|'),
+    sc('ramp-dx','3B','Ball on a ramp: distance vs. time','Starting from rest, the distance rolled grows with the square of the time.','Δx = ½aΔt²',
+       {s:'Δt',name:'time',u:'s',min:0,max:6,start:2},{s:'Δx',name:'distance rolled',u:'m'},RAMPA,function(p){return p/2;},'½a'),
+    sc('brake-dx','3D','Bike braking: stopping distance vs. initial speed','With the same brakes, a faster rider needs far more room to stop.','Δx = v₀²/(2a)',
+       {s:'v₀',name:'initial speed',u:'m/s',min:0,max:15,start:5},{s:'Δx',name:'stopping distance',u:'m'},{s:'a',name:'braking deceleration',u:'m/s²',min:1,max:10,step:0.1,def:4},function(p){return 1/(2*p);},'1/(2a)')
+  ],
+  inv:[
+    sc('time-speed','3A','Fixed track: time vs. speed','Over a track of fixed length, running faster cuts the time.','Δt = Δx/v',
+       {s:'v',name:'speed',u:'m/s',min:1,max:15,start:4},{s:'Δt',name:'time',u:'s'},{s:'Δx',name:'track length',u:'m',min:20,max:400,step:5,def:100},function(p){return p;},'Δx'),
+    sc('brake-a','3D','Bike braking: stopping distance vs. deceleration','From the same speed, stronger brakes shorten the stopping distance.','Δx = v₀²/(2a)',
+       {s:'a',name:'braking deceleration',u:'m/s²',min:1,max:10,start:4},{s:'Δx',name:'stopping distance',u:'m'},{s:'v₀',name:'initial speed',u:'m/s',min:5,max:20,step:0.5,def:10},function(p){return p*p/2;},'v₀²/2'),
+    sc('brake-t','3D','Bike braking: stopping time vs. deceleration','From the same speed, stronger brakes also bring you to rest sooner.','Δt = v₀/a',
+       {s:'a',name:'braking deceleration',u:'m/s²',min:1,max:10,start:4},{s:'Δt',name:'stopping time',u:'s'},{s:'v₀',name:'initial speed',u:'m/s',min:5,max:20,step:0.5,def:10},function(p){return p;},'v₀')
+  ],
+  invsq:[
+    sc('need-a','3E','Fixed distance from rest: acceleration vs. time','To cover the same distance in less time, the acceleration has to rise much faster.','a = 2Δx/Δt²',
+       {s:'Δt',name:'time allowed',u:'s',min:2,max:12,start:4},{s:'a',name:'required acceleration',u:'m/s²'},{s:'Δx',name:'distance to cover',u:'m',min:10,max:200,step:5,def:50},function(p){return 2*p;},'2Δx'),
+    sc('gravity','','Gravity: field strength vs. distance (preview)','Moving away from a planet weakens its pull. Distance r is measured in planet radii from the center.','g = g₀/r²',
+       {s:'r',name:'distance from center',u:'planet radii',min:1,max:6,start:2},{s:'g',name:'field strength',u:'m/s²'},{s:'g₀',name:'surface gravity',u:'m/s²',min:1.6,max:25,step:0.01,def:9.81},function(p){return p;},'g₀')
+  ],
+  sqrt:[
+    sc('ramp-sp','3B','Ball on a ramp: speed vs. distance rolled','Starting from rest, the speed grows with the square root of the distance rolled.','v = √(2aΔx)',
+       {s:'Δx',name:'distance rolled',u:'m',min:0,max:20,start:5},{s:'v',name:'speed',u:'m/s'},RAMPA,function(p){return Math.sqrt(2*p);},'√(2a)'),
+    sc('fall-sp','3C','Free fall: impact speed vs. drop height','A higher drop gives a higher impact speed, but not in direct proportion.','v = √(2|aᵧ|h)',
+       {s:'h',name:'drop height',u:'m',min:0,max:40,start:10},{s:'v',name:'impact speed',u:'m/s'},G,function(p){return Math.sqrt(2*Math.abs(p));},'√(2|aᵧ|)'),
+    sc('fall-time','','Free fall: fall time vs. drop height','Quadrupling the height only doubles the time in the air.','Δt = √(2Δy/aᵧ) = √(2h/|aᵧ|)',
+       {s:'h',name:'drop height',u:'m',min:0,max:40,start:10},{s:'Δt',name:'fall time',u:'s'},G,function(p){return Math.sqrt(2/Math.abs(p));},'√(2/|aᵧ|)')
+  ]
+};
+
+var CHIPS=[{num:1,den:3,l:'×⅓'},{num:1,den:2,l:'×½'},{num:2,den:1,l:'×2'},{num:3,den:1,l:'×3'},{num:4,den:1,l:'×4'},{num:9,den:1,l:'×9'},{num:16,den:1,l:'×16'}];
+
+/* ---------- state ---------- */
+var S={pq:'q1',pt:'horiz',pc:'v',pv:15,ph:8,pth:75,pjPred:{t:'',x:''},pjFb:null,mode:'math',rel:2,sc:0,k:{num:2,den:1},custom:false,A:null,p:null,x0:null,predict:false,revealed:true,fb:null};
+
+/* ---------- helpers ---------- */
+function $(id){return document.getElementById(id);}
+function gcd(a,b){return b?gcd(b,a%b):a;}
+function fmt(v){
+  if(!isFinite(v))return '—';
+  var a=Math.abs(v),s;
+  if(a>=1000)s=v.toFixed(0);else if(a>=100)s=v.toFixed(1);else if(a>=10)s=v.toFixed(1);else s=v.toFixed(2);
+  if(s.indexOf('.')>=0)s=s.replace(/0+$/,'').replace(/\.$/,'');
+  return s;
+}
+function frac(n,d){var g=gcd(n,d);n/=g;d/=g;return d===1?String(n):n+'/'+d;}
+function sqrtStr(m){
+  var c=1,r=m,i;
+  for(i=Math.floor(Math.sqrt(m));i>1;i--){if(m%(i*i)===0){c=i;r=m/(i*i);break;}}
+  if(r===1)return String(c);
+  return (c>1?String(c):'')+'√'+r;
+}
+function exactFactor(n,num,den){
+  var a,b,t,g;
+  if(n===0)return '1';
+  if(n===Math.round(n)){
+    a=Math.pow(num,Math.abs(n));b=Math.pow(den,Math.abs(n));
+    if(n<0){t=a;a=b;b=t;}
+    return frac(a,b);
+  }
+  g=gcd(num,den);num/=g;den/=g;
+  if(den===1)return sqrtStr(num);
+  if(num===1){t=sqrtStr(den);if(/^\d+√/.test(t))t='('+t+')';return '1/'+t;}
+  return '√('+num+'/'+den+')';
+}
+function kLabel(k){
+  if(k.approx)return fmt(k.num);
+  if(k.den===1)return String(k.num);
+  if(k.num===1&&k.den===2)return '½';
+  return k.num+'/'+k.den;
+}
+function kParen(k){var l=kLabel(k);return (/[\/.½]/.test(l))?'('+l+')':l;}
+function toFrac(v){
+  var d,n;
+  for(d=1;d<=12;d++){n=Math.round(v*d);if(n>0&&Math.abs(v*d-n)<1e-9)return {num:n,den:d};}
+  return {num:v,den:1,approx:true};
+}
+function kVal(k){return k.num/k.den;}
+function niceTicks(max){
+  var raw=max/5,p=Math.pow(10,Math.floor(Math.log10(raw))),f=raw/p;
+  var step=(f<=1?1:f<=2?2:f<=5?5:10)*p,top=Math.ceil(max/step-1e-9)*step,t=[],v;
+  for(v=0;v<=top+step*1e-6;v+=step)t.push(+v.toFixed(10));
+  return {ticks:t,top:top};
+}
+function relEq(rel,xs,ys){
+  switch(rel.n){
+    case 0:return ys+' = A';
+    case 1:return ys+' = A'+xs;
+    case 2:return ys+' = A'+xs+'²';
+    case -1:return ys+' = A/'+xs;
+    case -2:return ys+' = A/'+xs+'²';
+    default:return ys+' = A√'+xs;
+  }
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function getCtx(){
+  var rel=RELS[S.rel],A,c,s,p;
+  if(S.mode==='math'){
+    A=(S.A===null)?(rel.n===0?3:2):S.A;
+    c={rel:rel,math:true,xs:'x',ys:'y',xu:'',yu:'',xn:'x',yn:'y',
+       xmin:rel.n<0?0.5:0,xmax:10,xlo:rel.n<0?0.5:0.3,A:A,
+       pLabel:'A (a constant)',pVal:A,pMin:0.5,pMax:5,pStep:0.1,pUnit:'',x0def:4};
+  }else{
+    s=SCEN[rel.id][S.sc];
+    p=(S.p===null)?s.param.def:S.p;
+    A=s.A(p);
+    c={rel:rel,math:false,sc:s,xs:s.x.s,ys:s.y.s,xu:s.x.u,yu:s.y.u,xn:s.x.name,yn:s.y.name,
+       xmin:s.x.min,xmax:s.x.max,xlo:s.x.min>0?s.x.min:s.x.max*0.03,A:A,
+       pLabel:s.param.name+', '+s.param.s,pVal:p,pMin:s.param.min,pMax:s.param.max,pStep:s.param.step,pUnit:s.param.u,x0def:s.x.start};
+  }
+  c.f=function(x){return c.A*Math.pow(x,rel.n);};
+  return c;
+}
+function x0Range(c,kv){return [c.xlo/Math.min(1,kv),c.xmax/Math.max(1,kv)];}
+function feasible(c,k){var r=x0Range(c,kVal(k));return r[1]>=r[0]*1.2;}
+
+/* ---------- graph ---------- */
+function spark(n){
+  var N=24,i,x,y,pts=[],a=n<0?0.3:0,max=0,d='';
+  for(i=0;i<=N;i++){x=a+(1-a)*i/N;y=n===0?1:Math.pow(x,n);pts.push([i/N,y]);if(y>max)max=y;}
+  for(i=0;i<=N;i++){
+    var px=2+pts[i][0]*40,py=n===0?15:28-(pts[i][1]/max)*26;
+    d+=(i?'L':'M')+px.toFixed(1)+' '+py.toFixed(1);
+  }
+  return '<svg viewBox="0 0 44 30" aria-hidden="true"><path d="M2 28H42M2 28V2" stroke="var(--axis)" stroke-width="1" fill="none"/><path d="'+d+'" stroke="var(--curve)" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>';
+}
+
+function drawGraph(c,x0,k,showB){
+  var W=680,H=440,L=70,R=24,T=20,Bm=76,pw=W-L-R,ph=H-T-Bm;
+  var kv=kVal(k),x1=x0*kv,y0=c.f(x0),y1=c.f(x1);
+  var ymax=c.rel.n===0?c.A*1.5:Math.max(c.f(c.xmax),c.f(c.xmin>0?c.xmin:0),y0,y1);
+  ymax*=1.06;if(!(ymax>0))ymax=1;
+  var yt=niceTicks(ymax),xt=niceTicks(c.xmax);
+  function sx(v){return L+v/xt.top*pw;}
+  function sy(v){return T+ph-v/yt.top*ph;}
+  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Graph of '+esc(relEq(c.rel,c.xs,c.ys))+(showB?' with the points at '+esc(c.xs)+' = '+fmt(x0)+' and '+fmt(x1):'')+'">';
+  var i,t;
+  for(i=0;i<xt.ticks.length;i++){
+    t=xt.ticks[i];
+    s+='<line x1="'+sx(t)+'" y1="'+T+'" x2="'+sx(t)+'" y2="'+(T+ph)+'" stroke="var(--grid)" stroke-width="1"/>';
+    s+='<text x="'+sx(t)+'" y="'+(T+ph+20)+'" font-size="14" text-anchor="middle">'+fmt(t)+'</text>';
+  }
+  for(i=0;i<yt.ticks.length;i++){
+    t=yt.ticks[i];
+    s+='<line x1="'+L+'" y1="'+sy(t)+'" x2="'+(L+pw)+'" y2="'+sy(t)+'" stroke="var(--grid)" stroke-width="1"/>';
+    s+='<text x="'+(L-10)+'" y="'+(sy(t)+5)+'" font-size="14" text-anchor="end">'+fmt(t)+'</text>';
+  }
+  s+='<path d="M'+L+' '+T+'V'+(T+ph)+'H'+(L+pw)+'" stroke="var(--axis)" stroke-width="2" fill="none"/>';
+  /* curve */
+  var N=240,d='',a=c.xmin,b=c.xmax,x,y;
+  for(i=0;i<=N;i++){x=a+(b-a)*i/N;y=c.f(x);d+=(i?'L':'M')+sx(x).toFixed(1)+' '+sy(y).toFixed(1);}
+  s+='<path d="'+d+'" stroke="var(--curve)" stroke-width="3.5" fill="none" stroke-linejoin="round" stroke-linecap="round"/>';
+  /* guides + points */
+  function guide(px,py,col){
+    return '<path d="M'+sx(px)+' '+(T+ph)+'V'+sy(py)+'H'+L+'" stroke="'+col+'" stroke-width="1.8" stroke-dasharray="6 5" fill="none"/>';
+  }
+  function label(px,py,txt,col){
+    var cx=sx(px),cy=sy(py),right=cx>L+pw-120;
+    return '<text x="'+(right?cx-12:cx+12)+'" y="'+(cy-12)+'" font-size="15" font-weight="700" text-anchor="'+(right?'end':'start')+'" style="fill:'+col+'">'+txt+'</text>';
+  }
+  s+=guide(x0,y0,'var(--ptA)');
+  if(showB)s+=guide(x1,y1,'var(--ptB)');
+  s+='<circle cx="'+sx(x0)+'" cy="'+sy(y0)+'" r="8" fill="var(--ptA)" stroke="var(--panel)" stroke-width="2"/>';
+  s+=label(x0,y0,'start','var(--ptA)');
+  if(showB){
+    s+='<circle cx="'+sx(x1)+'" cy="'+sy(y1)+'" r="8" fill="var(--ptB)" stroke="var(--panel)" stroke-width="2"/>';
+    s+=label(x1,y1,'after','var(--ptB)');
+  }
+  /* axis titles */
+  var xt2=c.math?'x':(c.xn+', '+c.xs+' ('+c.xu+')'),yt2=c.math?'y':(c.yn+', '+c.ys+' ('+c.yu+')');
+  s+='<text x="'+(L+pw/2)+'" y="'+(H-14)+'" font-size="16" font-weight="700" text-anchor="middle" style="fill:var(--ink)">'+esc(xt2)+'</text>';
+  s+='<text transform="translate(18 '+(T+ph/2)+') rotate(-90)" font-size="16" font-weight="700" text-anchor="middle" style="fill:var(--ink)">'+esc(yt2)+'</text>';
+  return s+'</svg>';
+}
+
+/* ---------- render pieces ---------- */
+function renderRels(){
+  var h='',i;
+  for(i=0;i<RELS.length;i++){
+    h+='<button class="rel" data-i="'+i+'" aria-pressed="'+(i===S.rel)+'">'+spark(RELS[i].n)+'<span><span class="eq">'+RELS[i].eq+'</span><span class="nm">'+RELS[i].name+'</span></span></button>';
+  }
+  $('rels').innerHTML=h;
+}
+function renderScens(){
+  var block=$('scenBlock'),list,h='',i;
+  if(S.mode!=='phys'){block.hidden=true;return;}
+  block.hidden=false;
+  list=SCEN[RELS[S.rel].id];
+  for(i=0;i<list.length;i++){
+    h+='<button class="scen" data-i="'+i+'" aria-pressed="'+(i===S.sc)+'"><b>'+esc(list[i].title)+'</b><small>'+esc(list[i].eq)+'</small></button>';
+  }
+  $('scens').innerHTML=h;
+}
+function renderChips(c){
+  var h='',i,ch,on;
+  for(i=0;i<CHIPS.length;i++){
+    ch=CHIPS[i];
+    on=!S.custom&&S.k.num===ch.num&&S.k.den===ch.den;
+    h+='<button class="chip" data-i="'+i+'" aria-pressed="'+on+'"'+(feasible(c,ch)?'':' disabled title="Too big for this graph"')+'>'+ch.l+'</button>';
+  }
+  $('chips').innerHTML=h;
+}
+function renderInfo(c){
+  var h='',r=c.rel;
+  if(c.math){
+    h+='<h2>'+r.name+' relationship</h2>';
+    h+='<div class="eqbig">'+esc(r.eq)+'</div>';
+    h+='<p>A is a constant. Drag the A slider and notice that the shape of the curve changes, but the factor that y changes by does not.</p>';
+  }else{
+    h+='<h2>'+esc(c.sc.title)+(c.sc.ws?'<span class="tag">Worksheet '+c.sc.ws+'</span>':'')+'</h2>';
+    h+='<p>'+esc(c.sc.desc)+'</p>';
+    h+='<div class="eqbig">'+esc(c.sc.eq)+'</div>';
+    h+='<p>This is a <b>'+r.name.toLowerCase()+'</b> relationship: '+esc(relEq(r,c.xs,c.ys))+', where A = '+esc(c.sc.aSym)+' ≈ '+fmt(c.A)+'. Held constant: '+esc(c.sc.param.name)+' ('+esc(c.sc.param.s)+').</p>';
+  }
+  $('info').innerHTML=h;
+}
+function renderFP(){
+  var h='',i,j,f=[[2,1],[3,1],[1,2]];
+  for(i=0;i<RELS.length;i++){
+    h+='<tr'+(i===S.rel?' class="cur"':'')+'><th scope="row">'+RELS[i].eq+'</th>';
+    for(j=0;j<3;j++)h+='<td>'+exactFactor(RELS[i].n,f[j][0],f[j][1])+'</td>';
+    h+='</tr>';
+  }
+  $('fp').innerHTML=h;
+}
+function algebra(c,k,F){
+  var r=c.rel,xs=c.xs,ys=c.ys,kp=kParen(k),kx=kp+xs,n=r.n,coef,Fp=/\//.test(F)?'('+F+')':F;
+  if(n===0)return ys+'₁ = A = '+ys+'₀';
+  if(k.approx||k.den!==1){coef=/[\/√]/.test(F)?'('+F+')':F;}
+  switch(n){
+    case 1:return ys+'₁ = A('+kx+') = '+(coef||kp)+'·(A'+xs+') = '+Fp+'·'+ys+'₀';
+    case 2:return ys+'₁ = A('+kx+')² = '+(coef||kp+'²')+'·(A'+xs+'²) = '+Fp+'·'+ys+'₀';
+    case -1:return ys+'₁ = A/('+kx+') = '+(coef||'(1/'+kp+')')+'·(A/'+xs+') = '+Fp+'·'+ys+'₀';
+    case -2:return ys+'₁ = A/('+kx+')² = '+(coef||'(1/'+kp+'²)')+'·(A/'+xs+'²) = '+Fp+'·'+ys+'₀';
+    default:return ys+'₁ = A√('+kx+') = '+(coef||'√'+kp)+'·(A√'+xs+') = '+Fp+'·'+ys+'₀';
+  }
+}
+function withUnit(v,u){return fmt(v)+(u?' '+u:'');}
+
+function renderReadout(c,x0,k){
+  var kv=kVal(k),x1=x0*kv,y0=c.f(x0),y1=c.f(x1),n=c.rel.n,f=n===0?1:Math.pow(kv,n);
+  var F=k.approx?fmt(f):exactFactor(n,k.num,k.den);
+  var Fshow=F,h='',kl=kLabel(k);
+  if(!k.approx&&/[√\/]/.test(F))Fshow=F+' ≈ '+fmt(f);
+  var head=c.xs+' × '+kl+' → '+c.ys+' × ';
+  if(S.predict&&!S.revealed){
+    h+='<p class="big">'+esc(head)+'?</p>';
+    h+='<p class="nums">Predict the factor, then check it against the graph. You can type 4, 1/4, √2, or 0.5.</p>';
+    h+='<div class="predrow"><label for="predIn">y changes by a factor of</label><input id="predIn" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn" id="predGo">Check</button></div>';
+    if(S.fb)h+='<p class="fb bad">'+esc(S.fb)+'</p>';
+  }else{
+    h+='<p class="big">'+esc(head+(n===0?'1 (no change)':Fshow))+'</p>';
+    h+='<p class="nums">'+esc(c.xs)+': '+esc(withUnit(x0,c.xu))+' → '+esc(withUnit(x1,c.xu))+'<br>'+esc(c.ys)+': '+esc(withUnit(y0,c.yu))+' → '+esc(withUnit(y1,c.yu))+'</p>';
+    if(S.fb)h+='<p class="fb '+(S.fbOk?'ok':'bad')+'">'+esc(S.fb)+'</p>';
+    h+='<p class="alg"><span>Scaling method:</span><span>'+esc(algebra(c,k,F))+'</span></p>';
+  }
+  $('ro').innerHTML=h;
+}
+
+/* ---------- projectile motion mode ---------- */
+var AY=-9.81, GG=9.81;
+var PQ=[
+  {id:'q1',ws:'Q1',t:'horiz',c:'v',v:15,h:8,th:75,k:{num:2,den:1},title:'Horizontal launch: double the launch speed',
+   q:'A cannonball is shot horizontally off a cliff. What happens to its time of flight and its range if it is launched with velocity 2v?'},
+  {id:'q2',ws:'Q2',t:'horiz',c:'h',v:20,h:12,th:75,k:{num:1,den:2},title:'Horizontal launch: halve the launch height',
+   q:'A cannonball is shot horizontally from height h. What happens to its time of flight and its range if it is launched from ½h?'},
+  {id:'q3',ws:'Q3',t:'angled',c:'v',v:30,h:0,th:75,k:{num:1,den:3},title:'Angled launch: ⅓ of the launch speed',
+   q:'A cannonball is launched at an angle from the ground. What happens to its time of flight and its range if it is launched at the same angle with velocity ⅓v?'},
+  {id:'own',ws:'',title:'Your own experiment',q:'Choose the launch, the quantity to change, and the factor.'}
+];
+function pjShot(v,h){  /* time of flight and range for the current launch type */
+  var th=S.pth*Math.PI/180;
+  if(S.pt==='horiz'){var t=Math.sqrt(2*(-h)/AY);return {t:t,dx:v*t,vx:v,vy:0,h:h};}
+  var vy=v*Math.sin(th),tt=-2*vy/AY;return {t:tt,dx:v*Math.cos(th)*tt,vx:v*Math.cos(th),vy:vy,h:0};
+}
+function pjModel(){  /* power laws for t and Δx against the changed quantity */
+  var th=S.pth*Math.PI/180;
+  if(S.pt==='horiz'&&S.pc==='v')return {xs:'v',xn:'launch speed',xu:'m/s',x0:S.pv,
+    t:{n:0,A:Math.sqrt(2*S.ph/GG),Asym:'√(2Δy/a_y)'},x:{n:1,A:Math.sqrt(2*S.ph/GG),Asym:'√(2Δy/a_y)'}};
+  if(S.pt==='horiz')return {xs:'h',xn:'launch height',xu:'m',x0:S.ph,
+    t:{n:0.5,A:Math.sqrt(2/GG),Asym:'√(2/|a_y|)'},x:{n:0.5,A:S.pv*Math.sqrt(2/GG),Asym:'v√(2/|a_y|)'}};
+  return {xs:'v',xn:'launch speed',xu:'m/s',x0:S.pv,
+    t:{n:1,A:2*Math.sin(th)/GG,Asym:'2 sin θ/|a_y|'},x:{n:2,A:Math.sin(2*th)/GG,Asym:'2 sin θ cos θ/|a_y|'}};
+}
+function relByN(n){for(var i=0;i<RELS.length;i++)if(RELS[i].n===n)return RELS[i];return RELS[0];}
+function pjCtx(part,M,ys,yn,yu,x1){
+  var rel=relByN(part.n),c={rel:rel,math:false,xs:M.xs,ys:ys,xu:M.xu,yu:yu,xn:M.xn,yn:yn,
+    xmin:0,xmax:Math.max(M.x0,x1)*1.3,A:part.A};
+  c.f=function(x){return c.A*Math.pow(x,rel.n);};
+  return c;
+}
+function pjFactorStr(n,k){var f=n===0?1:Math.pow(kVal(k),n);
+  if(k.approx)return {s:fmt(f),v:f};
+  var F=exactFactor(n,k.num,k.den);return {s:(/[√\/]/.test(F)?F+' ≈ '+fmt(f):F),v:f};}
+var pjAnim={on:false,t:0,last:0,id:0};
+
+function renderProjPanels(){
+  var h='',i,q;
+  for(i=0;i<PQ.length;i++){q=PQ[i];
+    h+='<button class="scen" data-q="'+q.id+'" aria-pressed="'+(S.pq===q.id)+'"><b>'+(q.ws?'Question '+q.ws.slice(1)+': ':'')+esc(q.title)+'</b>'+(q.ws?'<small>Worksheet numbers from Part 2</small>':'<small>Any launch, any factor</small>')+'</button>';}
+  $('pjQs').innerHTML=h;
+    [].forEach.call($('pjType').children,function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-t')===S.pt));});
+  [].forEach.call($('pjChg').children,function(b){var c=b.getAttribute('data-c');b.setAttribute('aria-pressed',String(c===S.pc));
+    b.disabled=(c==='h'&&S.pt==='angled');});
+  $('pjHrow').hidden=S.pt!=='horiz'; $('pjThrow').hidden=S.pt!=='angled';
+  $('pjV').value=S.pv; $('pjH').value=S.ph; $('pjTh').value=S.pth;
+  $('pjVv').textContent=fmt(S.pv)+' m/s'; $('pjHv').textContent=fmt(S.ph)+' m'; $('pjThv').textContent=fmt(S.pth)+'°';
+}
+function renderProjInfo(){
+  var q=null,i,M=pjModel(),hz=S.pt==='horiz',der;
+  for(i=0;i<PQ.length;i++)if(PQ[i].id===S.pq)q=PQ[i];
+  var h='<h2>'+esc(q.title)+(q.ws?'<span class="tag">Worksheet '+q.ws+'</span>':'')+'</h2><p>'+esc(q.q)+'</p>';
+  h+='<div class="eqbig">'+(hz?'t = √(2Δy/a<sub>y</sub>) &nbsp;&nbsp; Δx = v√(2Δy/a<sub>y</sub>)':'t = −2v sin θ/a<sub>y</sub> &nbsp;&nbsp; Δx = −2v² sin θ cos θ/a<sub>y</sub>')+'</div>';
+  if(hz)der='<li>Vertical motion, with v<sub>0y</sub> = 0: Δy = ½a<sub>y</sub>t²</li><li>Solve for time: t² = 2Δy/a<sub>y</sub> → <b>t = √(2Δy/a<sub>y</sub>)</b>, where Δy = −h and a<sub>y</sub> = −9.81 m/s² (both negative, so the fraction is positive).</li><li>Horizontal motion, with a<sub>x</sub> = 0: Δx = v<sub>x</sub>t = <b>v√(2Δy/a<sub>y</sub>)</b></li>'+
+    (S.pc==='v'?'<li>v does not appear in t, so t is <b>constant</b>: t₂/t₁ = 1. Δx is <b>directly proportional</b> to v: Δx₂/Δx₁ = k.</li>'
+               :'<li>t ∝ √h and Δx ∝ √h (a <b>square-root</b> relationship): both change by √k.</li>');
+  else der='<li>Lands at its launch height, so Δy = 0: 0 = ½a<sub>y</sub>t² + v<sub>0y</sub>t = t(½a<sub>y</sub>t + v<sub>0y</sub>)</li><li>The quadratic formula (A = ½a<sub>y</sub>, B = v<sub>0y</sub>, C = 0) gives t = 0 or <b>t = −2v<sub>0y</sub>/a<sub>y</sub> = −2v sin θ/a<sub>y</sub></b></li><li>Horizontal motion: Δx = v<sub>x</sub>t = (v cos θ)(−2v sin θ/a<sub>y</sub>) = <b>−2v² sin θ cos θ/a<sub>y</sub></b></li><li>t ∝ v (<b>linear</b>): t₂/t₁ = k. Δx ∝ v² (<b>quadratic</b>): Δx₂/Δx₁ = k².</li>';
+  h+='<details class="der"><summary>Show the derivation (try the worksheet first)</summary><ol>'+der+'</ol></details>';
+  h+='<p>Time of flight is a <b>'+relByN(M.t.n).name.toLowerCase()+'</b> relationship with '+M.xs+', and range is a <b>'+relByN(M.x.n).name.toLowerCase()+'</b> relationship with '+M.xs+'.</p>';
+  $('info').innerHTML=h;
+}
+function pjDrawViz(){
+  var M=pjModel(),kv=kVal(S.k),x1=M.x0*kv;
+  var v1=S.pv,h1=S.ph,v2=S.pc==='v'?x1:S.pv,h2=S.pc==='h'?x1:S.ph;
+  var show=!(S.predict&&!S.revealed),A=pjShot(v1,h1),B=show?pjShot(v2,h2):A;   /* hide the changed launch until predictions are checked */
+  var W=680,H=320,L=56,R=20,T=24,Bm=46,pw=W-L-R,ph=H-T-Bm;
+  var peak=function(o){return o.h+(o.vy>0?o.vy*o.vy/(2*GG):0);};
+  var xmax=Math.max(A.dx,B.dx)*1.08+1,ymax=Math.max(peak(A),peak(B),1)*1.12,cw=0.06*xmax;
+  var k=Math.min(pw/(xmax+cw),ph/ymax),ox=L+cw*k,oy=T+ph;
+  function X(x){return ox+x*k;} function Y(y){return oy-y*k;}
+  function path(o){var d='',i,t,N=80;for(i=0;i<=N;i++){t=o.t*i/N;d+=(i?'L':'M')+X(o.vx*t).toFixed(1)+' '+Y(o.h+o.vy*t+0.5*AY*t*t).toFixed(1);}return d;}
+  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Both launches: the original and the changed one">';
+  s+='<rect x="0" y="'+oy+'" width="'+W+'" height="'+(H-oy)+'" fill="var(--accent-soft)"/><line x1="0" y1="'+oy+'" x2="'+W+'" y2="'+oy+'" stroke="var(--axis)" stroke-width="2"/>';
+  var hc=Math.max(A.h,B.h);
+  if(hc>0)s+='<rect x="'+(ox-cw*k)+'" y="'+Y(hc)+'" width="'+(cw*k)+'" height="'+(oy-Y(hc))+'" fill="var(--grid)" stroke="var(--axis)"/>';
+  (show?[[A,'var(--ptA)','1'],[B,'var(--ptB)','2']]:[[A,'var(--ptA)','1']]).forEach(function(p){var o=p[0],col=p[1];
+    s+='<path d="'+path(o)+'" stroke="'+col+'" stroke-width="2.5" stroke-dasharray="6 5" fill="none"/>';
+    s+='<line x1="'+X(o.dx)+'" y1="'+(oy-6)+'" x2="'+X(o.dx)+'" y2="'+(oy+6)+'" stroke="'+col+'" stroke-width="3"/>';
+    s+='<circle id="pjBall'+p[2]+'" cx="'+X(0)+'" cy="'+Y(o.h)+'" r="7" fill="'+col+'" stroke="var(--panel)" stroke-width="2"/>';
+  });
+  var lab=function(o,col,n,dy){var x=X(o.dx),anchor=x>W-160?'end':'start',xx=anchor==='end'?x-8:x+8;
+    return '<text x="'+xx+'" y="'+(oy+dy)+'" font-size="14" font-weight="700" text-anchor="'+anchor+'" style="fill:'+col+'">Δx'+n+' = '+fmt(o.dx)+' m, t'+n+' = '+fmt(o.t)+' s</text>';};
+  var ord=A.dx<=B.dx;
+  s+=show?lab(A,'var(--ptA)','₁',ord?20:38)+lab(B,'var(--ptB)','₂',ord?38:20):lab(A,'var(--ptA)','₁',20);
+  s+='<text x="'+(W-R)+'" y="18" font-size="14" text-anchor="end" style="fill:var(--muted)">'+(show?'dark: original · pink: changed':'pink launch hidden until you check your prediction')+'</text>';
+  s+='</svg><div class="pjbar"><button class="btn" id="pjGo">Launch both</button><span class="t" id="pjT">t = 0.00 s</span><span class="hint" id="pjRate"></span></div>';
+  $('pjViz').innerHTML=s;
+  pjAnim.A=A;pjAnim.B=B;pjAnim.X=X;pjAnim.Y=Y;pjAnim.on=false;pjAnim.t=0;cancelAnimationFrame(pjAnim.id);
+}
+function pjStep(now){
+  if(!pjAnim.on)return;
+  var a=pjAnim,tmax=Math.max(a.A.t,a.B.t),rate=Math.max(1,tmax/4);
+  a.t=Math.min(tmax,a.t+Math.min(0.05,(now-a.last)/1000)*rate);a.last=now;
+  [[a.A,'pjBall1'],[a.B,'pjBall2']].forEach(function(p){var o=p[0],t=Math.min(a.t,o.t),el=$(p[1]);if(!el)return;
+    el.setAttribute('cx',a.X(o.vx*t));el.setAttribute('cy',a.Y(o.h+o.vy*t+0.5*AY*t*t));});
+  $('pjT').textContent='t = '+a.t.toFixed(2)+' s';
+  $('pjRate').textContent=rate>1.01?'(playing at '+fmt(rate)+'× speed)':'';
+  if(a.t<tmax)a.id=requestAnimationFrame(pjStep);else{a.on=false;$('pjGo').textContent='Launch again';}
+}
+function renderProjGraphs(){
+  var M=pjModel(),kv=kVal(S.k),x1=M.x0*kv,show=!(S.predict&&!S.revealed);
+  var ct=pjCtx(M.t,M,'t','time of flight','s',x1),cx=pjCtx(M.x,M,'Δx','range','m',x1);
+  $('pjGraphs').innerHTML='<div><h3>Time of flight vs. '+M.xn+'</h3>'+drawGraph(ct,M.x0,S.k,show)+'</div><div><h3>Range vs. '+M.xn+'</h3>'+drawGraph(cx,M.x0,S.k,show)+'</div>';
+}
+function renderProjReadout(){
+  var M=pjModel(),kv=kVal(S.k),x1=M.x0*kv,kl=kLabel(S.k);
+  var v2=S.pc==='v'?x1:S.pv,h2=S.pc==='h'?x1:S.ph,A=pjShot(S.pv,S.ph),B=pjShot(v2,h2);
+  var Ft=pjFactorStr(M.t.n,S.k),Fx=pjFactorStr(M.x.n,S.k),h='';
+  var head=M.xs+' × '+kl;
+  if(S.predict&&!S.revealed){
+    h+='<p class="big">'+esc(head)+' → t × ? and Δx × ?</p><p class="nums">Predict both factors. You can type 4, 1/4, √2, or 0.5.</p>';
+    h+='<div class="predrow"><label for="pjPt">t₂/t₁ =</label><input id="pjPt" type="text" autocomplete="off" spellcheck="false" value="'+esc(S.pjPred.t)+'">';
+    h+='<label for="pjPx">Δx₂/Δx₁ =</label><input id="pjPx" type="text" autocomplete="off" spellcheck="false" value="'+esc(S.pjPred.x)+'"><button class="btn" id="predGo">Check</button></div>';
+    if(S.pjFb)h+='<p class="fb bad">'+esc(S.pjFb)+'</p>';
+  }else{
+    h+='<div class="pjres"><div><p class="big">'+esc(head)+' → t × '+esc(M.t.n===0?'1 (no change)':Ft.s)+'</p><p class="nums">t: '+fmt(A.t)+' s → '+fmt(B.t)+' s</p></div>';
+    h+='<div><p class="big">'+esc(head)+' → Δx × '+esc(Fx.s)+'</p><p class="nums">Δx: '+fmt(A.dx)+' m → '+fmt(B.dx)+' m</p></div></div>';
+    if(S.pjFb)h+=S.pjFb;
+    h+='<p class="alg"><span>Scaling method:</span><span>t ∝ '+esc(M.t.n===0?'(no '+M.xs+')':relEq(relByN(M.t.n),M.xs,'t').replace('t = A',''))+' → t₂/t₁ = '+esc(M.t.n===0?'1':Ft.s)+'</span>'+
+       '<span>Δx ∝ '+esc(relEq(relByN(M.x.n),M.xs,'Δx').replace('Δx = A',''))+' → Δx₂/Δx₁ = '+esc(Fx.s)+'</span></p>';
+  }
+  $('ro').innerHTML=h;
+}
+function renderProj(){
+  renderProjPanels();renderProjInfo();pjDrawViz();renderProjGraphs();renderProjReadout();
+}
+function checkProj(){
+  var M=pjModel(),kv=kVal(S.k),at=M.t.n===0?1:Math.pow(kv,M.t.n),ax=Math.pow(kv,M.x.n);
+  S.pjPred.t=$('pjPt').value;S.pjPred.x=$('pjPx').value;
+  var pt=parsePred(S.pjPred.t),px=parsePred(S.pjPred.x);
+  if(isNaN(pt)||isNaN(px)){S.pjFb='Enter both factors as numbers or fractions, such as 4, 1/4, or √2.';renderProjReadout();return;}
+  var ok=function(p,a){return Math.abs(p-a)<=0.015*Math.abs(a);};
+  var line=function(nm,p,a){return '<p class="fb '+(ok(p,a)?'ok':'bad')+'">'+nm+': '+(ok(p,a)?'correct, '+fmt(a)+'.':'you predicted '+fmt(p)+', and it is '+fmt(a)+'.')+'</p>';};
+  S.revealed=true;S.pjFb=line('Time factor',pt,at)+line('Range factor',px,ax);
+  pjDrawViz();renderProjGraphs();renderProjReadout();
+}
+
+/* ---------- main update ---------- */
+function setupSliders(c){
+  var kv=kVal(S.k),r=x0Range(c,kv),pr=$('pRange'),xr=$('x0Range');
+  pr.min=c.pMin;pr.max=c.pMax;pr.step=c.pStep;pr.value=c.pVal;
+  $('pLabel').textContent=c.pLabel;
+  xr.min=r[0];xr.max=r[1];
+  if(S.x0===null)S.x0=c.x0def;
+  S.x0=Math.min(r[1],Math.max(r[0],S.x0));
+  xr.value=S.x0;
+  $('x0Label').textContent=c.math?'Starting x':('Starting '+c.xn+', '+c.xs);
+  $('pHint').textContent=c.math?'Changing A moves the curve but never changes the factor.':'Constants like these stay fixed while '+c.xs+' changes.';
+}
+function updateViz(){
+  if(S.mode==='proj'){pjDrawViz();renderProjGraphs();renderProjReadout();return;}
+  var c=getCtx(),show=!(S.predict&&!S.revealed);
+  var xr=$('x0Range'),pr=$('pRange');
+  S.x0=parseFloat(xr.value);
+  $('pVal').textContent=fmt(c.pVal).replace('-','−')+(c.pUnit?' '+c.pUnit:'');
+  $('x0Val').textContent=withUnit(S.x0,c.xu);
+  $('graph').innerHTML=drawGraph(c,S.x0,S.k,show);
+  renderReadout(c,S.x0,S.k);
+}
+function ensureFeasible(c){
+  var order=[{num:2,den:1},{num:3,den:1},{num:1,den:2}],i;
+  if(feasible(c,S.k))return;
+  for(i=0;i<order.length;i++){if(feasible(c,order[i])){S.k=order[i];S.custom=false;return;}}
+}
+function setModeVisibility(){
+  var pj=S.mode==='proj';
+  $('relH').closest('section').hidden=pj; $('setH').closest('section').hidden=pj;
+  $('projBlock').hidden=!pj; $('projSet').hidden=!pj;
+  $('graph').hidden=pj; $('pjViz').hidden=!pj; $('pjGraphs').hidden=!pj;
+  $('kH').textContent=pj?'3. Multiply by a factor':'4. Multiply x by a factor';
+  $('modeProj').setAttribute('aria-pressed',String(pj));
+}
+function renderAll(){
+  setModeVisibility();
+  if(S.mode==='proj'){
+    $('modeMath').setAttribute('aria-pressed','false');$('modePhys').setAttribute('aria-pressed','false');
+    $('scenBlock').hidden=true;
+    var h='',i,ch,on;
+    for(i=0;i<CHIPS.length;i++){ch=CHIPS[i];on=!S.custom&&S.k.num===ch.num&&S.k.den===ch.den;
+      h+='<button class="chip" data-i="'+i+'" aria-pressed="'+on+'">'+ch.l+'</button>';}
+    $('chips').innerHTML=h;renderFP();renderProj();return;
+  }
+  var c=getCtx();
+  ensureFeasible(c);
+  c=getCtx();
+  $('modeMath').setAttribute('aria-pressed',S.mode==='math');
+  $('modePhys').setAttribute('aria-pressed',S.mode==='phys');
+  renderRels();renderScens();renderChips(c);renderInfo(c);renderFP();
+  setupSliders(c);
+  updateViz();
+}
+function resetReveal(){S.revealed=!S.predict;S.fb=null;S.fbOk=false;S.pjFb=null;S.pjPred={t:'',x:''};}
+
+/* ---------- prediction ---------- */
+function parsePred(str){
+  var s=String(str).trim().toLowerCase();
+  if(!s)return NaN;
+  s=s.replace(/√\s*\(?\s*([0-9.]+)\s*\)?/g,'sqrt($1)').replace(/[×·x]/g,'*').replace(/½/g,'(1/2)').replace(/¼/g,'(1/4)').replace(/⅓/g,'(1/3)').replace(/\^/g,'**');
+  s=s.replace(/(\d|\))\s*sqrt/g,'$1*sqrt');
+  if(!/^[0-9s.+\-*\/()\s]+$/.test(s.replace(/sqrt/g,'s')))return NaN;
+  s=s.replace(/sqrt/g,'Math.sqrt');
+  try{var v=Function('"use strict";return ('+s+')')();return (typeof v==='number'&&isFinite(v))?v:NaN;}catch(e){return NaN;}
+}
+function checkPrediction(){
+  if(S.mode==='proj'){checkProj();return;}
+  var c=getCtx(),kv=kVal(S.k),n=c.rel.n,actual=n===0?1:Math.pow(kv,n);
+  var v=parsePred($('predIn').value);
+  if(isNaN(v)){S.fb='Enter a number or a fraction, such as 4, 1/4, or √2.';S.fbOk=false;renderReadout(c,S.x0,S.k);return;}
+  if(Math.abs(v-actual)<=0.015*Math.abs(actual)){
+    S.revealed=true;S.fb='Correct. y changes by a factor of '+fmt(actual)+'.';S.fbOk=true;
+  }else{
+    S.revealed=true;S.fb='Not quite. You predicted '+fmt(v)+', and the graph shows '+fmt(actual)+'. Compare the scaling method below with your reasoning.';S.fbOk=false;
+  }
+  updateViz();
+}
+
+/* ---------- events ---------- */
+function on(id,ev,fn){$(id).addEventListener(ev,fn);}
+on('modeMath','click',function(){S.mode='math';S.sc=0;S.p=null;S.x0=null;resetReveal();renderAll();});
+on('modePhys','click',function(){S.mode='phys';S.sc=0;S.p=null;S.x0=null;resetReveal();renderAll();});
+on('rels','click',function(e){
+  var b=e.target.closest('.rel');if(!b)return;
+  S.rel=+b.getAttribute('data-i');S.sc=0;S.p=null;S.A=null;S.x0=null;resetReveal();renderAll();
+});
+on('scens','click',function(e){
+  var b=e.target.closest('.scen');if(!b)return;
+  S.sc=+b.getAttribute('data-i');S.p=null;S.x0=null;resetReveal();renderAll();
+});
+on('chips','click',function(e){
+  var b=e.target.closest('.chip');if(!b||b.disabled)return;
+  var ch=CHIPS[+b.getAttribute('data-i')];
+  S.k={num:ch.num,den:ch.den};S.custom=false;$('kCustom').value='';resetReveal();renderAll();
+});
+on('kCustom','change',function(){
+  var v=parseFloat($('kCustom').value),c=getCtx(),k;
+  if(!(v>=0.1&&v<=20))return;
+  if(S.mode==='proj'){S.k=toFrac(v);S.custom=true;resetReveal();renderAll();return;}
+  k=toFrac(v);
+  if(!feasible(c,k)){$('kCustom').value='';$('pHint').textContent='That factor is too large for this graph. Try a smaller one.';return;}
+  S.k=k;S.custom=true;resetReveal();renderAll();
+});
+on('pRange','input',function(){
+  var v=parseFloat($('pRange').value);
+  if(S.mode==='math')S.A=v;else S.p=v;
+  var c=getCtx();renderInfo(c);updateViz();
+});
+on('x0Range','input',updateViz);
+on('predToggle','change',function(){S.predict=$('predToggle').checked;resetReveal();updateViz();});
+on('ro','click',function(e){if(e.target&&e.target.id==='predGo')checkPrediction();});
+on('ro','keydown',function(e){if(e.key==='Enter'&&e.target&&(e.target.id==='predIn'||e.target.id==='pjPt'||e.target.id==='pjPx')){e.preventDefault();checkPrediction();}});
+/* projectile mode events */
+on('modeProj','click',function(){S.mode='proj';resetReveal();renderAll();});
+on('pjQs','click',function(e){var b=e.target.closest('.scen');if(!b)return;var id=b.getAttribute('data-q'),i,q;
+  S.pq=id;for(i=0;i<PQ.length;i++){q=PQ[i];if(q.id===id&&q.ws){S.pt=q.t;S.pc=q.c;S.pv=q.v;S.ph=q.h||8;S.pth=q.th;S.k={num:q.k.num,den:q.k.den};S.custom=false;$('kCustom').value='';}}
+  resetReveal();renderAll();});
+on('pjType','click',function(e){var b=e.target.closest('button');if(!b||b.disabled)return;S.pq='own';S.pt=b.getAttribute('data-t');if(S.pt==='angled')S.pc='v';resetReveal();renderAll();});
+on('pjChg','click',function(e){var b=e.target.closest('button');if(!b||b.disabled)return;S.pq='own';S.pc=b.getAttribute('data-c');resetReveal();renderAll();});
+['pjV','pjH','pjTh'].forEach(function(id){on(id,'input',function(){var v=parseFloat($(id).value);
+  if(id==='pjV')S.pv=v;else if(id==='pjH')S.ph=v;else S.pth=v;resetReveal();renderProj();});});
+on('pjViz','click',function(e){if(!e.target||e.target.id!=='pjGo')return;
+  if(pjAnim.on){pjAnim.on=false;cancelAnimationFrame(pjAnim.id);e.target.textContent='Resume';return;}
+  var tmax=Math.max(pjAnim.A.t,pjAnim.B.t);if(pjAnim.t>=tmax-1e-9)pjAnim.t=0;
+  pjAnim.on=true;pjAnim.last=performance.now();e.target.textContent='Pause';pjAnim.id=requestAnimationFrame(pjStep);});
+
+renderAll();
+})();
+</script>
+</body>
+</html>
