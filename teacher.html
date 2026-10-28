@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Teacher controls · Physics</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔑</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+<style>
+.tpanel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+.rows { display: grid; gap: 10px; }
+.lrow { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 14px; align-items: center;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; }
+.lrow img { width: 96px; height: 64px; object-fit: cover; object-position: top; border-radius: 6px; border: 1px solid var(--line); }
+.lrow.off img { filter: grayscale(1); opacity: 0.45; }
+.lrow h3 { margin: 0; font-size: 1.05rem; }
+.lrow .state { font-size: 0.9rem; color: var(--muted); }
+.lrow.off .state { color: #b42318; font-weight: 700; }
+.lrow.on .state { color: var(--pos); font-weight: 700; }
+.toggle { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.toggle input { width: 22px; height: 22px; accent-color: var(--pos); cursor: pointer; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 14px; }
+button { font: inherit; font-weight: 700; border: 2px solid var(--ink); background: var(--ink); color: var(--panel);
+  border-radius: 8px; padding: 7px 16px; cursor: pointer; }
+button.ghost { background: transparent; color: var(--ink); }
+button:disabled { opacity: 0.45; cursor: default; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.status { font-weight: 700; margin: 10px 0 0; min-height: 1.5em; }
+.status.ok { color: var(--pos); } .status.err { color: #b42318; } .status.info { color: var(--muted); }
+.dirty { color: #b42318; font-weight: 700; }
+.form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 14px; margin: 10px 0; }
+.form label { font-weight: 700; font-size: 0.93rem; display: grid; gap: 4px; }
+.form input { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); }
+.check { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0; }
+.check input { margin-top: 4px; width: 18px; height: 18px; }
+details summary { cursor: pointer; font-weight: 700; margin: 8px 0; }
+ol.howto { line-height: 1.7; margin: 6px 0 0; padding-left: 1.3em; }
+code { background: var(--tint); padding: 1px 5px; border-radius: 4px; }
+@media (max-width: 560px) { .lrow { grid-template-columns: 64px minmax(0, 1fr); } .lrow img { width: 64px; height: 44px; } .lrow .toggle { grid-column: 1 / -1; } }
+</style>
+</head>
+<body>
+<div class="topnav"><div class="wrap">
+  <a class="brand" href="index.html"><span class="stripe" aria-hidden="true"><span></span><span></span><span></span></span>Physics</a>
+  <nav aria-label="Site">
+    <a href="index.html">Home</a><a href="interactives.html">Interactives</a><a href="simulations.html">Simulations</a><a href="tools.html">Video analysis &amp; graphing</a>
+  </nav>
+</div></div>
+<div class="wrap">
+  <header class="page">
+    <h1>Teacher controls</h1>
+    <p class="lede">Choose which interactives students can open. Locked ones are grayed out on the Interactives and home pages, and show a “Not open yet” message if a student goes to them directly. This page isn’t linked anywhere, so bookmark it.</p>
+    <div class="stripe" aria-hidden="true"><span></span><span></span><span></span></div>
+  </header>
+
+  <main>
+    <section aria-labelledby="open-h">
+      <h2 id="open-h">Which interactives are open?</h2>
+      <p class="section-note" id="srcNote">Loading…</p>
+      <div class="bar">
+        <button type="button" class="ghost" id="allOn">Open all</button>
+        <button type="button" class="ghost" id="allOff">Lock all</button>
+        <span id="dirty" class="dirty" hidden>Unsaved changes</span>
+      </div>
+      <div class="rows" id="rows"></div>
+    </section>
+
+    <section aria-labelledby="save-h">
+      <h2 id="save-h">Save your choices</h2>
+      <div class="tpanel">
+        <div class="bar" style="margin:0">
+          <button type="button" id="saveGh" disabled>Save to GitHub</button>
+          <button type="button" class="ghost" id="download">Download availability.json</button>
+        </div>
+        <p class="status info" id="status" role="status" aria-live="polite">Connect to GitHub below to save with one click, or download the file and upload it to the top level of your repository.</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="gh-h">
+      <h2 id="gh-h">Connect to GitHub (one-time setup)</h2>
+      <div class="tpanel">
+        <p style="margin:0">This lets “Save to GitHub” update <code>availability.json</code> in your repository directly. Your access key is kept only in this browser on this computer, never on the website.</p>
+        <div class="form">
+          <label>GitHub username<input id="owner" autocomplete="off" spellcheck="false"></label>
+          <label>Repository name<input id="repo" autocomplete="off" spellcheck="false"></label>
+          <label>Branch<input id="branch" value="main" autocomplete="off" spellcheck="false"></label>
+          <label>Access key (token)<input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></label>
+        </div>
+        <div class="bar" style="margin:0">
+          <button type="button" id="connect">Save connection and test it</button>
+          <button type="button" class="ghost" id="forget">Forget the access key</button>
+        </div>
+        <p class="status info" id="ghStatus" role="status" aria-live="polite"></p>
+        <details>
+          <summary>How to make an access key (about 2 minutes)</summary>
+          <ol class="howto">
+            <li>On github.com, click your profile picture, then <b>Settings</b>.</li>
+            <li>At the bottom of the left menu, click <b>Developer settings</b>, then <b>Personal access tokens → Fine-grained tokens</b>, then <b>Generate new token</b>.</li>
+            <li>Name it something like “Physics site teacher page” and set the expiration to the end of the school year.</li>
+            <li>Under <b>Repository access</b>, choose <b>Only select repositories</b> and pick your website’s repository.</li>
+            <li>Under <b>Permissions → Repository permissions</b>, set <b>Contents</b> to <b>Read and write</b>.</li>
+            <li>Click <b>Generate token</b>, copy it, and paste it into the Access key box above.</li>
+          </ol>
+          <p>The key only works on that one repository. If you ever think it was shared, delete it on GitHub and make a new one.</p>
+        </details>
+      </div>
+    </section>
+
+    <section aria-labelledby="pv-h">
+      <h2 id="pv-h">Preview locked interactives on this computer</h2>
+      <div class="tpanel">
+        <label class="check"><input type="checkbox" id="preview"> Let me open locked interactives in this browser (students still see them locked)</label>
+        <p class="section-note" style="margin:6px 0 0">Locked pages show a purple “Teacher preview” banner while this is on. It only affects this browser on this computer.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer><p>Changes saved to GitHub reach students in about a minute.</p></footer>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const LS = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+               set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} },
+               del: k => { try { localStorage.removeItem(k); } catch (e) {} } };
+  let labs = [];            // [{id, title, img}]
+  let state = {};           // id -> true (open) / false (locked)
+  let saved = "";           // JSON of the last loaded/saved state, to spot unsaved changes
+
+  // ---------- read the list of interactives from the Interactives page ----------
+  async function loadLabs() {
+    const html = await (await fetch("interactives.html?t=" + Date.now(), { cache: "no-store" })).text();
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const out = [];
+    doc.querySelectorAll(".lab-card").forEach(card => {
+      const a = card.querySelector('a[href^="interactives/"]'); if (!a) return;
+      const id = a.getAttribute("href").replace("interactives/", "").replace(".html", "");
+      const h = card.querySelector("h3"), img = card.querySelector("img");
+      out.push({ id, title: h ? h.textContent.trim() : id, img: img ? img.getAttribute("src") : "" });
+    });
+    return out;
+  }
+  async function loadSiteState() {
+    try { const r = await fetch("availability.json?t=" + Date.now(), { cache: "no-store" }); if (r.ok) return (await r.json()).labs || {}; } catch (e) {}
+    return {};
+  }
+
+  // ---------- GitHub ----------
+  const conn = () => ({ owner: $("owner").value.trim(), repo: $("repo").value.trim(), branch: $("branch").value.trim() || "main", token: LS.get("ghToken") || "" });
+  const apiUrl = c => `https://api.github.com/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/contents/availability.json`;
+  const headers = c => ({ "Accept": "application/vnd.github+json", "Authorization": "Bearer " + c.token, "X-GitHub-Api-Version": "2022-11-28" });
+  async function ghGet(c) {
+    const r = await fetch(apiUrl(c) + "?ref=" + encodeURIComponent(c.branch) + "&t=" + Date.now(), { headers: headers(c), cache: "no-store" });
+    if (r.status === 404) return { sha: null, labs: null };
+    if (!r.ok) throw new Error(ghError(r.status));
+    const j = await r.json();
+    const text = decodeURIComponent(escape(atob(j.content.replace(/\n/g, ""))));
+    return { sha: j.sha, labs: (JSON.parse(text).labs || {}) };
+  }
+  function ghError(code) {
+    if (code === 401) return "GitHub didn’t accept the access key. Check that it was copied completely and hasn’t expired.";
+    if (code === 403) return "The access key doesn’t have permission. Give it Contents: Read and write for this repository.";
+    if (code === 404) return "GitHub couldn’t find that repository. Check the username, repository name and branch.";
+    if (code === 409 || code === 422) return "The file changed on GitHub while you were editing. Reload this page and try again.";
+    return "GitHub returned an error (" + code + "). Try again in a moment.";
+  }
+  const fileText = () => JSON.stringify({ labs: Object.fromEntries(labs.map(l => [l.id, state[l.id] !== false])) }, null, 2) + "\n";
+
+  // ---------- UI ----------
+  function setStatus(id, msg, kind) { const el = $(id); el.textContent = msg; el.className = "status " + (kind || "info"); }
+  function render() {
+    $("rows").innerHTML = labs.map(l => {
+      const on = state[l.id] !== false;
+      return `<div class="lrow ${on ? "on" : "off"}"><img src="${l.img}" alt="">
+        <div><h3>${l.title}</h3><div class="state">${on ? "Open for students" : "Locked"}</div></div>
+        <label class="toggle"><input type="checkbox" data-id="${l.id}" ${on ? "checked" : ""}> Open for students</label></div>`;
+    }).join("") || "<p>No interactives found on the Interactives page.</p>";
+    $("dirty").hidden = fileText() === saved;
+  }
+  $("rows").addEventListener("change", e => { const id = e.target.dataset.id; if (!id) return; state[id] = e.target.checked; render(); });
+  $("allOn").addEventListener("click", () => { labs.forEach(l => state[l.id] = true); render(); });
+  $("allOff").addEventListener("click", () => { labs.forEach(l => state[l.id] = false); render(); });
+
+  $("download").addEventListener("click", () => {
+    const blob = new Blob([fileText()], { type: "application/json" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "availability.json";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    setStatus("status", "Downloaded. Upload availability.json to the top level of your repository to apply it.", "ok");
+  });
+
+  $("saveGh").addEventListener("click", async () => {
+    const c = conn(); if (!c.token) return;
+    $("saveGh").disabled = true; setStatus("status", "Saving to GitHub…");
+    try {
+      const cur = await ghGet(c);
+      const content = btoa(unescape(encodeURIComponent(fileText())));
+      const body = { message: "Update which interactives are open", content, branch: c.branch };
+      if (cur.sha) body.sha = cur.sha;
+      const r = await fetch(apiUrl(c), { method: "PUT", headers: Object.assign({ "Content-Type": "application/json" }, headers(c)), body: JSON.stringify(body) });
+      if (!r.ok) throw new Error(ghError(r.status));
+      saved = fileText(); render();
+      setStatus("status", "Saved. Students will see the change in about a minute (they may need to refresh).", "ok");
+    } catch (e) { setStatus("status", e.message, "err"); }
+    $("saveGh").disabled = !LS.get("ghToken");
+  });
+
+  $("connect").addEventListener("click", async () => {
+    const t = $("token").value.trim();
+    if (t) LS.set("ghToken", t);
+    LS.set("ghOwner", $("owner").value.trim()); LS.set("ghRepo", $("repo").value.trim()); LS.set("ghBranch", $("branch").value.trim() || "main");
+    $("token").value = ""; $("token").placeholder = LS.get("ghToken") ? "saved in this browser" : "github_pat_…";
+    const c = conn();
+    if (!c.token) { setStatus("ghStatus", "Paste an access key first.", "err"); return; }
+    setStatus("ghStatus", "Testing the connection…");
+    try {
+      const cur = await ghGet(c);
+      if (cur.labs) { labs.forEach(l => { if (l.id in cur.labs) state[l.id] = cur.labs[l.id]; }); saved = fileText(); render(); }
+      setStatus("ghStatus", "Connected to " + c.owner + "/" + c.repo + ". “Save to GitHub” is ready.", "ok");
+      $("saveGh").disabled = false;
+    } catch (e) {
+      LS.del("ghToken"); $("token").placeholder = "github_pat_…";      // don’t keep a key that didn’t work
+      setStatus("ghStatus", e.message + " Paste the key again after fixing this.", "err"); $("saveGh").disabled = true;
+    }
+  });
+  $("forget").addEventListener("click", () => { LS.del("ghToken"); $("token").placeholder = "github_pat_…"; $("saveGh").disabled = true;
+    setStatus("ghStatus", "The access key was removed from this browser.", "ok"); });
+
+  $("preview").checked = LS.get("teacherPreview") === "1";
+  $("preview").addEventListener("change", e => { if (e.target.checked) LS.set("teacherPreview", "1"); else LS.del("teacherPreview"); });
+
+  // ---------- start ----------
+  (async () => {
+    // fill in the repository from the site address (username.github.io/repository/)
+    const host = location.hostname, seg = location.pathname.split("/").filter(Boolean)[0];
+    const guessOwner = host.endsWith(".github.io") ? host.replace(".github.io", "") : "";
+    const guessRepo = host.endsWith(".github.io") ? (seg && !seg.endsWith(".html") ? seg : host) : "";
+    $("owner").value = LS.get("ghOwner") || guessOwner; $("repo").value = LS.get("ghRepo") || guessRepo; $("branch").value = LS.get("ghBranch") || "main";
+    if (LS.get("ghToken")) { $("token").placeholder = "saved in this browser"; $("saveGh").disabled = false; }
+    try { labs = await loadLabs(); } catch (e) { $("srcNote").textContent = "Couldn’t read the Interactives page."; return; }
+    const site = await loadSiteState();
+    labs.forEach(l => { state[l.id] = site[l.id] !== false; });
+    saved = fileText(); render();
+    $("srcNote").textContent = `${labs.length} interactives, read from the Interactives page. New labs added there appear here automatically.`;
+    if (LS.get("ghToken")) {
+      try { const cur = await ghGet(conn()); if (cur.labs) { labs.forEach(l => { if (l.id in cur.labs) state[l.id] = cur.labs[l.id]; }); saved = fileText(); render(); }
+            setStatus("ghStatus", "Connected to " + $("owner").value + "/" + $("repo").value + ".", "ok"); }
+      catch (e) { setStatus("ghStatus", e.message, "err"); }
+    }
+  })();
+  window.addEventListener("beforeunload", e => { if (fileText() !== saved) { e.preventDefault(); e.returnValue = ""; } });
+})();
+</script>
+</body>
+</html>

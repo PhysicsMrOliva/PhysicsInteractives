@@ -592,5 +592,37 @@ button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-vi
   if (document.fonts) document.fonts.ready.then(draw);
 })();
 </script>
+<!-- lock check: hides this interactive until the teacher opens it (settings in ../availability.json) -->
+<script>
+(function () {
+  var id = location.pathname.split("/").pop().replace(".html", "");
+  fetch("../availability.json?t=" + Date.now(), { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (cfg) {
+      if (!cfg || !cfg.labs || cfg.labs[id] !== false) return;
+      var teacher = false; try { teacher = localStorage.getItem("teacherPreview") === "1"; } catch (e) {}
+      var font = "font-family:'Atkinson Hyperlegible','Segoe UI',system-ui,sans-serif;";
+      if (teacher) {
+        var b = document.createElement("div");
+        b.setAttribute("role", "status");
+        b.style.cssText = font + "position:sticky;top:0;z-index:50;background:#7a3fe0;color:#fff;font-weight:700;text-align:center;padding:8px 12px;";
+        b.textContent = "Teacher preview: this interactive is locked for students.";
+        document.body.prepend(b);
+        return;
+      }
+      var o = document.createElement("div");
+      o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-labelledby", "lockTitle");
+      o.style.cssText = font + "position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:var(--bg,#eaf1ee);";
+      o.innerHTML = '<div style="max-width:520px;background:var(--panel,#fff);color:var(--ink,#15232b);border:1px solid var(--line,#c4d3cc);border-radius:12px;padding:28px;text-align:center">' +
+        '<h1 id="lockTitle" style="margin:0 0 8px;font-size:1.6rem">Not open yet</h1>' +
+        '<p style="margin:0 0 18px;line-height:1.5">This interactive opens after we do the class activity that goes with it. Check back then!</p>' +
+        '<a href="../interactives.html" style="display:inline-block;font-weight:700;padding:8px 18px;border-radius:8px;background:var(--ink,#15232b);color:var(--panel,#fff);text-decoration:none">Back to Interactives</a></div>';
+      document.body.appendChild(o);
+      document.documentElement.style.overflow = "hidden";
+      Array.prototype.forEach.call(document.body.children, function (el) { if (el !== o) el.setAttribute("aria-hidden", "true"); });
+    })
+    .catch(function () {});
+})();
+</script>
 </body>
 </html>
