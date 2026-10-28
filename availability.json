@@ -7,6 +7,6 @@
     "relationship-explorer": false,
     "velocity-displacement": true,
     "two-part-motion": true,
-    "broom-ball": true
+    "broom-ball": false
   }
 }
