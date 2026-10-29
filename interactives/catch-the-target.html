@@ -123,7 +123,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-vi
 <header>
   <a class="back" href="../interactives.html">Back to Interactives</a>
   <h1>Hit the target: projectile collisions</h1>
-  <p>A cannon on a cliff fires a net while a target moves along the road below. Choose the settings, press Launch, and see whether the net lands on the target. The net catches the target if it lands within the net’s reach (±1.0 m).</p>
+  <p>A cannon on a cliff fires a net while a target moves along the road below. Choose the settings, press Launch, and see whether the net lands on the target. The net hits the target if it lands within the net’s reach (±1.0 m).</p>
 </header>
 
 <main class="layout">
@@ -381,9 +381,9 @@ button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-vi
       <li><b>Time in the air</b> (net reaches y = 0): 0 = ½(−${sig(g)} m/s²)t² + ${par(P.vy, "m/s")}t + ${sig(S.h)} m &nbsp;→&nbsp; t = <b>${sig(T)} s</b></li>
       <li><b>Where the net lands:</b> x = v₀ₓt = ${par(P.vx, "m/s")}(${sig(T)} s) = <b>${sig(P.xLand)} m</b></li>
       <li><b>Where the target is then:</b> x = ½${par(S.a, "m/s²")}(${sig(T)} s)² + ${par(S.u, "m/s")}(${sig(T)} s) + ${cst(S.x0, "m")} = <b>${sig(P.xT)} m</b></li>
-      <li><b>Catch condition:</b> x<sub>net</sub> = x<sub>target</sub> at t = ${sig(T)} s. ${P.hit ? "These settings catch the target." : `They are ${sig(Math.abs(P.gap))} m apart, so the net misses.`}</li></ol>
+      <li><b>Hit condition:</b> x<sub>net</sub> = x<sub>target</sub> at t = ${sig(T)} s. ${P.hit ? "These settings hit the target." : `They are ${sig(Math.abs(P.gap))} m apart, so the net misses.`}</li></ol>
       <div class="need">
-        <div>To catch it by changing only the <b>initial position</b>:<br>x₀ = x<sub>land</sub> − v₀t − ½at² = <b>${sig(needX0)} m</b></div>
+        <div>To hit it by changing only the <b>initial position</b>:<br>x₀ = x<sub>land</sub> − v₀t − ½at² = <b>${sig(needX0)} m</b></div>
         <div>…only the <b>initial speed</b>:<br>v₀ = (x<sub>land</sub> − x₀ − ½at²) / t = <b>${sig(needU)} m/s</b></div>
         <div>…only the <b>acceleration</b>:<br>a = 2(x<sub>land</sub> − x₀ − v₀t) / t² = <b>${sig(needA)} m/s²</b></div>
         <div>…only the net’s <b>launch speed</b>:<br>${needV === null ? "<b>no launch speed works</b> at this angle" : `v₀ = <b>${sig(needV)} m/s</b>`}<br><span class="hidden">(t depends on v₀, so this one is solved numerically)</span></div>
@@ -509,7 +509,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-vi
     ctx.fillText(`t = ${S.t.toFixed(2)} s`, 92, 20);
     if (done) {
       ctx.textAlign = "center"; ctx.font = "bold 20px 'Atkinson Hyperlegible', system-ui, sans-serif";
-      ctx.fillStyle = P.hit ? C.hit : C.miss; ctx.fillText(P.hit ? "CAUGHT!" : "MISSED", nx, Y(0) - 60);
+      ctx.fillStyle = P.hit ? C.hit : C.miss; ctx.fillText(P.hit ? "HIT!" : "MISSED", nx, Y(0) - 60);
     }
   }
 
@@ -561,7 +561,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-vi
     // result banner
     const done = S.t >= P.T - 1e-9 && S.launched, R = $("result");
     if (!done) { R.className = "result wait"; R.textContent = S.t > 0 ? `In the air… the net lands at t = ${sig(P.T)} s.` : "Press Launch to fire the net."; }
-    else if (P.hit) { R.className = "result hit"; R.textContent = `Caught! The net landed ${sig(Math.abs(P.gap))} m from the target (within ±${REACH} m) at t = ${sig(P.T)} s.`; }
+    else if (P.hit) { R.className = "result hit"; R.textContent = `Hit! The net landed ${sig(Math.abs(P.gap))} m from the target (within ±${REACH} m) at t = ${sig(P.T)} s.`; }
     else { R.className = "result miss"; R.textContent = `Missed by ${sig(Math.abs(P.gap))} m: the net landed ${P.gap > 0 ? "ahead of" : "behind"} the target at t = ${sig(P.T)} s.`; }
     $("scrub").value = P.T ? S.t / P.T : 0; updPlay();
   }

@@ -1,12 +1,12 @@
 {
   "labs": {
-    "relationship-explorer": true,
     "constant-acceleration": true,
-    "velocity-displacement": true,
-    "two-part-motion": true,
     "projectile-motion": true,
     "projectile-portions": true,
     "catch-the-target": true,
-    "broom-ball": false
+    "velocity-displacement": true,
+    "two-part-motion": true,
+    "broom-ball": true,
+    "relationship-explorer": true
   }
 }
