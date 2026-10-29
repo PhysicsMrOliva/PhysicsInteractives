@@ -187,13 +187,13 @@ details.der ol{margin:6px 0 0;padding-left:1.2em;font:400 18px/1.6 var(--serif)}
       </section>
 
       <section class="panel" aria-labelledby="setH">
-        <h2 id="setH">3. Set the constants and the starting point</h2>
+        <h2 id="setH">3. Set the constants and the original point</h2>
         <label class="slider">
           <span class="row"><span id="pLabel">A</span><b id="pVal">2</b></span>
           <input type="range" id="pRange" step="0.1">
         </label>
         <label class="slider">
-          <span class="row"><span id="x0Label">Starting x</span><b id="x0Val">4</b></span>
+          <span class="row"><span id="x0Label">Original x</span><b id="x0Val">4</b></span>
           <input type="range" id="x0Range" step="any">
         </label>
         <p class="hint" id="pHint"></p>
@@ -434,10 +434,10 @@ function drawGraph(c,x0,k,showB){
   s+=guide(x0,y0,'var(--ptA)');
   if(showB)s+=guide(x1,y1,'var(--ptB)');
   s+='<circle cx="'+sx(x0)+'" cy="'+sy(y0)+'" r="8" fill="var(--ptA)" stroke="var(--panel)" stroke-width="2"/>';
-  s+=label(x0,y0,'start','var(--ptA)');
+  s+=label(x0,y0,'original','var(--ptA)');
   if(showB){
     s+='<circle cx="'+sx(x1)+'" cy="'+sy(y1)+'" r="8" fill="var(--ptB)" stroke="var(--panel)" stroke-width="2"/>';
-    s+=label(x1,y1,'after','var(--ptB)');
+    s+=label(x1,y1,'hypothetical','var(--ptB)');
   }
   /* axis titles */
   var xt2=c.math?'x':(c.xn+', '+c.xs+' ('+c.xu+')'),yt2=c.math?'y':(c.yn+', '+c.ys+' ('+c.yu+')');
@@ -602,7 +602,7 @@ function pjDrawViz(){
   var k=Math.min(pw/(xmax+cw),ph/ymax),ox=L+cw*k,oy=T+ph;
   function X(x){return ox+x*k;} function Y(y){return oy-y*k;}
   function path(o){var d='',i,t,N=80;for(i=0;i<=N;i++){t=o.t*i/N;d+=(i?'L':'M')+X(o.vx*t).toFixed(1)+' '+Y(o.h+o.vy*t+0.5*AY*t*t).toFixed(1);}return d;}
-  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Both launches: the original and the changed one">';
+  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Both launches: the original and the hypothetical one">';
   s+='<rect x="0" y="'+oy+'" width="'+W+'" height="'+(H-oy)+'" fill="var(--accent-soft)"/><line x1="0" y1="'+oy+'" x2="'+W+'" y2="'+oy+'" stroke="var(--axis)" stroke-width="2"/>';
   var hc=Math.max(A.h,B.h);
   if(hc>0)s+='<rect x="'+(ox-cw*k)+'" y="'+Y(hc)+'" width="'+(cw*k)+'" height="'+(oy-Y(hc))+'" fill="var(--grid)" stroke="var(--axis)"/>';
@@ -615,7 +615,7 @@ function pjDrawViz(){
     return '<text x="'+xx+'" y="'+(oy+dy)+'" font-size="14" font-weight="700" text-anchor="'+anchor+'" style="fill:'+col+'">Δx'+n+' = '+fmt(o.dx)+' m, t'+n+' = '+fmt(o.t)+' s</text>';};
   var ord=A.dx<=B.dx;
   s+=show?lab(A,'var(--ptA)','₁',ord?20:38)+lab(B,'var(--ptB)','₂',ord?38:20):lab(A,'var(--ptA)','₁',20);
-  s+='<text x="'+(W-R)+'" y="18" font-size="14" text-anchor="end" style="fill:var(--muted)">'+(show?'dark: original · pink: changed':'pink launch hidden until you check your prediction')+'</text>';
+  s+='<text x="'+(W-R)+'" y="18" font-size="14" text-anchor="end" style="fill:var(--muted)">'+(show?'dark: original · pink: hypothetical':'hypothetical launch hidden until you check your prediction')+'</text>';
   s+='</svg><div class="pjbar"><button class="btn" id="pjGo">Launch both</button><span class="t" id="pjT">t = 0.00 s</span><span class="hint" id="pjRate"></span></div>';
   $('pjViz').innerHTML=s;
   pjAnim.A=A;pjAnim.B=B;pjAnim.X=X;pjAnim.Y=Y;pjAnim.on=false;pjAnim.t=0;cancelAnimationFrame(pjAnim.id);
@@ -677,7 +677,7 @@ function setupSliders(c){
   if(S.x0===null)S.x0=c.x0def;
   S.x0=Math.min(r[1],Math.max(r[0],S.x0));
   xr.value=S.x0;
-  $('x0Label').textContent=c.math?'Starting x':('Starting '+c.xn+', '+c.xs);
+  $('x0Label').textContent=c.math?'Original x':('Original '+c.xn+', '+c.xs);
   $('pHint').textContent=c.math?'Changing A moves the curve but never changes the factor.':'Constants like these stay fixed while '+c.xs+' changes.';
 }
 function updateViz(){
