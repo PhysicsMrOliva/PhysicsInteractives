@@ -7,6 +7,7 @@
     "velocity-displacement": true,
     "two-part-motion": true,
     "broom-ball": true,
-    "relationship-explorer": true
+    "relationship-explorer": true,
+    "guess-practice": true
   }
 }

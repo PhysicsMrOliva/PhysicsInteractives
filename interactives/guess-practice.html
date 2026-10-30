@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GUESS problem solving</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  --bg: #eaf1ee; --grid: #d3e0da; --panel: #ffffff; --ink: #15232b; --muted: #56666e; --line: #c4d3cc; --tint: #f3f7f5;
+  --pos: #23913a; --vel: #d22b2b; --acc: #1f6fb4; --known: #1a7f37; --knownbg: #dff3e4; --unk: #9a6700; --unkbg: #fff4d1;
+  --bad: #b42318; --badbg: #fde7e4; --hl: #ffe58f; --hlb: #d9a800; --sel: #1f6fb4; --focus: #1f6fb4; --btn: #15232b; --btn-ink: #ffffff;
+  font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42; --tint: #1b282e;
+    --pos: #4cc76a; --vel: #ff6b6b; --acc: #5aa9ff; --known: #6fd37a; --knownbg: #17331f; --unk: #f2c14e; --unkbg: #3a3014;
+    --bad: #ff8a80; --badbg: #3d1c1a; --hl: #5a4700; --hlb: #c9a227; --sel: #5aa9ff; --focus: #5aa9ff; --btn: #e5eef0; --btn-ink: #0f171b;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42; --tint: #1b282e;
+  --pos: #4cc76a; --vel: #ff6b6b; --acc: #5aa9ff; --known: #6fd37a; --knownbg: #17331f; --unk: #f2c14e; --unkbg: #3a3014;
+  --bad: #ff8a80; --badbg: #3d1c1a; --hl: #5a4700; --hlb: #c9a227; --sel: #5aa9ff; --focus: #5aa9ff; --btn: #e5eef0; --btn-ink: #0f171b;
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+*, *::before, *::after { box-sizing: inherit; }
+body { margin: 0; color: var(--ink); background-color: var(--bg); line-height: 1.45;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px; }
+header { max-width: 1320px; margin: 0 auto; padding: 28px 20px 8px; }
+h1 { font-size: clamp(1.6rem, 3.4vw, 2.4rem); margin: 0 0 4px; letter-spacing: -0.01em; }
+h1 .g { color: var(--pos); } h1 .u { color: var(--unk); } h1 .e { color: var(--acc); } h1 .s1 { color: var(--vel); } h1 .s2 { color: var(--muted); }
+header .back { display: inline-block; margin-bottom: 10px; color: var(--ink); font-weight: 700; }
+header p { margin: 0; color: var(--muted); max-width: 84ch; }
+.layout { max-width: 1320px; margin: 0 auto; padding: 16px 20px 40px; display: grid;
+  grid-template-columns: 280px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+aside.side { padding: 14px; }
+aside h2 { font-size: 0.95rem; margin: 10px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+aside h2:first-child { margin-top: 0; }
+.plist { display: grid; gap: 6px; }
+.plist button { text-align: left; font: inherit; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink);
+  border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+.plist button[aria-current="true"] { border-color: var(--sel); background: var(--tint); box-shadow: inset 4px 0 0 var(--sel); }
+.plist small { display: block; color: var(--muted); }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.steps li { padding: 4px 8px; border-radius: 6px; color: var(--muted); font-size: 0.93rem; }
+.steps li.cur { background: var(--tint); color: var(--ink); font-weight: 700; }
+.steps li.done { color: var(--known); }
+.steps li.done::before { content: "✓ "; }
+main { display: grid; gap: 14px; min-width: 0; }
+.card { padding: 16px 18px; }
+.card h2 { margin: 0 0 6px; font-size: 1.25rem; }
+.tag { display: inline-block; font-size: 0.8rem; font-weight: 700; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); vertical-align: middle; margin-left: 6px; }
+.prob { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 360px); gap: 16px; align-items: start; }
+@media (max-width: 760px) { .prob { grid-template-columns: 1fr; } }
+.prob p.text { font-size: 1.12rem; margin: 0 0 8px; }
+.pic svg { width: 100%; height: auto; display: block; }
+.pic text { font-family: inherit; }
+.parttitle { font-weight: 700; color: var(--acc); margin: 0 0 4px; }
+.carry { background: var(--tint); border-left: 4px solid var(--acc); padding: 8px 12px; border-radius: 0 8px 8px 0; margin: 8px 0 0; }
+.task h3 { margin: 0 0 4px; font-size: 1.15rem; }
+.task .lead { color: var(--muted); margin: 0 0 12px; }
+.q { margin: 0 0 16px; }
+.q h4 { margin: 0 0 6px; font-size: 1rem; }
+.opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.opts.wide { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.opt { border: 2px solid var(--line); background: var(--panel); border-radius: 8px; padding: 4px; cursor: pointer; color: var(--ink); font: inherit; }
+.opt svg { display: block; width: 100%; height: auto; }
+.opt[aria-pressed="true"] { border-color: var(--sel); box-shadow: 0 0 0 2px var(--sel); }
+.opt.right { border-color: var(--known); box-shadow: 0 0 0 2px var(--known); }
+.opt.wrong { border-color: var(--bad); box-shadow: 0 0 0 2px var(--bad); }
+.qfb { font-size: 0.92rem; margin-top: 4px; min-height: 1.2em; }
+.qfb.bad { color: var(--bad); } .qfb.ok { color: var(--known); }
+table.gt { border-collapse: collapse; width: 100%; max-width: 560px; }
+table.gt td, table.gt th { padding: 5px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+table.gt th { font-size: 0.85rem; color: var(--muted); }
+table.gt td.sym { font-size: 1.12rem; white-space: nowrap; width: 90px; }
+table.gt input { font: inherit; width: 110px; padding: 4px 8px; border: 1.5px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); text-align: right; }
+table.gt input.ok { border-color: var(--known); background: var(--knownbg); }
+table.gt input.bad { border-color: var(--bad); background: var(--badbg); }
+table.gt td.fb { font-size: 0.88rem; color: var(--bad); }
+table.gt td.fb.ok { color: var(--known); }
+.cols2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+button.btn { font: inherit; font-weight: 700; border: 2px solid var(--btn); background: var(--btn); color: var(--btn-ink); border-radius: 8px; padding: 7px 16px; cursor: pointer; }
+button.btn.ghost { background: transparent; color: var(--ink); }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.fb { font-weight: 700; margin: 10px 0 0; min-height: 1.4em; }
+.fb.ok { color: var(--known); } .fb.bad { color: var(--bad); } .fb.info { color: var(--muted); font-weight: 400; }
+table.mx { border-collapse: separate; border-spacing: 0 6px; width: 100%; }
+table.mx th { font-size: 0.85rem; color: var(--muted); font-weight: 700; text-align: center; padding: 0 4px; }
+table.mx td { padding: 0; }
+table.mx tr.row td { background: var(--panel); border-top: 1.5px solid var(--line); border-bottom: 1.5px solid var(--line); }
+table.mx tr.row td:first-child { border-left: 1.5px solid var(--line); border-radius: 8px 0 0 8px; }
+table.mx tr.row td:last-child { border-right: 1.5px solid var(--line); border-radius: 0 8px 8px 0; }
+table.mx tr.row { cursor: pointer; }
+table.mx tr.row:hover td { background: var(--tint); }
+table.mx tr.row.pick td { border-color: var(--sel); background: var(--tint); }
+table.mx tr.row.off { cursor: default; opacity: 0.45; }
+table.mx td.eqc { padding: 8px 12px; font-size: 1.08rem; white-space: nowrap; }
+table.mx td.cell { text-align: center; padding: 4px; min-width: 52px; }
+.chip { display: inline-block; min-width: 44px; padding: 3px 6px; border-radius: 6px; font-weight: 700; font-size: 0.95rem; }
+.chip.k { background: var(--knownbg); color: var(--known); }
+.chip.u { background: var(--unkbg); color: var(--unk); }
+.mxwrap { overflow-x: auto; }
+.legend { font-size: 0.9rem; color: var(--muted); }
+.legend .chip { min-width: 0; }
+.solveopts { display: grid; gap: 8px; }
+.solveopts button { text-align: left; font: inherit; font-size: 1.12rem; border: 2px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+.solveopts button.wrong { border-color: var(--bad); background: var(--badbg); }
+.solveopts button.right { border-color: var(--known); background: var(--knownbg); }
+.big { font-size: 1.25rem; margin: 6px 0; }
+.subrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 1.15rem; }
+.subrow input { font: inherit; width: 130px; padding: 5px 8px; border: 1.5px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); text-align: right; }
+.knownlist { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 1rem; margin: 6px 0 0; }
+.sheet { display: grid; grid-template-columns: 1fr 1fr; border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; }
+@media (max-width: 760px) { .sheet { grid-template-columns: 1fr; } }
+.sheet > div { padding: 10px 12px; border: 1px solid var(--line); min-height: 70px; }
+.sheet h4 { margin: 0 0 4px; font-size: 1rem; }
+.sheet h4 u { text-decoration-thickness: 2px; }
+.sheet ul { margin: 0; padding-left: 1.1em; }
+.sheet li { margin: 2px 0; }
+.boxed { border: 2px solid var(--known); border-radius: 6px; padding: 0 6px; display: inline-block; }
+.sheetpart { margin: 0 0 6px; font-weight: 700; color: var(--acc); }
+.done-card { border: 2px solid var(--known); }
+.ansl { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 1.1rem; }
+.hint { color: var(--muted); font-size: 0.93rem; }
+mark.tgt { background: var(--hl); color: inherit; border-radius: 4px; padding: 0 3px; font-weight: 700; box-shadow: 0 0 0 1.5px var(--hlb); }
+s.z { text-decoration: line-through; text-decoration-color: var(--bad); text-decoration-thickness: 2.5px; color: var(--muted); }
+s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0; }
+.zchips { display: flex; flex-wrap: wrap; gap: 8px; }
+.zchip { border: 1.5px solid var(--line); border-radius: 8px; padding: 6px 12px; font-size: 1.1rem; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; }
+.zchip input { width: 18px; height: 18px; }
+.simpres { background: var(--tint); border-radius: 8px; padding: 8px 12px; margin-top: 10px; }
+.sheet2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: "pic eq" "pic solve" "unk sub"; border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
+.sheet2 > div { padding: 10px 12px; border: 1px solid var(--line); min-height: 64px; }
+.sheet2 h4 { margin: 0 0 4px; font-size: 1rem; }
+.sheet2 ul { margin: 0; padding-left: 1.1em; } .sheet2 li { margin: 3px 0; }
+.sp { grid-area: pic; } .se { grid-area: eq; } .ss { grid-area: solve; } .su { grid-area: unk; } .sb { grid-area: sub; }
+@media (max-width: 760px) { .sheet2 { grid-template-columns: 1fr; grid-template-areas: "pic" "unk" "eq" "solve" "sub"; } }
+.stacks { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; margin: 4px 0 8px; }
+.stack { display: grid; gap: 2px; width: 118px; }
+.stack .st { font-size: 0.8rem; font-weight: 700; color: var(--muted); text-align: center; }
+.sg span { font-size: 0.78rem; color: var(--muted); }
+.mapmini { width: 150px; } .mapmini.v { width: 80px; }
+.mapmini svg { width: 100%; height: auto; display: block; }
+.sheetpic { max-width: 300px; margin: 2px 0 8px; }
+.sheetpic svg { width: 100%; height: auto; display: block; }
+.sheetpic text { font-family: inherit; }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../interactives.html">Back to Interactives</a>
+  <h1><span class="g">G</span><span class="u">U</span><span class="e">E</span><span class="s1">S</span><span class="s2">S</span> problem solving</h1>
+  <p>Don’t guess when you can use GUESS: <b>G</b>iven, <b>U</b>nknown, <b>E</b>quation, <b>S</b>olve, <b>S</b>ubstitute. Sketch the motion, list what you know, then use the kinematic matrix to find one unknown at a time. Each answer becomes a new given.</p>
+</header>
+
+<div class="layout">
+  <aside class="panel side" aria-label="Problems and progress">
+    <h2>Class examples</h2>
+    <div class="plist" id="listEx"></div>
+    <h2>Practice problems</h2>
+    <div class="plist" id="listPr"></div>
+    <h2>Progress</h2>
+    <ol class="steps" id="steps"></ol>
+    <div class="bar"><button class="btn ghost" id="reset">Start this problem over</button></div>
+  </aside>
+
+  <main>
+    <section class="panel card" id="probCard" aria-live="off"></section>
+    <section class="panel card task" id="task"></section>
+    <section class="panel card" aria-labelledby="sheetH">
+      <h2 id="sheetH" style="font-size:1.05rem">Your GUESS sheet</h2>
+      <div id="sheet"></div>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const G = 9.81;
+  const minus = s => String(s).replace(/-/g, "−");
+  const sig = n => { if (!isFinite(n)) return "—"; if (Math.abs(n) < 5e-10) return "0";
+    let s = Math.abs(n) >= 1000 ? Math.round(n).toString() : n.toPrecision(3); if (s.includes("e")) s = String(Number(n.toPrecision(3))); return minus(s); };
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const shuffle = (a, seed) => { const r = a.slice(); let x = seed || 7; for (let i = r.length - 1; i > 0; i--) { x = (x * 9301 + 49297) % 233280; const j = Math.floor(x / 233280 * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
+
+  // ======================================================================
+  // Equations: kinematic set (axis-agnostic keys) and trig set
+  // keys: s0 sf ds v0 vf va a dt | v th vx vy
+  // ======================================================================
+  const EQ = {
+    E1: { name: "Average velocity rule", form: "{va} = ({v0} + {vf}) / 2", vars: ["va", "v0", "vf"] },
+    E2: { name: "Def. of velocity", form: "{ds} = {va}{dt}", vars: ["ds", "va", "dt"] },
+    E3: { name: "Def. of acceleration", form: "{vf} = {a}{dt} + {v0}", vars: ["vf", "a", "dt", "v0"] },
+    E4: { name: "Displacement equation", form: "{ds} = ½{a}{dt}² + {v0}{dt}", vars: ["ds", "a", "dt", "v0"] },
+    E5: { name: "Time-free equation", form: "{vf}² − {v0}² = 2{a}{ds}", vars: ["vf", "v0", "a", "ds"] },
+    E6: { name: "Displacement (definition)", form: "{ds} = {sf} − {s0}", vars: ["ds", "sf", "s0"] },
+    T1: { name: "Horizontal component (CAH)", form: "{vx} = {v} cos {th}", vars: ["vx", "v", "th"] },
+    T2: { name: "Vertical component (SOH)", form: "{vy} = {v} sin {th}", vars: ["vy", "v", "th"] },
+    T3: { name: "Magnitude (Pythagoras)", form: "{v} = √({vx}² + {vy}²)", vars: ["v", "vx", "vy"] },
+    T4: { name: "Angle (TOA)", form: "{th} = tan⁻¹({vy} / {vx})", vars: ["th", "vx", "vy"] }
+  };
+  const SETS = { kin: ["E1", "E2", "E3", "E4", "E5", "E6"], trig: ["T1", "T2", "T3", "T4"] };
+  const COLS = { kin: ["va", "v0", "vf", "ds", "a", "dt", "s0", "sf"], trig: ["v", "th", "vx", "vy"] };
+  const rad = d => d * Math.PI / 180, deg = r => r * 180 / Math.PI;
+  // solved forms: ok (correct), bad (distractors), f (numeric), pm (sign must be chosen by direction)
+  const FORMS = {
+    E1: { va: { ok: "{va} = ({v0} + {vf}) / 2", bad: ["{va} = ({vf} − {v0}) / 2", "{va} = 2({v0} + {vf})"], f: V => (V.v0 + V.vf) / 2 },
+          v0: { ok: "{v0} = 2{va} − {vf}", bad: ["{v0} = {va} − {vf} / 2", "{v0} = ({va} − {vf}) / 2"], f: V => 2 * V.va - V.vf },
+          vf: { ok: "{vf} = 2{va} − {v0}", bad: ["{vf} = {va} − {v0} / 2", "{vf} = ({va} + {v0}) / 2"], f: V => 2 * V.va - V.v0 } },
+    E2: { ds: { ok: "{ds} = {va}{dt}", bad: ["{ds} = {va} / {dt}", "{ds} = {dt} / {va}"], f: V => V.va * V.dt },
+          va: { ok: "{va} = {ds} / {dt}", bad: ["{va} = {dt} / {ds}", "{va} = {ds}{dt}"], f: V => V.ds / V.dt },
+          dt: { ok: "{dt} = {ds} / {va}", bad: ["{dt} = {va} / {ds}", "{dt} = {ds}{va}"], f: V => V.ds / V.va } },
+    E3: { vf: { ok: "{vf} = {a}{dt} + {v0}", bad: ["{vf} = {a}{dt} − {v0}", "{vf} = {v0} − {a}{dt}"], f: V => V.a * V.dt + V.v0 },
+          a: { ok: "{a} = ({vf} − {v0}) / {dt}", bad: ["{a} = ({vf} + {v0}) / {dt}", "{a} = {dt} / ({vf} − {v0})", "{a} = {vf} / {dt} − {v0}"], f: V => (V.vf - V.v0) / V.dt },
+          dt: { ok: "{dt} = ({vf} − {v0}) / {a}", bad: ["{dt} = {a} / ({vf} − {v0})", "{dt} = ({vf} + {v0}) / {a}"], f: V => (V.vf - V.v0) / V.a },
+          v0: { ok: "{v0} = {vf} − {a}{dt}", bad: ["{v0} = {vf} + {a}{dt}", "{v0} = {a}{dt} − {vf}"], f: V => V.vf - V.a * V.dt } },
+    E4: { ds: { ok: "{ds} = ½{a}{dt}² + {v0}{dt}", bad: ["{ds} = ½{a}{dt} + {v0}{dt}", "{ds} = {a}{dt}² + {v0}{dt}"], f: V => 0.5 * V.a * V.dt * V.dt + V.v0 * V.dt },
+          a: { ok: "{a} = 2({ds} − {v0}{dt}) / {dt}²", bad: ["{a} = ({ds} − {v0}{dt}) / (2{dt}²)", "{a} = 2{ds} / {dt} − {v0}"], f: V => 2 * (V.ds - V.v0 * V.dt) / (V.dt * V.dt) },
+          v0: { ok: "{v0} = ({ds} − ½{a}{dt}²) / {dt}", bad: ["{v0} = ({ds} + ½{a}{dt}²) / {dt}", "{v0} = {ds} / {dt} − {a}{dt}"], f: V => (V.ds - 0.5 * V.a * V.dt * V.dt) / V.dt },
+          dt: { ok: "{dt} = √(2{ds} / {a})", bad: ["{dt} = 2{ds} / {a}", "{dt} = √({ds} / (2{a}))"], f: V => Math.sqrt(2 * V.ds / V.a), needV0zero: true } },
+    E5: { vf: { ok: "{vf} = ±√({v0}² + 2{a}{ds})", bad: ["{vf} = {v0} + √(2{a}{ds})", "{vf} = ±√({v0}² − 2{a}{ds})"], f: V => Math.sqrt(Math.max(0, V.v0 * V.v0 + 2 * V.a * V.ds)), pm: true },
+          v0: { ok: "{v0} = ±√({vf}² − 2{a}{ds})", bad: ["{v0} = ±√({vf}² + 2{a}{ds})", "{v0} = {vf} − √(2{a}{ds})"], f: V => Math.sqrt(Math.max(0, V.vf * V.vf - 2 * V.a * V.ds)), pm: true },
+          a: { ok: "{a} = ({vf}² − {v0}²) / (2{ds})", bad: ["{a} = ({vf} − {v0})² / (2{ds})", "{a} = 2{ds} / ({vf}² − {v0}²)"], f: V => (V.vf * V.vf - V.v0 * V.v0) / (2 * V.ds) },
+          ds: { ok: "{ds} = ({vf}² − {v0}²) / (2{a})", bad: ["{ds} = ({vf} − {v0})² / (2{a})", "{ds} = 2{a} / ({vf}² − {v0}²)"], f: V => (V.vf * V.vf - V.v0 * V.v0) / (2 * V.a) } },
+    E6: { ds: { ok: "{ds} = {sf} − {s0}", bad: ["{ds} = {s0} − {sf}", "{ds} = {sf} + {s0}"], f: V => V.sf - V.s0 },
+          sf: { ok: "{sf} = {ds} + {s0}", bad: ["{sf} = {ds} − {s0}", "{sf} = {s0} − {ds}"], f: V => V.ds + V.s0 },
+          s0: { ok: "{s0} = {sf} − {ds}", bad: ["{s0} = {ds} − {sf}", "{s0} = {sf} + {ds}"], f: V => V.sf - V.ds } },
+    T1: { vx: { ok: "{vx} = {v} cos {th}", bad: ["{vx} = {v} sin {th}", "{vx} = {v} / cos {th}"], f: V => V.v * Math.cos(rad(V.th)) },
+          v: { ok: "{v} = {vx} / cos {th}", bad: ["{v} = {vx} cos {th}", "{v} = cos {th} / {vx}"], f: V => V.vx / Math.cos(rad(V.th)) },
+          th: { ok: "{th} = cos⁻¹({vx} / {v})", bad: ["{th} = cos⁻¹({v} / {vx})", "{th} = sin⁻¹({vx} / {v})"], f: V => deg(Math.acos(V.vx / V.v)), pm: true,
+                 note: "cos⁻¹ only gives the size of the angle. Use the direction for the sign: below the horizontal is negative." } },
+    T2: { vy: { ok: "{vy} = {v} sin {th}", bad: ["{vy} = {v} cos {th}", "{vy} = {v} / sin {th}"], f: V => V.v * Math.sin(rad(V.th)) },
+          v: { ok: "{v} = {vy} / sin {th}", bad: ["{v} = {vy} sin {th}", "{v} = sin {th} / {vy}"], f: V => V.vy / Math.sin(rad(V.th)) },
+          th: { ok: "{th} = sin⁻¹({vy} / {v})", bad: ["{th} = sin⁻¹({v} / {vy})", "{th} = cos⁻¹({vy} / {v})"], f: V => deg(Math.asin(V.vy / V.v)) } },
+    T3: { v: { ok: "{v} = √({vx}² + {vy}²)", bad: ["{v} = {vx} + {vy}", "{v} = √({vx}² − {vy}²)"], f: V => Math.hypot(V.vx, V.vy) },
+          vx: { ok: "{vx} = √({v}² − {vy}²)", bad: ["{vx} = √({v}² + {vy}²)", "{vx} = {v} − {vy}"], f: V => Math.sqrt(Math.max(0, V.v * V.v - V.vy * V.vy)), pm: true },
+          vy: { ok: "{vy} = ±√({v}² − {vx}²)", bad: ["{vy} = √({v}² + {vx}²)", "{vy} = {v} − {vx}"], f: V => Math.sqrt(Math.max(0, V.v * V.v - V.vx * V.vx)), pm: true } },
+    T4: { th: { ok: "{th} = tan⁻¹({vy} / {vx})", bad: ["{th} = tan⁻¹({vx} / {vy})", "{th} = sin⁻¹({vy} / {vx})"], f: V => deg(Math.atan(V.vy / V.vx)) },
+          vy: { ok: "{vy} = {vx} tan {th}", bad: ["{vy} = {vx} / tan {th}", "{vy} = tan {th} / {vx}"], f: V => V.vx * Math.tan(rad(V.th)) },
+          vx: { ok: "{vx} = {vy} / tan {th}", bad: ["{vx} = {vy} tan {th}", "{vx} = tan {th} / {vy}"], f: V => V.vy / Math.tan(rad(V.th)) } }
+  };
+
+  // symbols per labelset
+  const SYM = {
+    "1d": { s0: "x<sub>0</sub>", sf: "x<sub>f</sub>", ds: "Δx", v0: "v<sub>0</sub>", vf: "v<sub>f</sub>", va: "v<sub>avg</sub>", a: "a", dt: "Δt" },
+    x: { s0: "x<sub>0</sub>", sf: "x<sub>f</sub>", ds: "Δx", v0: "v<sub>0x</sub>", vf: "v<sub>fx</sub>", va: "v<sub>avg,x</sub>", a: "a<sub>x</sub>", dt: "Δt" },
+    y: { s0: "y<sub>0</sub>", sf: "y<sub>f</sub>", ds: "Δy", v0: "v<sub>0y</sub>", vf: "v<sub>fy</sub>", va: "v<sub>avg,y</sub>", a: "a<sub>y</sub>", dt: "Δt" },
+    launch: { v: "|v<sub>0</sub>|", th: "θ<sub>0</sub>", vx: "v<sub>0x</sub>", vy: "v<sub>0y</sub>" },
+    final: { v: "|v<sub>f</sub>|", th: "θ<sub>f</sub>", vx: "v<sub>fx</sub>", vy: "v<sub>fy</sub>" }
+  };
+  const UNIT = (key, P) => { const L = P.len || "m";
+    return { s0: L, sf: L, ds: L, v0: L + "/s", vf: L + "/s", va: L + "/s", a: L + "/s²", dt: "s", v: L + "/s", vx: L + "/s", vy: L + "/s", th: "°" }[key]; };
+
+  // ======================================================================
+  // Graph shapes & motion maps
+  // ======================================================================
+  const POS = { "p-rest": u => 0.5, "p-up-line": u => u, "p-down-line": u => 1 - u, "p-up-concave": u => u * u, "p-down-concave": u => 1 - u * u,
+    "p-up-level": u => 1 - (1 - u) * (1 - u), "p-down-level": u => (1 - u) * (1 - u), "p-hump": u => 4 * u * (1 - u),
+    "p-hump-high": u => (0.45 + 0.8735 * u - 1.3235 * u * u) / 0.6 };
+  const VEL = { "v-zero": u => 0, "v-const-pos": u => 0.6, "v-const-neg": u => -0.6, "v-0-up": u => 0.85 * u, "v-0-down": u => -0.85 * u,
+    "v-pos-down-0": u => 0.85 * (1 - u), "v-neg-up-0": u => -0.85 * (1 - u), "v-pos-cross-neg": u => 0.75 - 1.5 * u, "v-neg-cross-pos": u => -0.75 + 1.5 * u };
+  const ACC = { "a-zero": u => 0, "a-pos": u => 0.6, "a-neg": u => -0.6 };
+  function graphSVG(kind, id) {
+    const W = 120, H = 84, L = 14, R = 110;
+    let s = `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">`;
+    const col = kind === "p" ? "var(--pos)" : kind === "v" ? "var(--vel)" : "var(--acc)";
+    if (kind === "p") {
+      s += `<line x1="${L}" y1="76" x2="${R}" y2="76" stroke="var(--muted)" stroke-width="1.5"/><line x1="${L}" y1="76" x2="${L}" y2="6" stroke="var(--muted)" stroke-width="1.5"/>`;
+      if (!id) return s + "</svg>";
+      const f = POS[id]; let d = "";
+      for (let i = 0; i <= 40; i++) { const u = i / 40, y = 74 - 62 * Math.max(0, Math.min(1, f(u))); d += (i ? "L" : "M") + (L + 2 + u * (R - L - 6)).toFixed(1) + " " + y.toFixed(1); }
+      s += `<path d="${d}" fill="none" stroke="${col}" stroke-width="3.5" stroke-linecap="round"/>`;
+    } else {
+      s += `<line x1="${L}" y1="42" x2="${R}" y2="42" stroke="var(--muted)" stroke-width="1.5"/><line x1="${L}" y1="78" x2="${L}" y2="6" stroke="var(--muted)" stroke-width="1.5"/>`;
+      s += `<text x="4" y="14" font-size="10" fill="var(--muted)">+</text><text x="5" y="76" font-size="10" fill="var(--muted)">−</text>`;
+      if (!id) return s + "</svg>";
+      const f = (kind === "v" ? VEL : ACC)[id]; let d = "";
+      for (let i = 0; i <= 20; i++) { const u = i / 20, y = 42 - 34 * f(u); d += (i ? "L" : "M") + (L + 2 + u * (R - L - 6)).toFixed(1) + " " + y.toFixed(1); }
+      s += `<path d="${d}" fill="none" stroke="${col}" stroke-width="3.5" stroke-linecap="round"/>`;
+    }
+    return s + "</svg>";
+  }
+  const HMAPS = ["rest", "even-r", "spread-r", "bunch-r", "even-l", "spread-l", "bunch-l"];
+  const VMAPS = ["down-spread", "down-bunch", "up-bunch", "up-spread", "up-bunch-down-spread"];
+  function mapSVG(id) {
+    const dot = (x, y) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="var(--pos)" stroke="var(--panel)" stroke-width="1"/>`;
+    if (HMAPS.includes(id)) {
+      let s = `<svg viewBox="0 0 200 54" aria-hidden="true"><line x1="10" y1="40" x2="190" y2="40" stroke="var(--muted)" stroke-width="1.5"/>`;
+      let xs;
+      if (id === "rest") xs = [100, 100, 100, 100, 100];
+      else { const kind = id.split("-")[0], dir = id.endsWith("-l") ? -1 : 1; let gaps;
+        gaps = kind === "even" ? [34, 34, 34, 34, 34] : kind === "spread" ? [8, 18, 30, 44, 58] : [58, 44, 30, 18, 8];
+        xs = [dir > 0 ? 18 : 182]; gaps.forEach(g => xs.push(xs[xs.length - 1] + dir * g * 0.95)); }
+      xs.forEach(x => s += dot(x, 26));
+      if (id === "rest") s += `<text x="100" y="14" font-size="11" text-anchor="middle" fill="var(--muted)">same spot</text>`;
+      else { const dir = id.endsWith("-l") ? -1 : 1, x0 = dir > 0 ? 150 : 50;
+        s += `<line x1="${x0}" y1="10" x2="${x0 + dir * 30}" y2="10" stroke="var(--ink)" stroke-width="2"/><path d="M${x0 + dir * 30} 10 l${-dir * 7} -4 v8 z" fill="var(--ink)"/>`; }
+      return s + "</svg>";
+    }
+    let s = `<svg viewBox="0 0 120 150" aria-hidden="true"><line x1="14" y1="8" x2="14" y2="142" stroke="var(--muted)" stroke-width="1.5"/>`;
+    const col = (x, ys) => ys.forEach(y => s += dot(x, y));
+    const down = (start, gaps) => { const ys = [start]; gaps.forEach(g => ys.push(ys[ys.length - 1] + g)); return ys; };
+    const up = (start, gaps) => { const ys = [start]; gaps.forEach(g => ys.push(ys[ys.length - 1] - g)); return ys; };
+    const arrow = (x, dir) => s += `<line x1="${x}" y1="${dir > 0 ? 20 : 130}" x2="${x}" y2="${dir > 0 ? 44 : 106}" stroke="var(--ink)" stroke-width="2"/><path d="M${x} ${dir > 0 ? 44 : 106} l-4 ${dir > 0 ? -7 : 7} h8 z" fill="var(--ink)"/>`;
+    if (id === "down-spread") { col(60, down(14, [5, 12, 20, 30, 42])); arrow(96, 1); }
+    if (id === "down-bunch") { col(60, down(14, [42, 30, 20, 12, 5])); arrow(96, 1); }
+    if (id === "up-bunch") { col(60, up(136, [42, 30, 20, 12, 5])); arrow(96, -1); }
+    if (id === "up-spread") { col(60, up(136, [5, 12, 20, 30, 42])); arrow(96, -1); }
+    if (id === "up-bunch-down-spread") { col(42, up(136, [42, 30, 20, 12])); col(72, down(30, [12, 20, 30, 42])); arrow(98, -1); arrow(110, 1); }
+    return s + "</svg>";
+  }
+
+  // ======================================================================
+  // Pictures
+  // ======================================================================
+  const T = (x, y, t, o = "") => `<text x="${x}" y="${y}" font-size="13" fill="var(--ink)" ${o}>${t}</text>`;
+  const arrowR = (x1, y1, x2, y2, c = "var(--ink)") => { const a = Math.atan2(y2 - y1, x2 - x1), h = 8;
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="2.5"/><path d="M${x2} ${y2} L${(x2 - h * Math.cos(a - 0.45)).toFixed(1)} ${(y2 - h * Math.sin(a - 0.45)).toFixed(1)} L${(x2 - h * Math.cos(a + 0.45)).toFixed(1)} ${(y2 - h * Math.sin(a + 0.45)).toFixed(1)} Z" fill="${c}"/>`; };
+  const ground = (y, w = 360) => `<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="var(--muted)" stroke-width="2"/>`;
+  const PICS = {
+    ramp: () => `<svg viewBox="0 0 360 190" role="img" aria-label="A marble at the top of a 180 cm ramp">${ground(160)}
+      <path d="M20 160 L20 60 L330 160 Z" fill="var(--tint)" stroke="var(--muted)" stroke-width="1.5"/><circle cx="32" cy="50" r="12" fill="var(--pos)"/>
+      ${T(160, 98, "180 cm", 'transform="rotate(18 160 98)"')}${T(200, 185, "reaches 120 cm/s at the bottom")}${arrowR(60, 72, 120, 92, "var(--vel)")}</svg>`,
+    braking: R => `<svg viewBox="0 0 360 150" role="img" aria-label="A car moving at ${R.v0} m/s brakes to a stop">${ground(120)}
+      <rect x="30" y="92" width="64" height="20" rx="5" fill="var(--acc)"/><rect x="44" y="80" width="34" height="16" rx="4" fill="var(--acc)"/><circle cx="46" cy="114" r="7" fill="var(--ink)"/><circle cx="80" cy="114" r="7" fill="var(--ink)"/>
+      ${arrowR(100, 70, 170, 70, "var(--vel)")}${T(102, 62, R.v0 + " m/s")}${T(220, 62, "brakes…")}
+      <rect x="280" y="92" width="64" height="20" rx="5" fill="var(--acc)" opacity="0.5"/><rect x="294" y="80" width="34" height="16" rx="4" fill="var(--acc)" opacity="0.5"/>${T(250, 145, "stopped after " + R.dt + " s")}</svg>`,
+    car2: R => `<svg viewBox="0 0 360 150" role="img" aria-label="A car speeds up from rest, then brakes to a stop">${ground(120)}
+      ${[20, 170, 290].map((x, i) => `<rect x="${x}" y="92" width="54" height="20" rx="5" fill="var(--acc)" opacity="${[1, 0.75, 0.5][i]}"/><circle cx="${x + 12}" cy="114" r="6" fill="var(--ink)"/><circle cx="${x + 42}" cy="114" r="6" fill="var(--ink)"/>`).join("")}
+      ${T(10, 70, "from rest")}${T(10, 86, R.a1 + " m/s² for " + R.t1 + " s")}${T(150, 70, "brakes:")}${T(150, 86, "stops in " + R.t2 + " s")}${T(282, 145, "stopped")}</svg>`,
+    skydiver: R => `<svg viewBox="0 0 360 260" role="img" aria-label="A skydiver falls from a hovering helicopter, then opens a parachute">
+      <ellipse cx="70" cy="30" rx="34" ry="14" fill="var(--muted)"/><line x1="30" y1="12" x2="110" y2="12" stroke="var(--ink)" stroke-width="2"/>
+      <circle cx="70" cy="80" r="7" fill="var(--ink)"/><line x1="70" y1="87" x2="70" y2="106" stroke="var(--ink)" stroke-width="3"/>
+      ${arrowR(110, 70, 110, 150, "var(--vel)")}${T(120, 100, R.t1 + " s, reaches")}${T(120, 116, R.vmax + " m/s (max)")}
+      <path d="M40 170 Q70 140 100 170 Z" fill="var(--pos)" opacity="0.7"/><line x1="44" y1="170" x2="70" y2="200" stroke="var(--ink)"/><line x1="96" y1="170" x2="70" y2="200" stroke="var(--ink)"/>
+      <circle cx="70" cy="204" r="6" fill="var(--ink)"/>${T(120, 190, "parachute: slows at")}${T(120, 206, R.a2 + " m/s² for " + R.t2 + " s")}${ground(250)}</svg>`,
+    drop: () => `<svg viewBox="0 0 360 230" role="img" aria-label="A ball is dropped from a balcony">${ground(210)}
+      <rect x="20" y="40" width="110" height="10" fill="var(--muted)"/><rect x="20" y="50" width="10" height="160" fill="var(--muted)"/>
+      ${[0, 0.06, 0.25, 0.56, 1].map(f => `<circle cx="150" cy="${46 + 156 * f}" r="${f === 0 ? 9 : 5}" fill="var(--vel)" opacity="${f === 0 ? 1 : 0.6}"/>`).join("")}
+      ${T(180, 60, "dropped (from rest)")}${T(180, 130, "falls for 0.90 s")}${T(180, 200, "y = 0 at the ground")}</svg>`,
+    launcher: () => `<svg viewBox="0 0 360 230" role="img" aria-label="A ball launched straight up and back down">${ground(210)}
+      <rect x="160" y="180" width="20" height="30" fill="var(--muted)"/>
+      ${[0, 0.44, 0.78, 0.96, 1].map(f => `<circle cx="150" cy="${176 - 140 * f}" r="5" fill="var(--pos)" opacity="0.7"/><circle cx="190" cy="${176 - 140 * f}" r="5" fill="var(--vel)" opacity="0.7"/>`).join("")}
+      ${T(205, 50, "top: v = 0")}${T(205, 120, "up and back down")}${T(205, 140, "in 1.00 s total")}${T(20, 200, "launcher")}</svg>`,
+    hlaunch: () => { let d = ""; for (let i = 0; i <= 30; i++) { const t = 2.8557 * i / 30, x = 80 + 30 * t * 2.6, y = 50 + 4.905 * t * t * 3.5; d += (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1); }
+      return `<svg viewBox="0 0 360 210" role="img" aria-label="A ball launched horizontally at 30 m/s from a 40 m cliff">${ground(190)}
+      <rect x="20" y="50" width="60" height="140" fill="var(--tint)" stroke="var(--muted)"/><rect x="64" y="38" width="20" height="10" rx="3" fill="var(--ink)"/>
+      <path d="${d}" fill="none" stroke="var(--muted)" stroke-dasharray="5 5" stroke-width="2"/>${arrowR(86, 42, 140, 42, "var(--vel)")}${T(100, 34, "v₀ₓ = 30 m/s, θ₀ = 0°")}${T(26, 125, "h = 40 m")}</svg>`; },
+    alaunch: () => { let d = ""; const vx = 16.07, vy = 19.15; for (let i = 0; i <= 40; i++) { const t = 4.6 * i / 40, x = 80 + vx * t * 3.3, y = 120 - (vy * t - 4.905 * t * t) * 3.0; if (y > 190) break; d += (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1); }
+      return `<svg viewBox="0 0 360 210" role="img" aria-label="A ball launched at 25 m/s and 50 degrees from a 15 m cliff">${ground(190)}
+      <rect x="20" y="120" width="60" height="70" fill="var(--tint)" stroke="var(--muted)"/><path d="${d}" fill="none" stroke="var(--muted)" stroke-dasharray="5 5" stroke-width="2"/>
+      ${arrowR(80, 118, 112, 80, "var(--vel)")}${T(104, 76, "v₀ = 25 m/s")}${T(96, 116, "θ = 50°")}${T(26, 160, "h = 15 m")}</svg>`; }
+  };
+
+  // ======================================================================
+  // Problems
+  // var spec: [key, value, given?, hint]
+  // ======================================================================
+  const K = (key, v, given, hint) => ({ key, v, given: !!given, hint });
+  const hRest = "“Releases”, “dropped” or “from rest” means it starts at 0.";
+  const hAy = "Free fall: a<sub>y</sub> = −9.81 m/s² is a given (down is negative).";
+  const hOrigin = "Choose the origin where the motion starts: 0.";
+  // random numbers for practice problems (returned as display strings)
+  const rint = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+  const rstep = (lo, hi, step, dec) => (lo + step * Math.floor(Math.random() * (Math.round((hi - lo) / step) + 1))).toFixed(dec);
+  const PROBLEMS = [
+    { id: "ramp", group: "ex", title: "Marble on a ramp", sub: "1D · speeding up",
+      text: "A student releases a marble from the top of a 180 cm long ramp. The marble increases speed steadily and reaches the bottom of the ramp with a speed of 120 cm/s. What was the acceleration of the marble and how long did it take to get to the bottom?",
+      pic: "ramp", sketch: { maps: ["h:spread-r"], graphs: [["p", "x", "p-up-concave"], ["v", "v", "v-0-up"], ["a", "a", "a-pos"]] },
+      parts: [{ set: "kin", lab: "1d", len: "cm", vars: [K("s0", 0, 1, hOrigin), K("sf", 180, 1), K("ds", 180, 1), K("v0", 0, 1, hRest), K("vf", 120, 1), K("va"), K("a"), K("dt")] }] },
+    { id: "drop", group: "ex", title: "Orange ball drop", sub: "Free fall · drop height",
+      text: "A ball is dropped from a balcony and takes 0.90 s to reach the ground. Determine the drop height and the velocity just before impact.",
+      pic: "drop", sketch: { maps: ["v:down-spread"], graphs: [["p", "y", "p-down-concave"], ["v", "vy", "v-0-down"], ["a", "ay", "a-neg"]] },
+      parts: [{ set: "kin", lab: "y", vars: [K("s0"), K("sf", 0, 1, "The origin is at the ground, so the ball ends at y = 0."), K("ds"), K("v0", 0, 1, hRest), K("vf"), K("va"), K("a", -9.81, 1, hAy), K("dt", 0.90, 1)] }] },
+    { id: "launcher", group: "ex", title: "Ball launcher", sub: "Free fall · up and down",
+      text: "A ball is launched straight up from the ground and lands back on the ground 1.00 s later. Determine its initial velocity and the maximum height it reaches.",
+      pic: "launcher", sketch: { maps: ["v:up-bunch-down-spread"], graphs: [["p", "y", "p-hump"], ["v", "vy", "v-pos-cross-neg"], ["a", "ay", "a-neg"]] },
+      parts: [{ title: "The way up (the graph is symmetrical, so split it in half)", set: "kin", lab: "y",
+        carry: "Hidden givens: the trip up takes half the total time, Δt<sub>up</sub> = ½(1.00 s) = 0.50 s, and at the top v<sub>top,y</sub> = 0.",
+        vars: [K("s0", 0, 1, hOrigin), K("sf"), K("ds"), K("v0"), K("vf", 0, 1, "At the top the ball stops for an instant: v<sub>top,y</sub> = 0."), K("va"), K("a", -9.81, 1, hAy), K("dt", 0.50, 1, "The way up is half of the 1.00 s trip.")] }] },
+    { id: "hlaunch", group: "ex", title: "Horizontal launch", sub: "Projectile · 40 m cliff",
+      text: "A ball is launched horizontally at 30 m/s from the top of a 40 m tall cliff. Find the flight time, the horizontal displacement, and the impact velocity (magnitude and angle) just before it hits the ground.",
+      pic: "hlaunch", sketch: { maps: ["h:even-r", "v:down-spread"], graphs: [["p", "x", "p-up-line"], ["v", "vx", "v-const-pos"], ["a", "ax", "a-zero"], ["p", "y", "p-down-concave"], ["v", "vy", "v-0-down"], ["a", "ay", "a-neg"]] },
+      parts: [
+        { title: "Vertical motion (free fall)", set: "kin", lab: "y", vars: [K("s0", 40, 1, "It starts at the top of the 40 m cliff."), K("sf", 0, 1, "It lands on the ground, y = 0."), K("ds", -40, 1, "Δy = y<sub>f</sub> − y<sub>0</sub> = 0 − 40 m."), K("v0", 0, 1, "Launched horizontally, so it has no vertical velocity at the start."), K("vf"), K("va"), K("a", -9.81, 1, hAy), K("dt")] },
+        { title: "Horizontal motion (constant velocity)", set: "kin", lab: "x", carry: "From the vertical motion: the flight time is the same for both directions, Δt = 2.86 s.",
+          vars: [K("s0", 0, 1, hOrigin), K("ds"), K("v0", 30, 1), K("vf", 30, 1, "No horizontal acceleration, so v<sub>fx</sub> = v<sub>0x</sub>."), K("va"), K("a", 0, 1, "Nothing pushes it sideways: a<sub>x</sub> = 0."), K("dt", 2.86, 1, "Use the flight time from the vertical motion.")] },
+        { title: "Impact velocity (trigonometry)", set: "trig", lab: "final", carry: "From earlier parts: v<sub>fx</sub> = 30 m/s and v<sub>fy</sub> = −28.0 m/s.",
+          vars: [K("vx", 30, 1), K("vy", -28.0, 1, "Use the final vertical velocity from the first part (negative: moving down)."), K("v"), K("th")] } ] },
+    { id: "alaunch", group: "ex", title: "Angled launch", sub: "Projectile · up and down",
+      text: "A ball is launched at 25 m/s at 50° above the horizontal from the top of a 15 m tall cliff. Find the time to the top, the maximum height, the total flight time, the horizontal displacement, and the final velocity (magnitude and angle).",
+      pic: "alaunch", sketch: { maps: ["h:even-r", "v:up-bunch-down-spread"], graphs: [["p", "x", "p-up-line"], ["v", "vx", "v-const-pos"], ["a", "ax", "a-zero"], ["p", "y", "p-hump-high"], ["v", "vy", "v-pos-cross-neg"], ["a", "ay", "a-neg"]] },
+      parts: [
+        { title: "Launch components (trigonometry)", set: "trig", lab: "launch", vars: [K("v", 25, 1), K("th", 50, 1), K("vx"), K("vy")] },
+        { title: "UP to the top", set: "kin", lab: "y", carry: "From the components: v<sub>0y</sub> = 19.2 m/s. At the top, v<sub>top,y</sub> = 0. The cliff is 15 m tall.",
+          vars: [K("s0", 15, 1, "It is launched from the 15 m cliff."), K("sf"), K("ds"), K("v0", 19.2, 1, "Use v<sub>0y</sub> from the launch components."), K("vf", 0, 1, "At the top the vertical velocity is zero."), K("va"), K("a", -9.81, 1, hAy), K("dt")] },
+        { title: "DOWN to the ground", set: "kin", lab: "y", carry: "From the way up: it starts this part at the top, h<sub>top</sub> = 33.8 m, with v<sub>0y</sub> = 0.",
+          vars: [K("s0", 33.8, 1, "Start this part at the top: y<sub>0</sub> = h<sub>top</sub> = 33.8 m."), K("sf", 0, 1, "It lands on the ground, y = 0."), K("ds"), K("v0", 0, 1, "At the top the vertical velocity is zero."), K("vf"), K("va"), K("a", -9.81, 1, hAy), K("dt")] },
+        { title: "Horizontal motion", set: "kin", lab: "x", carry: "Total flight time = Δt<sub>up</sub> + Δt<sub>down</sub> = 1.96 s + 2.63 s = 4.58 s. From the components: v<sub>0x</sub> = 16.1 m/s.",
+          vars: [K("s0", 0, 1, hOrigin), K("ds"), K("v0", 16.1, 1), K("vf", 16.1, 1, "No horizontal acceleration, so v<sub>fx</sub> = v<sub>0x</sub>."), K("va"), K("a", 0, 1, "a<sub>x</sub> = 0."), K("dt", 4.58, 1, "Use the total flight time.")] },
+        { title: "Final velocity (trigonometry)", set: "trig", lab: "final", carry: "From earlier parts: v<sub>fx</sub> = 16.1 m/s and v<sub>fy</sub> = −25.8 m/s.",
+          vars: [K("vx", 16.1, 1), K("vy", -25.8, 1, "Use the final vertical velocity from the way down."), K("v"), K("th")] } ] },
+    // ---- practice problems: new random numbers each time (R holds them as display strings) ----
+    { id: "braking", group: "pr", title: "Car braking", sub: "1D · slowing down · random numbers",
+      gen: () => ({ v0: String(rint(12, 35)), dt: rstep(2.5, 7.5, 0.1, 1) }),
+      make: R => ({ pic: "braking",
+        text: `A car traveling at ${R.v0} m/s applies its brakes and comes to a stop in ${R.dt} s. How far did it take to come to a stop? What was the acceleration while the car was stopping?`,
+        sketch: { maps: ["h:bunch-r"], graphs: [["p", "x", "p-up-level"], ["v", "v", "v-pos-down-0"], ["a", "a", "a-neg"]] },
+        parts: [{ set: "kin", lab: "1d", vars: [K("s0", 0, 1, hOrigin), K("sf"), K("ds"), K("v0", +R.v0, 1), K("vf", 0, 1, "“Comes to a stop” means v<sub>f</sub> = 0."), K("va"), K("a"), K("dt", +R.dt, 1)] }] }) },
+    { id: "car2", group: "pr", title: "Car: speed up, then brake", sub: "1D · two parts · random numbers",
+      gen: () => ({ a1: rstep(1.5, 4.0, 0.5, 1), t1: rstep(4.0, 9.0, 0.5, 1), t2: rstep(3.0, 7.0, 0.5, 1) }),
+      make: R => { const a1 = +R.a1, t1 = +R.t1, t2 = +R.t2, vmax = Math.round(a1 * t1 * 100) / 100, d1 = 0.5 * a1 * t1 * t1, d2 = vmax * t2 / 2;
+        return { pic: "car2",
+        text: `A car starts off from rest and steadily speeds up at a rate of ${R.a1} m/s² for ${R.t1} s before applying the brakes and coming to a stop in ${R.t2} s. How far did it travel while speeding up, and while slowing to a stop? What was its maximum speed, and its acceleration while stopping? What was the total distance traveled?`,
+        parts: [
+          { title: "Part 1: speeding up", set: "kin", lab: "1d", sketch: { maps: ["h:spread-r"], graphs: [["p", "x", "p-up-concave"], ["v", "v", "v-0-up"], ["a", "a", "a-pos"]] },
+            vars: [K("s0", 0, 1, hOrigin), K("ds"), K("v0", 0, 1, hRest), K("vf"), K("va"), K("a", a1, 1), K("dt", t1, 1)] },
+          { title: "Part 2: braking to a stop", set: "kin", lab: "1d", carry: `The final values of Part 1 are the initial values of Part 2: v<sub>0</sub> = ${vmax} m/s (the maximum speed).`,
+            sketch: { maps: ["h:bunch-r"], graphs: [["p", "x", "p-up-level"], ["v", "v", "v-pos-down-0"], ["a", "a", "a-neg"]] },
+            vars: [K("ds"), K("v0", vmax, 1, "Part 2 starts at Part 1’s final speed."), K("vf", 0, 1, "“Coming to a stop” means v<sub>f</sub> = 0."), K("va"), K("a"), K("dt", t2, 1)] } ],
+        total: `Total distance = Δx₁ + Δx₂ = ${sig(d1)} m + ${sig(d2)} m = ${sig(d1 + d2)} m` }; } },
+    { id: "skydiver", group: "pr", title: "Skydiver", sub: "Vertical · two parts · random numbers",
+      gen: () => { for (;;) { const t1 = +rstep(4.0, 6.5, 0.01, 2), vmax = (Math.round(9.8 * t1 * 10) / 10).toFixed(1), a2 = rstep(40, 70, 0.5, 1);
+          const t2 = ((+vmax - (0.2 + Math.random() * 3)) / +a2).toFixed(2), vf = -(+vmax) + (+a2) * (+t2);
+          if (vf < -0.3 && +t2 > 0.3) return { t1: t1.toFixed(2), vmax, a2, t2 }; } },
+      make: R => ({ pic: "skydiver",
+        text: `A person jumps out of a hovering helicopter and accelerates toward earth for ${R.t1} s, reaching a maximum speed of ${R.vmax} m/s. After pulling their parachute, they slow down at a rate of ${R.a2} m/s² for ${R.t2} s. How far did they fall in each part? What was their acceleration before opening the parachute? How fast were they falling after slowing down? (Up is positive.)`,
+        parts: [
+          { title: "Part 1: falling, speeding up", set: "kin", lab: "y", sketch: { maps: ["v:down-spread"], graphs: [["p", "y", "p-down-concave"], ["v", "vy", "v-0-down"], ["a", "ay", "a-neg"]] },
+            vars: [K("ds"), K("v0", 0, 1, "Jumping from a hovering helicopter: starts from rest."), K("vf", -R.vmax, 1, "Falling, so the velocity is negative (up is positive)."), K("va"), K("a"), K("dt", +R.t1, 1)] },
+          { title: "Part 2: parachute, slowing down", set: "kin", lab: "y", carry: `Part 2 starts at Part 1’s final velocity: v<sub>0y</sub> = −${R.vmax} m/s.`,
+            sketch: { maps: ["v:down-bunch"], graphs: [["p", "y", "p-down-level"], ["v", "vy", "v-neg-up-0"], ["a", "ay", "a-pos"]] },
+            vars: [K("ds"), K("v0", -R.vmax, 1, "Still falling: negative."), K("vf"), K("va"), K("a", +R.a2, 1, "Slowing while moving down means the acceleration points up: positive."), K("dt", +R.t2, 1)] } ] }) }
+  ];
+
+  // answer keys: solve each part from its givens
+  function solvePart(P) {
+    const V = {}, known = new Set(); P.vars.forEach(x => { if (x.given) { V[x.key] = x.v; known.add(x.key); } });
+    const keys = P.vars.map(x => x.key), order = P.set === "kin" ? ["E6", "E3", "E1", "E2", "E4", "E5"] : ["T1", "T2", "T3", "T4"];
+    let progress = true;
+    while (progress) { progress = false;
+      for (const id of order) { const vs = EQ[id].vars; if (vs.some(v => !keys.includes(v))) continue;
+        const unk = vs.filter(v => !known.has(v)); if (unk.length !== 1) continue;
+        const u = unk[0], F = FORMS[id][u]; if (!F || F.pm) continue; if (F.needV0zero && V.v0 !== 0) continue;
+        V[u] = F.f(V); known.add(u); progress = true; } }
+    P.vars.forEach(x => { if (!x.given) x.v = V[x.key]; });
+  }
+  PROBLEMS.forEach(p => p.parts && p.parts.forEach(solvePart));
+
+  // ======================================================================
+  // State
+  // ======================================================================
+  const S = { pid: "ramp" };
+  S.R = {};                                     // the current random numbers for each practice problem
+  function build(id, fresh) {
+    const base = PROBLEMS.find(p => p.id === id);
+    if (!base.make) return base;
+    if (fresh || !S.R[id]) S.R[id] = base.gen();
+    const p = Object.assign({}, base, base.make(S.R[id]), { R: S.R[id] });
+    p.parts.forEach(solvePart);
+    return p;
+  }
+  function prob() { return S.cur; }
+  function startProblem(id, fresh) {
+    S.pid = id; S.cur = build(id, fresh || id !== S.pid0); S.pid0 = id; const p = prob();
+    S.pi = 0; S.log = p.parts.map(() => []); S.stage = null; S.done = false; S.psd = {};
+    S.sketchDoneP = !p.sketch; enterPart();
+    renderAll();
+  }
+  function enterPart() {
+    const p = prob(), P = p.parts[S.pi];
+    S.known = new Set(); S.entered = {}; S.gtries = 0; S.sub = null; S.eq = null; S.picks = {};
+    if (!S.sketchDoneP) S.stage = "sketch";
+    else if (P.sketch && !S.psd[S.pi]) S.stage = "sketch";
+    else S.stage = "givens";
+  }
+  const curPart = () => prob().parts[S.pi];
+  const sym = (key, P) => SYM[P.lab][key];
+  const tmpl = (t, P, valFn, hi) => t.replace(/\{(\w+)\}/g, (_, k) => valFn ? valFn(k) : (k === hi ? `<mark class="tgt">${sym(k, P)}</mark>` : sym(k, P)))
+    .replace(/⟦/g, '<s class="z">').replace(/⟧/g, "</s>");
+  const isReq = x => x.key !== "va";            // v_avg is optional unless asked for
+  const unknownsLeft = P => P.vars.filter(x => !x.given && isReq(x) && !S.known.has(x.key));
+
+  // ======================================================================
+  // Rendering
+  // ======================================================================
+  function renderList() {
+    const btn = p => `<button data-id="${p.id}" aria-current="${p.id === S.pid}"><b>${esc(p.title)}</b><small>${esc(p.sub)}</small></button>`;
+    $("listEx").innerHTML = PROBLEMS.filter(p => p.group === "ex").map(btn).join("");
+    $("listPr").innerHTML = PROBLEMS.filter(p => p.group === "pr").map(btn).join("");
+  }
+  function renderSteps() {
+    const p = prob(), items = [];
+    if (p.sketch) items.push({ t: "Picture, motion map & graphs", st: S.sketchDoneP ? "done" : (S.stage === "sketch" ? "cur" : "") });
+    p.parts.forEach((P, i) => {
+      const pre = p.parts.length > 1 ? (P.title ? P.title.split(":")[0].replace(/ \(.*/, "") + ": " : `Part ${i + 1}: `) : "";
+      const state = i < S.pi || S.done ? "done" : i > S.pi ? "" : null;
+      if (P.sketch) items.push({ t: pre + "motion map & graphs", st: state || (S.stage === "sketch" ? "cur" : "done") });
+      items.push({ t: pre + "givens & unknowns", st: state || (S.stage === "givens" ? "cur" : S.stage === "sketch" ? "" : "done") });
+      items.push({ t: pre + "equation → simplify → solve → substitute", st: state || (S.stage === "loop" ? "cur" : S.stage === "partdone" ? "done" : "") });
+    });
+    $("steps").innerHTML = items.map(x => `<li class="${x.st}">${x.t}</li>`).join("");
+  }
+  function renderProb() {
+    const p = prob(), P = curPart();
+    $("probCard").innerHTML = `<div class="prob"><div><h2>${esc(p.title)}<span class="tag">${p.group === "ex" ? "Class example" : "Practice"}</span>${p.make ? ` <button class="btn ghost" id="newNums" style="margin-left:8px;padding:3px 12px;font-size:0.9rem">New numbers</button>` : ""}</h2>
+      <p class="text">${esc(p.text)}</p>
+      ${p.parts.length > 1 && P.title ? `<p class="parttitle">Now: ${P.title}</p>` : ""}
+      ${P.carry && S.stage !== "sketch" ? `<p class="carry">${P.carry}</p>` : ""}</div>
+      <div class="pic">${PICS[p.pic](p.R || {})}</div></div>`;
+  }
+
+  // ---------- sketch stage ----------
+  function sketchSpec() { const p = prob(); return !S.sketchDoneP ? p.sketch : curPart().sketch; }
+  const gLabel = { x: "x–t", v: "v–t", a: "a–t", y: "y–t", vx: "v<sub>x</sub>–t", vy: "v<sub>y</sub>–t", ax: "a<sub>x</sub>–t", ay: "a<sub>y</sub>–t" };
+  const gName = { p: "Position", v: "Velocity", a: "Acceleration" };
+  function renderSketch() {
+    const sp = sketchSpec(); let h = `<h3>Picture, motion map &amp; graphs</h3><p class="lead">Choose the motion map and the shape of each kinematic graph for this motion. Then check.</p>`;
+    sp.maps.forEach((m, i) => { const [kind] = m.split(":"); const ids = kind === "h" ? HMAPS : VMAPS;
+      h += `<div class="q"><h4>${kind === "h" ? "Horizontal" : "Vertical"} motion map (dots at equal time intervals)</h4><div class="opts wide" data-q="m${i}">` +
+        ids.map(id => `<button class="opt" data-v="${id}" aria-pressed="${S.picks["m" + i] === id}" aria-label="${id.replace(/-/g, " ")}">${mapSVG(id)}</button>`).join("") + `</div><div class="qfb" id="fb-m${i}"></div></div>`; });
+    sp.graphs.forEach((g, i) => { const [kind, lab] = g; const lib = kind === "p" ? POS : kind === "v" ? VEL : ACC;
+      h += `<div class="q"><h4>${gName[kind]}: ${gLabel[lab]} graph</h4><div class="opts" data-q="g${i}">` +
+        Object.keys(lib).map(id => `<button class="opt" data-v="${id}" aria-pressed="${S.picks["g" + i] === id}" aria-label="${id.replace(/-/g, " ")}">${graphSVG(kind, id)}</button>`).join("") + `</div><div class="qfb" id="fb-g${i}"></div></div>`; });
+    h += `<div class="bar"><button class="btn" id="chkSketch">Check</button><button class="btn ghost" id="showSketch" hidden>Show the answers</button></div><p class="fb" id="sfb" role="status"></p>`;
+    $("task").innerHTML = h;
+  }
+  function checkSketch(reveal) {
+    const sp = sketchSpec(); let allOk = true;
+    const mark = (q, ans) => { const box = document.querySelector(`[data-q="${q}"]`); if (reveal) S.picks[q] = ans;
+      box.querySelectorAll(".opt").forEach(b => { b.classList.remove("right", "wrong"); b.setAttribute("aria-pressed", String(b.dataset.v === S.picks[q]));
+        if (b.dataset.v === S.picks[q]) b.classList.add(b.dataset.v === ans ? "right" : "wrong"); });
+      const ok = S.picks[q] === ans; if (!ok) allOk = false;
+      const fb = $("fb-" + q); fb.className = "qfb " + (ok ? "ok" : "bad"); fb.textContent = ok ? "Correct" : (S.picks[q] ? "Not this one. Think about the direction and whether it speeds up or slows down." : "Choose one."); };
+    sp.maps.forEach((m, i) => mark("m" + i, m.split(":")[1]));
+    sp.graphs.forEach((g, i) => mark("g" + i, g[2]));
+    if (allOk) { $("sfb").className = "fb ok"; $("sfb").innerHTML = "All correct! " + `<button class="btn" id="toGivens" style="margin-left:8px">Next: givens &amp; unknowns</button>`; }
+    else { $("sfb").className = "fb bad"; $("sfb").textContent = "Some choices need another look."; $("showSketch").hidden = false; }
+  }
+
+  // ---------- givens stage ----------
+  function renderGivens() {
+    const P = curPart();
+    let h = `<h3><span style="color:var(--pos)">G</span>iven &amp; <span style="color:var(--unk)">U</span>nknown</h3><p class="lead">Type each value the problem gives you (including hidden givens). Type <b>?</b> for each unknown. Use a negative sign for down or left.</p>`;
+    h += `<table class="gt"><thead><tr><th>Quantity</th><th>Value</th><th>Units</th><th></th></tr></thead><tbody>` +
+      P.vars.map(x => `<tr><td class="sym">${sym(x.key, P)}</td><td><input id="in-${x.key}" inputmode="text" autocomplete="off" spellcheck="false" value="${esc(S.entered[x.key] || "")}" aria-label="${sym(x.key, P).replace(/<[^>]+>/g, "")}"></td><td>${UNIT(x.key, P)}</td><td class="fb" id="gf-${x.key}"></td></tr>`).join("") + `</tbody></table>`;
+    h += `<p class="hint">${P.vars.some(x => x.key === "va") ? "v<sub>avg</sub> is never given directly: mark it ?. " : ""}Tip: values may be written in the problem, in the picture, or hidden in words like “from rest”.</p>`;
+    h += `<div class="bar"><button class="btn" id="chkGivens">Check</button><button class="btn ghost" id="showGivens" ${S.gtries >= 1 ? "" : "hidden"}>Show the answers</button></div><p class="fb" id="gfb" role="status"></p>`;
+    $("task").innerHTML = h;
+  }
+  const parseNum = s => { s = String(s).trim().replace(/−/g, "-").replace(/,/g, ""); if (s === "") return NaN; return Number(s); };
+  function checkGivens(reveal) {
+    const P = curPart(); let ok = true; S.gtries++;
+    P.vars.forEach(x => { const inp = $("in-" + x.key), fb = $("gf-" + x.key);
+      if (reveal) inp.value = x.given ? minus(String(x.v)) : "?";
+      S.entered[x.key] = inp.value; const raw = inp.value.trim(); let good, msg = "";
+      if (x.given) { const n = parseNum(raw); good = isFinite(n) && Math.abs(n - x.v) <= Math.max(0.011 * Math.abs(x.v), 1e-9);
+        if (!good) { msg = raw === "?" ? (x.hint || "This one is given in the problem.") : raw === "" ? "Enter the given value." :
+          (isFinite(n) && Math.abs(Math.abs(n) - Math.abs(x.v)) < 0.011 * Math.abs(x.v) + 1e-9 ? "Check the sign (up and right are positive)." : (x.hint || "Check this value in the problem.")); } }
+      else { good = raw === "?"; if (!good) msg = raw === "" ? "Is this given or unknown? Unknowns get a ?." : "This isn’t given in the problem: mark it ?."; }
+      inp.classList.toggle("ok", good); inp.classList.toggle("bad", !good); fb.className = "fb" + (good ? " ok" : ""); fb.innerHTML = good ? "✓" : msg;
+      if (!good) ok = false; });
+    if (ok) { P.vars.forEach(x => { if (x.given) S.known.add(x.key); });
+      $("gfb").className = "fb ok"; $("gfb").innerHTML = `Givens and unknowns are right. <button class="btn" id="toLoop" style="margin-left:8px">Next: find the unknowns</button>`; }
+    else { $("gfb").className = "fb bad"; $("gfb").textContent = "Fix the highlighted rows and check again."; $("showGivens").hidden = false; }
+  }
+
+  // ---------- equation → solve → substitute loop ----------
+  function eqStatus(id, P) {
+    const keys = P.vars.map(x => x.key), vs = EQ[id].vars;
+    if (vs.some(v => !keys.includes(v))) return { off: true };
+    const unk = vs.filter(v => !S.known.has(v)); return { unk };
+  }
+  function matrixHTML(P) {
+    const cols = COLS[P.set].filter(c => P.vars.some(x => x.key === c));
+    let h = `<div class="mxwrap"><table class="mx"><thead><tr><th style="text-align:left">Equation</th>${cols.map(c => `<th>${sym(c, P)}</th>`).join("")}</tr></thead><tbody>`;
+    SETS[P.set].forEach(id => { const st = eqStatus(id, P);
+      h += `<tr class="row${st.off ? " off" : ""}${S.eq === id ? " pick" : ""}" data-eq="${id}" ${st.off ? 'aria-disabled="true"' : 'tabindex="0" role="button"'} aria-label="${EQ[id].name}">
+        <td class="eqc">${tmpl(EQ[id].form, P)}</td>` +
+        cols.map(c => EQ[id].vars.includes(c) ? `<td class="cell"><span class="chip ${S.known.has(c) ? "k" : "u"}">${S.known.has(c) ? "✓" : "?"}</span></td>` : `<td class="cell"></td>`).join("") + `</tr>`; });
+    return h + `</tbody></table></div><p class="legend"><span class="chip k">✓</span> known &nbsp; <span class="chip u">?</span> unknown &nbsp; Faded rows use quantities that aren’t part of this problem.</p>`;
+  }
+  function knownListHTML(P) {
+    return `<div class="knownlist">` + P.vars.filter(x => S.known.has(x.key)).map(x => `<span>${sym(x.key, P)} = ${sig(x.v)} ${UNIT(x.key, P)}</span>`).join("") + `</div>`;
+  }
+  // ---- simplify: cross out terms that contain a quantity equal to zero ----
+  function splitTerms(s) {
+    const out = []; let depth = 0, cur = "", sign = "+", i = 0;
+    if (s.startsWith("−")) { sign = "-"; i = 1; }
+    for (; i < s.length; i++) { const c = s[i];
+      if (c === "(") depth++; else if (c === ")") depth--;
+      if (depth === 0 && (s.startsWith(" + ", i) || s.startsWith(" − ", i))) { out.push({ sign, t: cur }); sign = s[i + 1] === "+" ? "+" : "-"; cur = ""; i += 2; continue; }
+      cur += c; }
+    out.push({ sign, t: cur }); return out;
+  }
+  function simpGroups(s, zeros, strike) {      // simplify inside each (...) group first
+    let res = "", i = 0;
+    while (i < s.length) { const c = s[i];
+      if (c === "(") { let d = 1, j = i + 1; while (j < s.length && d) { if (s[j] === "(") d++; else if (s[j] === ")") d--; j++; }
+        const r = simpLevel(s.slice(i + 1, j - 1), zeros, strike);
+        const unwrap = !strike && r.changed && r.n === 1 && res.slice(-1) !== "√";
+        res += unwrap ? r.s : "(" + r.s + ")"; i = j; continue; }
+      res += c; i++; }
+    return res;
+  }
+  function simpLevel(str, zeros, strike) {
+    const s = simpGroups(str, zeros, strike), terms = splitTerms(s);
+    const isZero = t => zeros.some(z => t.replace(/⟦[^⟧]*⟧/g, "").includes("{" + z + "}"));
+    if (strike) {
+      let changed = false;
+      const out = terms.map((tm, k) => { const op = k === 0 ? (tm.sign === "-" ? "−" : "") : (tm.sign === "-" ? " − " : " + ");
+        if (!isZero(tm.t)) return op + tm.t; changed = true;
+        return k === 0 ? "⟦" + op + tm.t + "⟧" : " ⟦" + op.trim() + " " + tm.t + "⟧"; }).join("");
+      return { s: out, n: terms.length, changed };
+    }
+    const kept = terms.filter(tm => !isZero(tm.t));
+    if (!kept.length) return { s: "0", n: 1, changed: true };
+    const out = kept.map((tm, k) => (k === 0 ? (tm.sign === "-" ? "−" : "") : (tm.sign === "-" ? " − " : " + ")) + tm.t).join("");
+    return { s: out, n: kept.length, changed: kept.length < terms.length };
+  }
+  const lhsOf = f => f.slice(0, f.indexOf(" = ")), rhsOf = f => f.slice(f.indexOf(" = ") + 3);
+  const simpEq = (form, zeros, strike) => form.split(" = ").map(side => simpLevel(side, zeros, strike).s).join(" = ");
+  const simpSolved = (f, zeros) => lhsOf(f) + " = " + simpLevel(rhsOf(f), zeros, false).s;
+  function flipSign(f) { const l = lhsOf(f), r = rhsOf(f), many = splitTerms(r).length > 1;
+    if (r.startsWith("−") && !many) return l + " = " + r.slice(1); return l + " = −" + (many ? "(" + r + ")" : r); }
+  function invert(f) { const l = lhsOf(f), r = rhsOf(f); let d = 0;
+    for (let i = 0; i < r.length; i++) { const c = r[i]; if (c === "(") d++; else if (c === ")") d--;
+      if (d === 0 && r.startsWith(" / ", i)) { const A = r.slice(0, i), B = r.slice(i + 3), w = x => (splitTerms(x).length > 1 || x.includes(" / ")) && !/^\(.*\)$/.test(x) ? "(" + x + ")" : x; return l + " = " + w(B) + " / " + w(A); } }
+    return null; }
+  const zeroKeys = (id, P, u) => EQ[id].vars.filter(v => v !== u && S.known.has(v) && P.vars.find(x => x.key === v).v === 0);
+
+  function renderLoop(msg) {
+    const P = curPart(), left = unknownsLeft(P);
+    const fbp = `<p class="fb ${msg ? msg.k : ""}" id="lfb" role="status">${msg ? msg.t : ""}</p>`;
+    let h = "";
+    if (!S.sub) {
+      h += `<h3><span style="color:var(--acc)">E</span>quation</h3><p class="lead">Unknowns left: ${left.map(x => `<b>${sym(x.key, P)}</b>`).join(", ")}${P.vars.some(x => x.key === "va" && !S.known.has("va")) ? " (v<sub>avg</sub> is optional)" : ""}. Click the equation from the kinematic matrix that has <b>only one unknown</b>.</p>`;
+      h += matrixHTML(P) + fbp;
+    } else if (S.sub.stage === "simplify") {
+      const u = S.sub.u, form = EQ[S.eq].form, knownIn = EQ[S.eq].vars.filter(v => v !== u && S.known.has(v));
+      h += `<h3><span style="color:var(--vel)">S</span>implify first</h3><p class="lead">Equation: <b>${EQ[S.eq].name}</b>. Before you rearrange for <mark class="tgt">${sym(u, P)}</mark>, cross out every known quantity that is <b>zero</b>. Any term with a zero in it drops out, which makes the algebra easier.</p>
+        <p class="big">${tmpl(form, P, null, u)}</p>
+        <p class="hint" style="margin:6px 0 2px">Known values:</p>${knownListHTML(P)}`;
+      if (!S.sub.simpOK) {
+        h += `<p style="margin:12px 0 6px"><b>Which of these are zero?</b> <span class="hint">If none are, check with nothing selected.</span></p>
+          <div class="zchips">${knownIn.map(k => `<label class="zchip"><input type="checkbox" value="${k}" ${S.sub.picked.includes(k) ? "checked" : ""}><span>${sym(k, P)} = 0</span></label>`).join("")}</div>
+          <div class="bar"><button class="btn" id="chkSimp">Check</button><button class="btn ghost" id="backEq">Choose a different equation</button></div>` + fbp;
+      } else {
+        h += `<div class="simpres">${S.sub.zeros.length
+            ? `<p class="big">${tmpl(simpEq(form, S.sub.zeros, true), P, null, u)}</p><p class="big">Simplified: ${tmpl(S.sub.simp, P, null, u)}</p>`
+            : `<p class="big" style="font-size:1.05rem">None of the known values here are zero, so the equation stays the same.</p>`}</div>
+          <div class="bar"><button class="btn" id="toSolve">Next: rearrange</button></div>` + fbp;
+      }
+    } else if (S.sub.stage === "solve") {
+      const u = S.sub.u;
+      h += `<h3><span style="color:var(--vel)">S</span>olve (symbolic algebra)</h3><p class="lead">Rearrange the equation to isolate <mark class="tgt">${sym(u, P)}</mark>. Do the algebra before putting in any numbers.</p>
+        <p class="big">${tmpl(S.sub.simp, P, null, u)}</p>
+        <div class="solveopts">${S.sub.opts.map((o, i) => `<button data-i="${i}" class="${S.sub.tried.includes(i) ? "wrong" : ""}">${tmpl(o, P, null, u)}</button>`).join("")}</div>
+        ${fbp}<div class="bar"><button class="btn ghost" id="backEq">Choose a different equation</button></div>`;
+    } else {
+      const F = FORMS[S.eq][S.sub.u], u = S.sub.u;
+      h += `<h3><span style="color:var(--muted)">S</span>ubstitute</h3><p class="lead">Put the known values (with units) into your solved equation and calculate <mark class="tgt">${sym(u, P)}</mark>.</p>
+        <p class="big">${tmpl(S.sub.ok, P, null, u)}</p>${F.pm ? `<p class="hint">${F.note || "Choose the sign (±) from the direction of motion."}</p>` : ""}
+        <p class="hint" style="margin:6px 0 2px">Known values:</p>${knownListHTML(P)}
+        <div class="subrow" style="margin-top:12px"><label for="subIn"><mark class="tgt">${sym(u, P)}</mark> =</label><input id="subIn" inputmode="decimal" autocomplete="off" spellcheck="false"><span>${UNIT(u, P)}</span><button class="btn" id="chkSub">Check</button></div>
+        ${fbp}${S.sub.tries >= 2 ? `<div class="bar"><button class="btn ghost" id="showSub">Show the answer</button></div>` : ""}`;
+    }
+    $("task").innerHTML = h;
+    if (S.sub && S.sub.stage === "sub") setTimeout(() => $("subIn") && $("subIn").focus(), 0);
+  }
+  function pickEq(id) {
+    const P = curPart(), st = eqStatus(id, P);
+    if (st.off) return;
+    S.eq = id;
+    if (st.unk.length === 0) return renderLoop({ k: "bad", t: "Everything in this equation is already known. Choose one that has an unknown." });
+    if (st.unk.length > 1) return renderLoop({ k: "bad", t: `This equation has ${st.unk.length} unknowns (${st.unk.map(u => sym(u, P)).join(", ")}). Find one with only one unknown.` });
+    const u = st.unk[0], F = FORMS[id][u];
+    if (F.needV0zero && !(S.known.has("v0") && P.vars.find(x => x.key === "v0").v === 0))
+      return renderLoop({ k: "bad", t: `Δt appears twice here (in Δt² and in ${sym("v0", P)}Δt), so you’d need the quadratic formula. Try another equation first.` });
+    S.sub = { stage: "simplify", u, zeros: zeroKeys(id, P, u), picked: [], simpOK: false, tried: [], tries: 0 };
+    renderLoop();
+  }
+  function checkSimp() {
+    const P = curPart(), picked = [...document.querySelectorAll(".zchip input:checked")].map(i => i.value);
+    S.sub.picked = picked;
+    const want = S.sub.zeros, extra = picked.filter(k => !want.includes(k)), missed = want.filter(k => !picked.includes(k));
+    if (extra.length) return renderLoop({ k: "bad", t: `${extra.map(k => sym(k, P)).join(", ")} ${extra.length > 1 ? "aren’t" : "isn’t"} zero here. Check the known values.` });
+    if (missed.length) return renderLoop({ k: "bad", t: "Look again: one of the known values in this equation is zero. Crossing it out makes the algebra much easier." });
+    const id = S.eq, u = S.sub.u, F = FORMS[id][u], z = S.sub.zeros;
+    S.sub.simpOK = true; S.sub.simp = simpEq(EQ[id].form, z, false); S.sub.ok = simpSolved(F.ok, z);
+    const bad = [];
+    [...F.bad.map(b => simpSolved(b, z)), flipSign(S.sub.ok), invert(S.sub.ok)].forEach(b => { if (b && b !== S.sub.ok && !bad.includes(b) && bad.length < 3) bad.push(b); });
+    S.sub.opts = shuffle([S.sub.ok, ...bad], id.charCodeAt(1) * 31 + u.length * 7 + S.pi + z.length);
+    renderLoop({ k: "ok", t: z.length ? "Nice: the zero terms drop out." : "Right: nothing to cross out this time." });
+  }
+  function pickSolve(i) {
+    if (S.sub.opts[i] === S.sub.ok) { S.sub.stage = "sub"; renderLoop({ k: "ok", t: "Correct rearrangement. Now substitute." }); }
+    else { S.sub.tried.push(i); renderLoop({ k: "bad", t: "Not quite. Undo each operation step by step: whatever is added moves by subtracting, whatever multiplies moves by dividing." }); }
+  }
+  function valStr(k, P) { const x = P.vars.find(v => v.key === k); const u = UNIT(k, P); return k === "th" ? `${sig(x.v)}°` : `(${sig(x.v)} ${u})`; }
+  function checkSub(reveal) {
+    const P = curPart(), x = P.vars.find(v => v.key === S.sub.u);
+    const n = reveal ? x.v : parseNum($("subIn").value);
+    if (!isFinite(n)) return renderLoop({ k: "bad", t: "Enter a number." });
+    const tol = Math.max(0.015 * Math.abs(x.v), 0.02);
+    if (Math.abs(n - x.v) <= tol) {
+      S.known.add(x.key);
+      const F = FORMS[S.eq][S.sub.u];
+      let subLine = tmpl(rhsOf(S.sub.ok), P, k => valStr(k, P));
+      if (F.pm) subLine = subLine.includes("±") ? subLine.replace("±", x.v < 0 ? "−" : "") : (x.v < 0 ? "−" : "") + subLine;
+      S.log[S.pi].push({ eq: S.eq, u: x.key, zeros: S.sub.zeros, simpEq: S.sub.simp, solved: S.sub.ok, sub: `${sym(x.key, P)} = ${subLine}`, val: x.v, revealed: !!reveal });
+      S.sub = null; S.eq = null;
+      if (!unknownsLeft(P).length) { S.stage = "partdone"; renderAll(); return; }
+      renderAll(); renderLoop({ k: "ok", t: `${sym(x.key, P)} = ${sig(x.v)} ${UNIT(x.key, P)} is now a given. Find the next unknown.` }); return;
+    }
+    S.sub.tries++;
+    let t = "Not quite. Check your arithmetic and units.";
+    if (Math.abs(Math.abs(n) - Math.abs(x.v)) <= tol) t = "The size is right, but check the sign (direction).";
+    else if (FORMS[S.eq][S.sub.u].pm) t = "Check the ± sign and the arithmetic inside the square root.";
+    renderLoop({ k: "bad", t });
+  }
+
+  // ---------- part done ----------
+  function renderPartDone() {
+    const p = prob(), P = curPart(), last = S.pi === p.parts.length - 1;
+    const ans = P.vars.filter(x => !x.given && S.known.has(x.key));
+    let h = `<h3>${last ? "Problem solved!" : "Part complete"}</h3><p class="lead">Your answers${p.parts.length > 1 && P.title ? " for " + P.title.toLowerCase() : ""}:</p>
+      <div class="ansl">${ans.map(x => `<span class="boxed">${sym(x.key, P)} = ${sig(x.v)} ${UNIT(x.key, P)}</span>`).join("")}</div>`;
+    if (last && p.total) h += `<p class="big" style="margin-top:12px">${p.total}</p>`;
+    h += `<p class="hint">Does the answer make sense? Check the signs and the size against your sketch.</p>`;
+    h += `<div class="bar">${last ? `<button class="btn" id="nextProb">Try another problem</button>` : `<button class="btn" id="nextPart">Next: ${esc(p.parts[S.pi + 1].title || "Part " + (S.pi + 2))}</button>`}</div>`;
+    $("task").innerHTML = h; $("task").classList.toggle("done-card", true);
+  }
+
+  // ---------- GUESS sheet ----------
+  function stackHTML(spec, done) {
+    const one = (gs, title) => `<div class="stack">${title ? `<div class="st">${title}</div>` : ""}${gs.map(g => `<div class="sg"><span>${gLabel[g[1]]}</span>${graphSVG(g[0], done ? g[2] : null)}</div>`).join("")}</div>`;
+    const maps = done ? spec.maps.map(m => { const [k, id] = m.split(":"); return `<div class="mapmini ${k}">${mapSVG(id)}</div>`; }).join("") : "";
+    const stacks = spec.graphs.length > 3 ? one(spec.graphs.slice(0, 3), "Horizontal") + one(spec.graphs.slice(3), "Vertical") : one(spec.graphs);
+    return `<div class="stacks">${stacks}${maps ? `<div>${maps}</div>` : ""}</div>${done ? "" : `<p class="hint">Fills in when you finish the motion map &amp; graphs step.</p>`}`;
+  }
+  function renderSheet() {
+    const p = prob();
+    let h = "";
+    p.parts.forEach((P, i) => {
+      if (i > S.pi) return;
+      const isCur = i === S.pi, known = isCur ? S.known : new Set(P.vars.map(x => x.key));
+      const showGU = !isCur || (S.stage === "loop" || S.stage === "partdone");
+      const log = S.log[i];
+      const spec = P.sketch || (i === 0 ? p.sketch : null);
+      const sdone = P.sketch ? (!!S.psd[i] || i < S.pi) : S.sketchDoneP;
+      if (p.parts.length > 1) h += `<p class="sheetpart">${P.title || "Part " + (i + 1)}</p>`;
+      h += `<div class="sheet2">
+        <div class="sp"><h4>Picture, Motion Map, Kinematic Graphs:</h4><div class="sheetpic">${PICS[p.pic](p.R || {})}</div>${spec ? stackHTML(spec, sdone) : `<p class="hint">Same motion map and graphs as the first part.</p>`}
+          <h4 style="margin-top:6px"><u>G</u>iven:</h4>${showGU ? `<ul>${P.vars.filter(x => x.given).map(x => `<li>${sym(x.key, P)} = ${sig(x.v)} ${UNIT(x.key, P)}</li>`).join("")}</ul>` : `<span class="hint">Filled in after you check your givens.</span>`}</div>
+        <div class="se"><h4><u>E</u>quation(s):</h4><ul>${log.map(l => `<li>${tmpl(EQ[l.eq].form, P)}${l.zeros.length ? `<br>→ ${tmpl(l.simpEq, P)}` : ""}</li>`).join("")}</ul></div>
+        <div class="ss"><h4><u>S</u>olve:</h4><ul>${log.map(l => `<li>${tmpl(l.solved, P)}</li>`).join("")}</ul></div>
+        <div class="su"><h4><u>U</u>nknown(s):</h4>${showGU ? `<ul>${P.vars.filter(x => !x.given).map(x => `<li>${sym(x.key, P)} = ${known.has(x.key) ? `<span class="boxed">${sig(x.v)} ${UNIT(x.key, P)}</span>` : "?"}</li>`).join("")}</ul>` : ""}</div>
+        <div class="sb"><h4><u>S</u>ubstitute:</h4><ul>${log.map(l => `<li>${l.sub} = <b>${sig(l.val)} ${UNIT(l.u, P)}</b>${l.revealed ? ' <span class="hint">(shown)</span>' : ""}</li>`).join("")}</ul></div>
+      </div>`;
+    });
+    $("sheet").innerHTML = h;
+  }
+
+  function renderAll() {
+    renderList(); renderSteps(); renderProb(); renderSheet();
+    $("task").classList.toggle("done-card", false);
+    if (S.stage === "sketch") renderSketch();
+    else if (S.stage === "givens") renderGivens();
+    else if (S.stage === "loop") renderLoop();
+    else if (S.stage === "partdone") renderPartDone();
+  }
+
+  // ======================================================================
+  // Events
+  // ======================================================================
+  document.querySelector("aside").addEventListener("click", e => { const b = e.target.closest(".plist button"); if (b) startProblem(b.dataset.id); });
+  $("reset").addEventListener("click", () => startProblem(S.pid, false));
+  $("probCard").addEventListener("click", e => { if (e.target.id === "newNums") startProblem(S.pid, true); });
+  $("task").addEventListener("click", e => {
+    const t = e.target;
+    const opt = t.closest(".opt"); if (opt) { const q = opt.parentElement.dataset.q; S.picks[q] = opt.dataset.v;
+      opt.parentElement.querySelectorAll(".opt").forEach(b => { b.setAttribute("aria-pressed", String(b === opt)); b.classList.remove("right", "wrong"); }); return; }
+    if (t.id === "chkSketch") return checkSketch(false);
+    if (t.id === "showSketch") return checkSketch(true);
+    if (t.id === "toGivens") { if (!S.sketchDoneP) S.sketchDoneP = true; else S.psd[S.pi] = true; S.stage = curPart().sketch && !S.psd[S.pi] ? "sketch" : "givens"; S.picks = {}; return renderAll(); }
+    if (t.id === "chkGivens") return checkGivens(false);
+    if (t.id === "showGivens") return checkGivens(true);
+    if (t.id === "toLoop") { S.stage = "loop"; return renderAll(); }
+    const row = t.closest("tr.row"); if (row) return pickEq(row.dataset.eq);
+    const so = t.closest(".solveopts button"); if (so) return pickSolve(Number(so.dataset.i));
+    if (t.id === "backEq") { S.sub = null; S.eq = null; return renderLoop(); }
+    if (t.id === "chkSimp") return checkSimp();
+    if (t.id === "toSolve") { S.sub.stage = "solve"; return renderLoop(); }
+    if (t.id === "chkSub") return checkSub(false);
+    if (t.id === "showSub") return checkSub(true);
+    if (t.id === "nextPart") { S.pi++; enterPart(); return renderAll(); }
+    if (t.id === "nextProb") { const i = PROBLEMS.findIndex(p => p.id === S.pid); return startProblem(PROBLEMS[(i + 1) % PROBLEMS.length].id); }
+  });
+  $("task").addEventListener("keydown", e => {
+    const row = e.target.closest && e.target.closest("tr.row");
+    if (row && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); pickEq(row.dataset.eq); }
+    if (e.key === "Enter" && e.target.id === "subIn") { e.preventDefault(); checkSub(false); }
+    if (e.key === "Enter" && e.target.id && e.target.id.startsWith("in-")) { e.preventDefault(); checkGivens(false); }
+  });
+  $("task").addEventListener("input", e => { if (e.target.id && e.target.id.startsWith("in-")) S.entered[e.target.id.slice(3)] = e.target.value; });
+
+  startProblem("ramp");
+})();
+</script>
+<!-- lock check: hides this interactive until the teacher opens it (settings in ../availability.json) -->
+<script>
+(function () {
+  var id = location.pathname.split("/").pop().replace(".html", "");
+  fetch("../availability.json?t=" + Date.now(), { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (cfg) {
+      if (!cfg || !cfg.labs || cfg.labs[id] !== false) return;
+      var teacher = false; try { teacher = localStorage.getItem("teacherPreview") === "1"; } catch (e) {}
+      var font = "font-family:'Atkinson Hyperlegible','Segoe UI',system-ui,sans-serif;";
+      if (teacher) {
+        var b = document.createElement("div");
+        b.setAttribute("role", "status");
+        b.style.cssText = font + "position:sticky;top:0;z-index:50;background:#7a3fe0;color:#fff;font-weight:700;text-align:center;padding:8px 12px;";
+        b.textContent = "Teacher preview: this interactive is locked for students.";
+        document.body.prepend(b);
+        return;
+      }
+      var o = document.createElement("div");
+      o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-labelledby", "lockTitle");
+      o.style.cssText = font + "position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:var(--bg,#eaf1ee);";
+      o.innerHTML = '<div style="max-width:520px;background:var(--panel,#fff);color:var(--ink,#15232b);border:1px solid var(--line,#c4d3cc);border-radius:12px;padding:28px;text-align:center">' +
+        '<h1 id="lockTitle" style="margin:0 0 8px;font-size:1.6rem">Not open yet</h1>' +
+        '<p style="margin:0 0 18px;line-height:1.5">This interactive opens after we do the class activity that goes with it. Check back then!</p>' +
+        '<a href="../interactives.html" style="display:inline-block;font-weight:700;padding:8px 18px;border-radius:8px;background:var(--ink,#15232b);color:var(--panel,#fff);text-decoration:none">Back to Interactives</a></div>';
+      document.body.appendChild(o);
+      document.documentElement.style.overflow = "hidden";
+      Array.prototype.forEach.call(document.body.children, function (el) { if (el !== o) el.setAttribute("aria-hidden", "true"); });
+    })
+    .catch(function () {});
+})();
+</script>
+</body>
+</html>
