@@ -326,16 +326,17 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
         s += `<line x1="${x0}" y1="10" x2="${x0 + dir * 30}" y2="10" stroke="var(--ink)" stroke-width="2"/><path d="M${x0 + dir * 30} 10 l${-dir * 7} -4 v8 z" fill="var(--ink)"/>`; }
       return s + "</svg>";
     }
-    let s = `<svg viewBox="0 0 120 150" aria-hidden="true"><line x1="14" y1="8" x2="14" y2="142" stroke="var(--muted)" stroke-width="1.5"/>`;
+    let s = `<svg viewBox="0 0 120 150" aria-hidden="true">`;
     const col = (x, ys) => ys.forEach(y => s += dot(x, y));
     const down = (start, gaps) => { const ys = [start]; gaps.forEach(g => ys.push(ys[ys.length - 1] + g)); return ys; };
     const up = (start, gaps) => { const ys = [start]; gaps.forEach(g => ys.push(ys[ys.length - 1] - g)); return ys; };
     const arrow = (x, dir) => s += `<line x1="${x}" y1="${dir > 0 ? 20 : 130}" x2="${x}" y2="${dir > 0 ? 44 : 106}" stroke="var(--ink)" stroke-width="2"/><path d="M${x} ${dir > 0 ? 44 : 106} l-4 ${dir > 0 ? -7 : 7} h8 z" fill="var(--ink)"/>`;
-    if (id === "down-spread") { col(60, down(14, [5, 12, 20, 30, 42])); arrow(96, 1); }
-    if (id === "down-bunch") { col(60, down(14, [42, 30, 20, 12, 5])); arrow(96, 1); }
-    if (id === "up-bunch") { col(60, up(136, [42, 30, 20, 12, 5])); arrow(96, -1); }
-    if (id === "up-spread") { col(60, up(136, [5, 12, 20, 30, 42])); arrow(96, -1); }
-    if (id === "up-bunch-down-spread") { col(42, up(136, [42, 30, 20, 12])); col(72, down(30, [12, 20, 30, 42])); arrow(98, -1); arrow(110, 1); }
+    // up arrows go on the left of the dots, down arrows on the right
+    if (id === "down-spread") { col(60, down(14, [10, 15, 21, 29, 39])); arrow(92, 1); }
+    if (id === "down-bunch") { col(60, down(14, [39, 29, 21, 15, 10])); arrow(92, 1); }
+    if (id === "up-bunch") { col(60, up(136, [39, 29, 21, 15, 10])); arrow(28, -1); }
+    if (id === "up-spread") { col(60, up(136, [10, 15, 21, 29, 39])); arrow(28, -1); }
+    if (id === "up-bunch-down-spread") { col(46, up(136, [42, 30, 20, 12])); col(74, down(30, [12, 20, 30, 42])); arrow(20, -1); arrow(100, 1); }
     return s + "</svg>";
   }
 
