@@ -98,6 +98,21 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
 .fb.ok { color: var(--known); } .fb.bad { color: var(--bad); } .fb.info { color: var(--muted); font-weight: 400; }
 table.mx { border-collapse: separate; border-spacing: 0 6px; width: 100%; }
 table.mx th { font-size: 0.85rem; color: var(--muted); font-weight: 700; text-align: center; padding: 0 4px; }
+table.mx tr.mrow td { background: var(--panel); border-top: 1.5px solid var(--line); border-bottom: 1.5px solid var(--line); }
+table.mx tr.mrow td:first-child { border-left: 1.5px solid var(--line); border-radius: 8px 0 0 8px; }
+table.mx tr.mrow td:last-child { border-right: 1.5px solid var(--line); border-radius: 0 8px 8px 0; }
+table.mx tr.mrow.off { opacity: 0.45; }
+table.marking td.cell { cursor: pointer; }
+table.marking td.cell.badcol { box-shadow: inset 2px 0 0 var(--bad), inset -2px 0 0 var(--bad); }
+.colbtn { font: inherit; font-weight: 700; font-size: 0.95rem; min-width: 52px; padding: 4px 6px; border-radius: 6px; cursor: pointer;
+  border: 2px dashed var(--line); background: var(--panel); color: var(--ink); }
+.colbtn.k { border: 2px solid var(--known); background: var(--knownbg); color: var(--known); }
+.colbtn.u { border: 2px solid var(--unk); background: var(--unkbg); color: var(--unk); }
+.colbtn.badcol { outline: 2.5px solid var(--bad); outline-offset: 2px; }
+.chip.n { background: var(--tint); color: var(--muted); }
+.toolbtn { font: inherit; font-weight: 700; border-radius: 8px; padding: 6px 14px; cursor: pointer; border: 2px solid var(--line); background: var(--panel); color: var(--ink); }
+.toolbtn.k[aria-pressed="true"] { border-color: var(--known); background: var(--knownbg); color: var(--known); }
+.toolbtn.u[aria-pressed="true"] { border-color: var(--unk); background: var(--unkbg); color: var(--unk); }
 table.mx td { padding: 0; }
 table.mx tr.row td { background: var(--panel); border-top: 1.5px solid var(--line); border-bottom: 1.5px solid var(--line); }
 table.mx tr.row td:first-child { border-left: 1.5px solid var(--line); border-radius: 8px 0 0 8px; }
@@ -269,9 +284,10 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
   // ======================================================================
   const POS = { "p-rest": u => 0.5, "p-up-line": u => u, "p-down-line": u => 1 - u, "p-up-concave": u => u * u, "p-down-concave": u => 1 - u * u,
     "p-up-level": u => 1 - (1 - u) * (1 - u), "p-down-level": u => (1 - u) * (1 - u), "p-hump": u => 4 * u * (1 - u),
-    "p-hump-high": u => (0.45 + 0.8735 * u - 1.3235 * u * u) / 0.6 };
+    // from a 15 m cliff at v₀ᵧ = 19.2 m/s: top at t = 1.96 s of 4.58 s (u = 0.427), lands at y = 0
+    "p-hump-high": u => (15 + 19.2 * 4.58 * u - 4.905 * 4.58 * 4.58 * u * u) / 33.8 };
   const VEL = { "v-zero": u => 0, "v-const-pos": u => 0.6, "v-const-neg": u => -0.6, "v-0-up": u => 0.85 * u, "v-0-down": u => -0.85 * u,
-    "v-pos-down-0": u => 0.85 * (1 - u), "v-neg-up-0": u => -0.85 * (1 - u), "v-pos-cross-neg": u => 0.75 - 1.5 * u, "v-neg-cross-pos": u => -0.75 + 1.5 * u };
+    "v-pos-down-0": u => 0.85 * (1 - u), "v-neg-up-0": u => -0.85 * (1 - u), "v-pos-cross-neg": u => 0.75 - 1.5 * u, "v-pos-cross-neg-early": u => 0.85 * (19.2 - 9.81 * 4.58 * u) / 25.75, "v-neg-cross-pos": u => -0.75 + 1.5 * u };
   const ACC = { "a-zero": u => 0, "a-pos": u => 0.6, "a-neg": u => -0.6 };
   function graphSVG(kind, id) {
     const W = 120, H = 84, L = 14, R = 110;
@@ -331,9 +347,9 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
     return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="2.5"/><path d="M${x2} ${y2} L${(x2 - h * Math.cos(a - 0.45)).toFixed(1)} ${(y2 - h * Math.sin(a - 0.45)).toFixed(1)} L${(x2 - h * Math.cos(a + 0.45)).toFixed(1)} ${(y2 - h * Math.sin(a + 0.45)).toFixed(1)} Z" fill="${c}"/>`; };
   const ground = (y, w = 360) => `<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="var(--muted)" stroke-width="2"/>`;
   const PICS = {
-    ramp: () => `<svg viewBox="0 0 360 190" role="img" aria-label="A marble at the top of a 180 cm ramp">${ground(160)}
+    ramp: R => `<svg viewBox="0 0 360 190" role="img" aria-label="A marble at the top of a ${R.L} cm ramp">${ground(160)}
       <path d="M20 160 L20 60 L330 160 Z" fill="var(--tint)" stroke="var(--muted)" stroke-width="1.5"/><circle cx="32" cy="50" r="12" fill="var(--pos)"/>
-      ${T(160, 98, "180 cm", 'transform="rotate(18 160 98)"')}${T(200, 185, "reaches 120 cm/s at the bottom")}${arrowR(60, 72, 120, 92, "var(--vel)")}</svg>`,
+      ${T(160, 98, R.L + " cm", 'transform="rotate(18 160 98)"')}${T(190, 185, "reaches " + R.vf + " cm/s at the bottom")}${arrowR(60, 72, 120, 92, "var(--vel)")}</svg>`,
     braking: R => `<svg viewBox="0 0 360 150" role="img" aria-label="A car moving at ${R.v0} m/s brakes to a stop">${ground(120)}
       <rect x="30" y="92" width="64" height="20" rx="5" fill="var(--acc)"/><rect x="44" y="80" width="34" height="16" rx="4" fill="var(--acc)"/><circle cx="46" cy="114" r="7" fill="var(--ink)"/><circle cx="80" cy="114" r="7" fill="var(--ink)"/>
       ${arrowR(100, 70, 170, 70, "var(--vel)")}${T(102, 62, R.v0 + " m/s")}${T(220, 62, "brakes…")}
@@ -347,22 +363,26 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
       ${arrowR(110, 70, 110, 150, "var(--vel)")}${T(120, 100, R.t1 + " s, reaches")}${T(120, 116, R.vmax + " m/s (max)")}
       <path d="M40 170 Q70 140 100 170 Z" fill="var(--pos)" opacity="0.7"/><line x1="44" y1="170" x2="70" y2="200" stroke="var(--ink)"/><line x1="96" y1="170" x2="70" y2="200" stroke="var(--ink)"/>
       <circle cx="70" cy="204" r="6" fill="var(--ink)"/>${T(120, 190, "parachute: slows at")}${T(120, 206, R.a2 + " m/s² for " + R.t2 + " s")}${ground(250)}</svg>`,
-    drop: () => `<svg viewBox="0 0 360 230" role="img" aria-label="A ball is dropped from a balcony">${ground(210)}
+    drop: R => `<svg viewBox="0 0 360 230" role="img" aria-label="A ball is dropped from a balcony">${ground(210)}
       <rect x="20" y="40" width="110" height="10" fill="var(--muted)"/><rect x="20" y="50" width="10" height="160" fill="var(--muted)"/>
       ${[0, 0.06, 0.25, 0.56, 1].map(f => `<circle cx="150" cy="${46 + 156 * f}" r="${f === 0 ? 9 : 5}" fill="var(--vel)" opacity="${f === 0 ? 1 : 0.6}"/>`).join("")}
-      ${T(180, 60, "dropped (from rest)")}${T(180, 130, "falls for 0.90 s")}${T(180, 200, "y = 0 at the ground")}</svg>`,
-    launcher: () => `<svg viewBox="0 0 360 230" role="img" aria-label="A ball launched straight up and back down">${ground(210)}
+      ${T(180, 60, "dropped (from rest)")}${T(180, 130, "falls for " + R.dt + " s")}${T(180, 200, "y = 0 at the ground")}</svg>`,
+    launcher: R => `<svg viewBox="0 0 360 230" role="img" aria-label="A ball launched straight up and back down">${ground(210)}
       <rect x="160" y="180" width="20" height="30" fill="var(--muted)"/>
       ${[0, 0.44, 0.78, 0.96, 1].map(f => `<circle cx="150" cy="${176 - 140 * f}" r="5" fill="var(--pos)" opacity="0.7"/><circle cx="190" cy="${176 - 140 * f}" r="5" fill="var(--vel)" opacity="0.7"/>`).join("")}
-      ${T(205, 50, "top: v = 0")}${T(205, 120, "up and back down")}${T(205, 140, "in 1.00 s total")}${T(20, 200, "launcher")}</svg>`,
-    hlaunch: () => { let d = ""; for (let i = 0; i <= 30; i++) { const t = 2.8557 * i / 30, x = 80 + 30 * t * 2.6, y = 50 + 4.905 * t * t * 3.5; d += (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1); }
-      return `<svg viewBox="0 0 360 210" role="img" aria-label="A ball launched horizontally at 30 m/s from a 40 m cliff">${ground(190)}
-      <rect x="20" y="50" width="60" height="140" fill="var(--tint)" stroke="var(--muted)"/><rect x="64" y="38" width="20" height="10" rx="3" fill="var(--ink)"/>
-      <path d="${d}" fill="none" stroke="var(--muted)" stroke-dasharray="5 5" stroke-width="2"/>${arrowR(86, 42, 140, 42, "var(--vel)")}${T(100, 34, "v₀ₓ = 30 m/s, θ₀ = 0°")}${T(26, 125, "h = 40 m")}</svg>`; },
-    alaunch: () => { let d = ""; const vx = 16.07, vy = 19.15; for (let i = 0; i <= 40; i++) { const t = 4.6 * i / 40, x = 80 + vx * t * 3.3, y = 120 - (vy * t - 4.905 * t * t) * 3.0; if (y > 190) break; d += (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1); }
-      return `<svg viewBox="0 0 360 210" role="img" aria-label="A ball launched at 25 m/s and 50 degrees from a 15 m cliff">${ground(190)}
-      <rect x="20" y="120" width="60" height="70" fill="var(--tint)" stroke="var(--muted)"/><path d="${d}" fill="none" stroke="var(--muted)" stroke-dasharray="5 5" stroke-width="2"/>
-      ${arrowR(80, 118, 112, 80, "var(--vel)")}${T(104, 76, "v₀ = 25 m/s")}${T(96, 116, "θ = 50°")}${T(26, 160, "h = 15 m")}</svg>`; }
+      ${T(205, 50, "top: v = 0")}${T(205, 120, "up and back down")}${T(205, 140, "in " + R.T + " s total")}${T(20, 200, "launcher")}</svg>`,
+    hlaunch: R => { const h = +R.h, v = +R.v, tt = Math.sqrt(2 * h / G), kx = 250 / (v * tt), ky = 140 / h; let d = "";
+      for (let i = 0; i <= 30; i++) { const t = tt * i / 30; d += (i ? "L" : "M") + (80 + v * t * kx).toFixed(1) + " " + (50 + 4.905 * t * t * ky).toFixed(1); }
+      return `<svg viewBox="0 0 360 210" role="img" aria-label="A ball launched horizontally at ${v} m/s from a ${h} m cliff">${ground(190)}
+      <rect x="12" y="50" width="68" height="140" fill="var(--tint)" stroke="var(--muted)"/><rect x="64" y="38" width="20" height="10" rx="3" fill="var(--ink)"/>
+      <path d="${d}" fill="none" stroke="var(--muted)" stroke-dasharray="5 5" stroke-width="2"/>${arrowR(86, 42, 140, 42, "var(--vel)")}${T(100, 34, "v₀ₓ = " + v + " m/s, θ₀ = 0°")}${T(17, 125, "h = " + h + " m", 'font-size="12"')}</svg>`; },
+    alaunch: R => { const h = +R.h, v = +R.v, th = rad(+R.th), vx = v * Math.cos(th), vy = v * Math.sin(th);
+      const tt = (vy + Math.sqrt(vy * vy + 2 * G * h)) / G, ymax = h + vy * vy / (2 * G), kx = 250 / (vx * tt), ky = 150 / ymax, top = 190 - h * ky; let d = "";
+      for (let i = 0; i <= 40; i++) { const t = tt * i / 40; d += (i ? "L" : "M") + (80 + vx * t * kx).toFixed(1) + " " + (190 - (h + vy * t - 4.905 * t * t) * ky).toFixed(1); }
+      const ax = 80 + 38 * Math.cos(th), ay = top - 2 - 38 * Math.sin(th), tall = h * ky >= 26;
+      return `<svg viewBox="0 0 360 214" role="img" aria-label="A ball launched at ${v} m/s and ${R.th} degrees from a ${h} m cliff">${ground(190)}
+      <rect x="12" y="${top.toFixed(1)}" width="68" height="${(190 - top).toFixed(1)}" fill="var(--tint)" stroke="var(--muted)"/><path d="${d}" fill="none" stroke="var(--muted)" stroke-dasharray="5 5" stroke-width="2"/>
+      ${arrowR(80, top - 2, ax, ay, "var(--vel)")}${T(ax + 4, ay - 9, "v₀ = " + v + " m/s")}${T(86, top + 15, "θ = " + R.th + "°", 'font-size="12"')}${tall ? T(17, (top + 190) / 2 + 4, "h = " + h + " m", 'font-size="12"') : T(14, 207, "h = " + h + " m", 'font-size="12"')}</svg>`; }
   };
 
   // ======================================================================
@@ -374,45 +394,61 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
   const hAy = "Free fall: a<sub>y</sub> = −9.81 m/s² is a given (down is negative).";
   const hOrigin = "Choose the origin where the motion starts: 0.";
   // random numbers for practice problems (returned as display strings)
+  const s3 = n => Number(n.toPrecision(3));                    // carry values the way students do (3 sig figs)
   const rint = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
   const rstep = (lo, hi, step, dec) => (lo + step * Math.floor(Math.random() * (Math.round((hi - lo) / step) + 1))).toFixed(dec);
   const PROBLEMS = [
+    // ---- class examples: open with the slide numbers (orig); "New numbers" draws random ones (gen) ----
     { id: "ramp", group: "ex", title: "Marble on a ramp", sub: "1D · speeding up",
-      text: "A student releases a marble from the top of a 180 cm long ramp. The marble increases speed steadily and reaches the bottom of the ramp with a speed of 120 cm/s. What was the acceleration of the marble and how long did it take to get to the bottom?",
-      pic: "ramp", sketch: { maps: ["h:spread-r"], graphs: [["p", "x", "p-up-concave"], ["v", "v", "v-0-up"], ["a", "a", "a-pos"]] },
-      parts: [{ set: "kin", lab: "1d", len: "cm", vars: [K("s0", 0, 1, hOrigin), K("sf", 180, 1), K("ds", 180, 1), K("v0", 0, 1, hRest), K("vf", 120, 1), K("va"), K("a"), K("dt")] }] },
+      orig: { L: "180", vf: "120" }, gen: () => ({ L: String(rint(10, 25) * 10), vf: String(rint(12, 40) * 5) }),
+      make: R => ({ pic: "ramp",
+        text: `A student releases a marble from the top of a ${R.L} cm long ramp. The marble increases speed steadily and reaches the bottom of the ramp with a speed of ${R.vf} cm/s. What was the acceleration of the marble and how long did it take to get to the bottom?`,
+        sketch: { maps: ["h:spread-r"], graphs: [["p", "x", "p-up-concave"], ["v", "v", "v-0-up"], ["a", "a", "a-pos"]] },
+        parts: [{ set: "kin", lab: "1d", len: "cm", vars: [K("s0", 0, 1, hOrigin), K("sf", +R.L, 1), K("ds", +R.L, 1), K("v0", 0, 1, hRest), K("vf", +R.vf, 1), K("va"), K("a"), K("dt")] }] }) },
     { id: "drop", group: "ex", title: "Orange ball drop", sub: "Free fall · drop height",
-      text: "A ball is dropped from a balcony and takes 0.90 s to reach the ground. Determine the drop height and the velocity just before impact.",
-      pic: "drop", sketch: { maps: ["v:down-spread"], graphs: [["p", "y", "p-down-concave"], ["v", "vy", "v-0-down"], ["a", "ay", "a-neg"]] },
-      parts: [{ set: "kin", lab: "y", vars: [K("s0"), K("sf", 0, 1, "The origin is at the ground, so the ball ends at y = 0."), K("ds"), K("v0", 0, 1, hRest), K("vf"), K("va"), K("a", -9.81, 1, hAy), K("dt", 0.90, 1)] }] },
+      orig: { dt: "0.90" }, gen: () => ({ dt: rstep(0.60, 1.40, 0.05, 2) }),
+      make: R => ({ pic: "drop",
+        text: `A ball is dropped from a balcony and takes ${R.dt} s to reach the ground. Determine the drop height and the velocity just before impact.`,
+        sketch: { maps: ["v:down-spread"], graphs: [["p", "y", "p-down-concave"], ["v", "vy", "v-0-down"], ["a", "ay", "a-neg"]] },
+        parts: [{ set: "kin", lab: "y", vars: [K("s0"), K("sf", 0, 1, "The origin is at the ground, so the ball ends at y = 0."), K("ds"), K("v0", 0, 1, hRest), K("vf"), K("va"), K("a", -9.81, 1, hAy), K("dt", +R.dt, 1)] }] }) },
     { id: "launcher", group: "ex", title: "Ball launcher", sub: "Free fall · up and down",
-      text: "A ball is launched straight up from the ground and lands back on the ground 1.00 s later. Determine its initial velocity and the maximum height it reaches.",
-      pic: "launcher", sketch: { maps: ["v:up-bunch-down-spread"], graphs: [["p", "y", "p-hump"], ["v", "vy", "v-pos-cross-neg"], ["a", "ay", "a-neg"]] },
-      parts: [{ title: "The way up (the graph is symmetrical, so split it in half)", set: "kin", lab: "y",
-        carry: "Hidden givens: the trip up takes half the total time, Δt<sub>up</sub> = ½(1.00 s) = 0.50 s, and at the top v<sub>top,y</sub> = 0.",
-        vars: [K("s0", 0, 1, hOrigin), K("sf"), K("ds"), K("v0"), K("vf", 0, 1, "At the top the ball stops for an instant: v<sub>top,y</sub> = 0."), K("va"), K("a", -9.81, 1, hAy), K("dt", 0.50, 1, "The way up is half of the 1.00 s trip.")] }] },
-    { id: "hlaunch", group: "ex", title: "Horizontal launch", sub: "Projectile · 40 m cliff",
-      text: "A ball is launched horizontally at 30 m/s from the top of a 40 m tall cliff. Find the flight time, the horizontal displacement, and the impact velocity (magnitude and angle) just before it hits the ground.",
-      pic: "hlaunch", sketch: { maps: ["h:even-r", "v:down-spread"], graphs: [["p", "x", "p-up-line"], ["v", "vx", "v-const-pos"], ["a", "ax", "a-zero"], ["p", "y", "p-down-concave"], ["v", "vy", "v-0-down"], ["a", "ay", "a-neg"]] },
-      parts: [
-        { title: "Vertical motion (free fall)", set: "kin", lab: "y", vars: [K("s0", 40, 1, "It starts at the top of the 40 m cliff."), K("sf", 0, 1, "It lands on the ground, y = 0."), K("ds", -40, 1, "Δy = y<sub>f</sub> − y<sub>0</sub> = 0 − 40 m."), K("v0", 0, 1, "Launched horizontally, so it has no vertical velocity at the start."), K("vf"), K("va"), K("a", -9.81, 1, hAy), K("dt")] },
-        { title: "Horizontal motion (constant velocity)", set: "kin", lab: "x", carry: "From the vertical motion: the flight time is the same for both directions, Δt = 2.86 s.",
-          vars: [K("s0", 0, 1, hOrigin), K("ds"), K("v0", 30, 1), K("vf", 30, 1, "No horizontal acceleration, so v<sub>fx</sub> = v<sub>0x</sub>."), K("va"), K("a", 0, 1, "Nothing pushes it sideways: a<sub>x</sub> = 0."), K("dt", 2.86, 1, "Use the flight time from the vertical motion.")] },
-        { title: "Impact velocity (trigonometry)", set: "trig", lab: "final", carry: "From earlier parts: v<sub>fx</sub> = 30 m/s and v<sub>fy</sub> = −28.0 m/s.",
-          vars: [K("vx", 30, 1), K("vy", -28.0, 1, "Use the final vertical velocity from the first part (negative: moving down)."), K("v"), K("th")] } ] },
+      orig: { T: "1.00" }, gen: () => ({ T: rstep(0.60, 1.60, 0.05, 2) }),
+      make: R => { const half = (+R.T / 2).toFixed(3).replace(/0$/, "");
+        return { pic: "launcher",
+        text: `A ball is launched straight up from the ground and lands back on the ground ${R.T} s later. Determine its initial velocity and the maximum height it reaches.`,
+        sketch: { maps: ["v:up-bunch-down-spread"], graphs: [["p", "y", "p-hump"], ["v", "vy", "v-pos-cross-neg"], ["a", "ay", "a-neg"]] },
+        parts: [{ title: "The way up (the graph is symmetrical, so split it in half)", set: "kin", lab: "y",
+          carry: `Hidden givens: the trip up takes half the total time, Δt<sub>up</sub> = ½(${R.T} s) = ${half} s, and at the top v<sub>top,y</sub> = 0.`,
+          vars: [K("s0", 0, 1, hOrigin), K("sf"), K("ds"), K("v0"), K("vf", 0, 1, "At the top the ball stops for an instant: v<sub>top,y</sub> = 0."), K("va"), K("a", -9.81, 1, hAy), K("dt", +half, 1, `The way up is half of the ${R.T} s trip.`)] }] }; } },
+    { id: "hlaunch", group: "ex", title: "Horizontal launch", sub: "Projectile · launched from a cliff",
+      orig: { h: "40", v: "30" }, gen: () => ({ h: String(rint(4, 16) * 5), v: String(rint(10, 40)) }),
+      make: R => { const h = +R.h, v = +R.v, t = Math.sqrt(2 * h / G), tD = s3(t), vyD = s3(-G * t);
+        return { pic: "hlaunch",
+        text: `A ball is launched horizontally at ${v} m/s from the top of a ${h} m tall cliff. Find the flight time, the horizontal displacement, and the impact velocity (magnitude and angle) just before it hits the ground.`,
+        sketch: { maps: ["h:even-r", "v:down-spread"], graphs: [["p", "x", "p-up-line"], ["v", "vx", "v-const-pos"], ["a", "ax", "a-zero"], ["p", "y", "p-down-concave"], ["v", "vy", "v-0-down"], ["a", "ay", "a-neg"]] },
+        parts: [
+          { title: "Vertical motion (free fall)", set: "kin", lab: "y", vars: [K("s0", h, 1, `It starts at the top of the ${h} m cliff.`), K("sf", 0, 1, "It lands on the ground, y = 0."), K("ds", -h, 1, `Δy = y<sub>f</sub> − y<sub>0</sub> = 0 − ${h} m.`), K("v0", 0, 1, "Launched horizontally, so it has no vertical velocity at the start."), K("vf"), K("va"), K("a", -9.81, 1, hAy), K("dt")] },
+          { title: "Horizontal motion (constant velocity)", set: "kin", lab: "x", carry: `From the vertical motion: the flight time is the same for both directions, Δt = ${sig(tD)} s.`,
+            vars: [K("s0", 0, 1, hOrigin), K("ds"), K("v0", v, 1), K("vf", v, 1, "No horizontal acceleration, so v<sub>fx</sub> = v<sub>0x</sub>."), K("va"), K("a", 0, 1, "Nothing pushes it sideways: a<sub>x</sub> = 0."), K("dt", tD, 1, "Use the flight time from the vertical motion.")] },
+          { title: "Impact velocity (trigonometry)", set: "trig", lab: "final", carry: `From earlier parts: v<sub>fx</sub> = ${v} m/s and v<sub>fy</sub> = ${sig(vyD)} m/s.`,
+            vars: [K("vx", v, 1), K("vy", vyD, 1, "Use the final vertical velocity from the first part (negative: moving down)."), K("v"), K("th")] } ] }; } },
     { id: "alaunch", group: "ex", title: "Angled launch", sub: "Projectile · up and down",
-      text: "A ball is launched at 25 m/s at 50° above the horizontal from the top of a 15 m tall cliff. Find the time to the top, the maximum height, the total flight time, the horizontal displacement, and the final velocity (magnitude and angle).",
-      pic: "alaunch", sketch: { maps: ["h:even-r", "v:up-bunch-down-spread"], graphs: [["p", "x", "p-up-line"], ["v", "vx", "v-const-pos"], ["a", "ax", "a-zero"], ["p", "y", "p-hump-high"], ["v", "vy", "v-pos-cross-neg"], ["a", "ay", "a-neg"]] },
-      parts: [
-        { title: "Launch components (trigonometry)", set: "trig", lab: "launch", vars: [K("v", 25, 1), K("th", 50, 1), K("vx"), K("vy")] },
-        { title: "UP to the top", set: "kin", lab: "y", carry: "From the components: v<sub>0y</sub> = 19.2 m/s. At the top, v<sub>top,y</sub> = 0. The cliff is 15 m tall.",
-          vars: [K("s0", 15, 1, "It is launched from the 15 m cliff."), K("sf"), K("ds"), K("v0", 19.2, 1, "Use v<sub>0y</sub> from the launch components."), K("vf", 0, 1, "At the top the vertical velocity is zero."), K("va"), K("a", -9.81, 1, hAy), K("dt")] },
-        { title: "DOWN to the ground", set: "kin", lab: "y", carry: "From the way up: it starts this part at the top, h<sub>top</sub> = 33.8 m, with v<sub>0y</sub> = 0.",
-          vars: [K("s0", 33.8, 1, "Start this part at the top: y<sub>0</sub> = h<sub>top</sub> = 33.8 m."), K("sf", 0, 1, "It lands on the ground, y = 0."), K("ds"), K("v0", 0, 1, "At the top the vertical velocity is zero."), K("vf"), K("va"), K("a", -9.81, 1, hAy), K("dt")] },
-        { title: "Horizontal motion", set: "kin", lab: "x", carry: "Total flight time = Δt<sub>up</sub> + Δt<sub>down</sub> = 1.96 s + 2.63 s = 4.58 s. From the components: v<sub>0x</sub> = 16.1 m/s.",
-          vars: [K("s0", 0, 1, hOrigin), K("ds"), K("v0", 16.1, 1), K("vf", 16.1, 1, "No horizontal acceleration, so v<sub>fx</sub> = v<sub>0x</sub>."), K("va"), K("a", 0, 1, "a<sub>x</sub> = 0."), K("dt", 4.58, 1, "Use the total flight time.")] },
-        { title: "Final velocity (trigonometry)", set: "trig", lab: "final", carry: "From earlier parts: v<sub>fx</sub> = 16.1 m/s and v<sub>fy</sub> = −25.8 m/s.",
-          vars: [K("vx", 16.1, 1), K("vy", -25.8, 1, "Use the final vertical velocity from the way down."), K("v"), K("th")] } ] },
+      orig: { h: "15", v: "25", th: "50" }, gen: () => ({ h: String(rint(5, 30)), v: String(rint(15, 35)), th: String(rint(6, 14) * 5) }),
+      make: R => { const h = +R.h, v = +R.v, th = +R.th, vx = s3(v * Math.cos(rad(th))), vy = s3(v * Math.sin(rad(th)));
+        const tup = vy / G, htop = s3(h + vy * vy / (2 * G)), tdn = Math.sqrt(2 * htop / G), ttot = s3(tup + tdn), vfy = s3(-G * tdn);
+        return { pic: "alaunch",
+        text: `A ball is launched at ${v} m/s at ${th}° above the horizontal from the top of a ${h} m tall cliff. Find the time to the top, the maximum height, the total flight time, the horizontal displacement, and the final velocity (magnitude and angle).`,
+        sketch: { maps: ["h:even-r", "v:up-bunch-down-spread"], graphs: [["p", "x", "p-up-line"], ["v", "vx", "v-const-pos"], ["a", "ax", "a-zero"], ["p", "y", "p-hump-high"], ["v", "vy", "v-pos-cross-neg-early"], ["a", "ay", "a-neg"]] },
+        parts: [
+          { title: "Launch components (trigonometry)", set: "trig", lab: "launch", vars: [K("v", v, 1), K("th", th, 1), K("vx"), K("vy")] },
+          { title: "UP to the top", set: "kin", lab: "y", carry: `From the components: v<sub>0y</sub> = ${sig(vy)} m/s. At the top, v<sub>top,y</sub> = 0. The cliff is ${h} m tall.`,
+            vars: [K("s0", h, 1, `It is launched from the ${h} m cliff.`), K("sf"), K("ds"), K("v0", vy, 1, "Use v<sub>0y</sub> from the launch components."), K("vf", 0, 1, "At the top the vertical velocity is zero."), K("va"), K("a", -9.81, 1, hAy), K("dt")] },
+          { title: "DOWN to the ground", set: "kin", lab: "y", carry: `From the way up: it starts this part at the top, h<sub>top</sub> = ${sig(htop)} m, with v<sub>0y</sub> = 0.`,
+            vars: [K("s0", htop, 1, `Start this part at the top: y<sub>0</sub> = h<sub>top</sub> = ${sig(htop)} m.`), K("sf", 0, 1, "It lands on the ground, y = 0."), K("ds"), K("v0", 0, 1, "At the top the vertical velocity is zero."), K("vf"), K("va"), K("a", -9.81, 1, hAy), K("dt")] },
+          { title: "Horizontal motion", set: "kin", lab: "x", carry: `Total flight time = Δt<sub>up</sub> + Δt<sub>down</sub> = ${sig(tup)} s + ${sig(tdn)} s = ${sig(ttot)} s. From the components: v<sub>0x</sub> = ${sig(vx)} m/s.`,
+            vars: [K("s0", 0, 1, hOrigin), K("ds"), K("v0", vx, 1), K("vf", vx, 1, "No horizontal acceleration, so v<sub>fx</sub> = v<sub>0x</sub>."), K("va"), K("a", 0, 1, "a<sub>x</sub> = 0."), K("dt", ttot, 1, "Use the total flight time.")] },
+          { title: "Final velocity (trigonometry)", set: "trig", lab: "final", carry: `From earlier parts: v<sub>fx</sub> = ${sig(vx)} m/s and v<sub>fy</sub> = ${sig(vfy)} m/s.`,
+            vars: [K("vx", vx, 1), K("vy", vfy, 1, "Use the final vertical velocity from the way down."), K("v"), K("th")] } ] }; } },
     // ---- practice problems: new random numbers each time (R holds them as display strings) ----
     { id: "braking", group: "pr", title: "Car braking", sub: "1D · slowing down · random numbers",
       gen: () => ({ v0: String(rint(12, 35)), dt: rstep(2.5, 7.5, 0.1, 1) }),
@@ -465,17 +501,20 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
   // ======================================================================
   const S = { pid: "ramp" };
   S.R = {};                                     // the current random numbers for each practice problem
-  function build(id, fresh) {
+  S.Rr = {};                                    // true when the problem is using random numbers
+  function build(id, mode) {
     const base = PROBLEMS.find(p => p.id === id);
     if (!base.make) return base;
-    if (fresh || !S.R[id]) S.R[id] = base.gen();
+    if (mode === "new") { S.R[id] = base.gen(); S.Rr[id] = true; }
+    else if (mode === "orig") { S.R[id] = base.orig; S.Rr[id] = false; }
+    else if (mode === "open" || !S.R[id]) { S.Rr[id] = !base.orig; S.R[id] = base.orig || base.gen(); }
     const p = Object.assign({}, base, base.make(S.R[id]), { R: S.R[id] });
     p.parts.forEach(solvePart);
     return p;
   }
   function prob() { return S.cur; }
-  function startProblem(id, fresh) {
-    S.pid = id; S.cur = build(id, fresh || id !== S.pid0); S.pid0 = id; const p = prob();
+  function startProblem(id, mode) {            // mode: "open" (default), "same", "new", "orig"
+    S.pid = id; S.cur = build(id, mode || "open"); const p = prob();
     S.pi = 0; S.log = p.parts.map(() => []); S.stage = null; S.done = false; S.psd = {};
     S.sketchDoneP = !p.sketch; enterPart();
     renderAll();
@@ -483,6 +522,7 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
   function enterPart() {
     const p = prob(), P = p.parts[S.pi];
     S.known = new Set(); S.entered = {}; S.gtries = 0; S.sub = null; S.eq = null; S.picks = {};
+    S.mxOK = false; S.colMarks = {}; S.colBad = []; S.mxTool = "k"; S.mxTries = 0;
     if (!S.sketchDoneP) S.stage = "sketch";
     else if (P.sketch && !S.psd[S.pi]) S.stage = "sketch";
     else S.stage = "givens";
@@ -510,13 +550,13 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
       const state = i < S.pi || S.done ? "done" : i > S.pi ? "" : null;
       if (P.sketch) items.push({ t: pre + "motion map & graphs", st: state || (S.stage === "sketch" ? "cur" : "done") });
       items.push({ t: pre + "givens & unknowns", st: state || (S.stage === "givens" ? "cur" : S.stage === "sketch" ? "" : "done") });
-      items.push({ t: pre + "equation → simplify → solve → substitute", st: state || (S.stage === "loop" ? "cur" : S.stage === "partdone" ? "done" : "") });
+      items.push({ t: pre + "matrix → equation → simplify → solve → substitute", st: state || (S.stage === "loop" ? "cur" : S.stage === "partdone" ? "done" : "") });
     });
     $("steps").innerHTML = items.map(x => `<li class="${x.st}">${x.t}</li>`).join("");
   }
   function renderProb() {
     const p = prob(), P = curPart();
-    $("probCard").innerHTML = `<div class="prob"><div><h2>${esc(p.title)}<span class="tag">${p.group === "ex" ? "Class example" : "Practice"}</span>${p.make ? ` <button class="btn ghost" id="newNums" style="margin-left:8px;padding:3px 12px;font-size:0.9rem">New numbers</button>` : ""}</h2>
+    $("probCard").innerHTML = `<div class="prob"><div><h2>${esc(p.title)}<span class="tag">${p.group === "ex" ? (S.Rr[p.id] ? "Class example · new numbers" : "Class example") : "Practice"}</span>${p.make ? ` <button class="btn ghost" id="newNums" style="margin-left:8px;padding:3px 12px;font-size:0.9rem">New numbers</button>` : ""}${p.orig && S.Rr[p.id] ? ` <button class="btn ghost" id="origNums" style="padding:3px 12px;font-size:0.9rem">Original numbers</button>` : ""}</h2>
       <p class="text">${esc(p.text)}</p>
       ${p.parts.length > 1 && P.title ? `<p class="parttitle">Now: ${P.title}</p>` : ""}
       ${P.carry && S.stage !== "sketch" ? `<p class="carry">${P.carry}</p>` : ""}</div>
@@ -584,14 +624,53 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
     if (vs.some(v => !keys.includes(v))) return { off: true };
     const unk = vs.filter(v => !S.known.has(v)); return { unk };
   }
-  function matrixHTML(P) {
+  function matrixHTML(P, mark) {
     const cols = COLS[P.set].filter(c => P.vars.some(x => x.key === c));
-    let h = `<div class="mxwrap"><table class="mx"><thead><tr><th style="text-align:left">Equation</th>${cols.map(c => `<th>${sym(c, P)}</th>`).join("")}</tr></thead><tbody>`;
+    // mark mode: students label each column known/unknown; otherwise chips come from what is known
+    const head = c => mark
+      ? `<th><button type="button" class="colbtn ${S.colMarks[c] || ""}${S.colBad.includes(c) ? " badcol" : ""}" data-col="${c}" aria-label="Mark ${sym(c, P).replace(/<[^>]+>/g, "")}">${sym(c, P)}</button></th>`
+      : `<th>${sym(c, P)}</th>`;
+    const cell = c => {
+      if (!mark) return `<span class="chip ${S.known.has(c) ? "k" : "u"}">${S.known.has(c) ? "✓" : "?"}</span>`;
+      const m = S.colMarks[c];
+      return `<span class="chip ${m || "n"}" data-col="${c}">${m === "k" ? "✓" : m === "u" ? "?" : "·"}</span>`;
+    };
+    let h = `<div class="mxwrap"><table class="mx${mark ? " marking" : ""}"><thead><tr><th style="text-align:left">Equation</th>${cols.map(head).join("")}</tr></thead><tbody>`;
     SETS[P.set].forEach(id => { const st = eqStatus(id, P);
-      h += `<tr class="row${st.off ? " off" : ""}${S.eq === id ? " pick" : ""}" data-eq="${id}" ${st.off ? 'aria-disabled="true"' : 'tabindex="0" role="button"'} aria-label="${EQ[id].name}">
-        <td class="eqc">${tmpl(EQ[id].form, P)}</td>` +
-        cols.map(c => EQ[id].vars.includes(c) ? `<td class="cell"><span class="chip ${S.known.has(c) ? "k" : "u"}">${S.known.has(c) ? "✓" : "?"}</span></td>` : `<td class="cell"></td>`).join("") + `</tr>`; });
+      h += mark
+        ? `<tr class="mrow${st.off ? " off" : ""}"><td class="eqc">${tmpl(EQ[id].form, P)}</td>`
+        : `<tr class="row${st.off ? " off" : ""}${S.eq === id ? " pick" : ""}" data-eq="${id}" ${st.off ? 'aria-disabled="true"' : 'tabindex="0" role="button"'} aria-label="${EQ[id].name}">
+        <td class="eqc">${tmpl(EQ[id].form, P)}</td>`;
+      h += cols.map(c => EQ[id].vars.includes(c) ? `<td class="cell${mark && S.colBad.includes(c) ? " badcol" : ""}">${cell(c)}</td>` : `<td class="cell${mark && S.colBad.includes(c) ? " badcol" : ""}"></td>`).join("") + `</tr>`; });
     return h + `</tbody></table></div><p class="legend"><span class="chip k">✓</span> known &nbsp; <span class="chip u">?</span> unknown &nbsp; Faded rows use quantities that aren’t part of this problem.</p>`;
+  }
+  function renderMark(msg) {
+    const P = curPart(), cols = COLS[P.set].filter(c => P.vars.some(x => x.key === c));
+    const tool = t => `<button type="button" class="toolbtn ${t}" data-tool="${t}" aria-pressed="${S.mxTool === t}">${t === "k" ? "Known ✓" : "Unknown ?"}</button>`;
+    let h = `<h3>Apply your givens to the <span style="color:var(--acc)">kinematic matrix</span></h3>
+      <p class="lead">Mark every column as <b>known</b> or <b>unknown</b>. Choose a tool, then click a column (its heading or any cell in it). Click again to clear it.</p>
+      <div class="bar" style="margin:0 0 10px">Tool: ${tool("k")}${tool("u")}</div>` + matrixHTML(P, true);
+    const done = cols.filter(c => S.colMarks[c]).length;
+    h += `<div class="bar"><button class="btn" id="chkMx">Check</button><span class="hint">${done} of ${cols.length} columns marked</span>${S.mxTries >= 2 ? `<button class="btn ghost" id="showMx">Show the answers</button>` : ""}</div>
+      <p class="fb ${msg ? msg.k : ""}" id="lfb" role="status">${msg ? msg.t : ""}</p>`;
+    $("task").innerHTML = h;
+  }
+  function markCol(c) {
+    S.colMarks[c] = S.colMarks[c] === S.mxTool ? undefined : S.mxTool;
+    S.colBad = S.colBad.filter(x => x !== c);
+    renderMark();
+  }
+  function checkMark(reveal) {
+    const P = curPart(), cols = COLS[P.set].filter(c => P.vars.some(x => x.key === c));
+    if (reveal) cols.forEach(c => S.colMarks[c] = S.known.has(c) ? "k" : "u");
+    S.colBad = cols.filter(c => S.colMarks[c] !== (S.known.has(c) ? "k" : "u"));
+    if (!S.colBad.length) {
+      S.mxOK = true; renderLoop({ k: "ok", t: "The matrix matches your givens. Now find an equation with only one unknown." }); return;
+    }
+    S.mxTries++;
+    const unmarked = S.colBad.filter(c => !S.colMarks[c]).length;
+    renderMark({ k: "bad", t: unmarked === S.colBad.length ? `Mark every column (${unmarked} still blank).`
+      : `${S.colBad.length} column${S.colBad.length > 1 ? "s need" : " needs"} another look (outlined in red). Compare with your givens and unknowns.` });
   }
   function knownListHTML(P) {
     return `<div class="knownlist">` + P.vars.filter(x => S.known.has(x.key)).map(x => `<span>${sym(x.key, P)} = ${sig(x.v)} ${UNIT(x.key, P)}</span>`).join("") + `</div>`;
@@ -646,6 +725,7 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
     const P = curPart(), left = unknownsLeft(P);
     const fbp = `<p class="fb ${msg ? msg.k : ""}" id="lfb" role="status">${msg ? msg.t : ""}</p>`;
     let h = "";
+    if (!S.mxOK) return renderMark(msg);
     if (!S.sub) {
       h += `<h3><span style="color:var(--acc)">E</span>quation</h3><p class="lead">Unknowns left: ${left.map(x => `<b>${sym(x.key, P)}</b>`).join(", ")}${P.vars.some(x => x.key === "va" && !S.known.has("va")) ? " (v<sub>avg</sub> is optional)" : ""}. Click the equation from the kinematic matrix that has <b>only one unknown</b>.</p>`;
       h += matrixHTML(P) + fbp;
@@ -788,8 +868,8 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
   // Events
   // ======================================================================
   document.querySelector("aside").addEventListener("click", e => { const b = e.target.closest(".plist button"); if (b) startProblem(b.dataset.id); });
-  $("reset").addEventListener("click", () => startProblem(S.pid, false));
-  $("probCard").addEventListener("click", e => { if (e.target.id === "newNums") startProblem(S.pid, true); });
+  $("reset").addEventListener("click", () => startProblem(S.pid, "same"));
+  $("probCard").addEventListener("click", e => { if (e.target.id === "newNums") startProblem(S.pid, "new"); if (e.target.id === "origNums") startProblem(S.pid, "orig"); });
   $("task").addEventListener("click", e => {
     const t = e.target;
     const opt = t.closest(".opt"); if (opt) { const q = opt.parentElement.dataset.q; S.picks[q] = opt.dataset.v;
@@ -800,6 +880,12 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
     if (t.id === "chkGivens") return checkGivens(false);
     if (t.id === "showGivens") return checkGivens(true);
     if (t.id === "toLoop") { S.stage = "loop"; return renderAll(); }
+    const tb = t.closest(".toolbtn"); if (tb) { S.mxTool = tb.dataset.tool; return renderMark(); }
+    const cb = t.closest("[data-col]"); if (cb && !S.mxOK) return markCol(cb.dataset.col);
+    if (!S.mxOK && t.closest("table.marking td.cell")) { const td = t.closest("td.cell"), idx = [...td.parentElement.children].indexOf(td);
+      const th = td.closest("table").querySelectorAll("thead th")[idx]; const b = th && th.querySelector("[data-col]"); if (b) return markCol(b.dataset.col); }
+    if (t.id === "chkMx") return checkMark(false);
+    if (t.id === "showMx") return checkMark(true);
     const row = t.closest("tr.row"); if (row) return pickEq(row.dataset.eq);
     const so = t.closest(".solveopts button"); if (so) return pickSolve(Number(so.dataset.i));
     if (t.id === "backEq") { S.sub = null; S.eq = null; return renderLoop(); }
