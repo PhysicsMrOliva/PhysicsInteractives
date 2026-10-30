@@ -51,7 +51,7 @@ h2 { font-size: 1.5rem; margin: 0 0 4px; }
 .section-note { color: var(--muted); margin: 0 0 18px; max-width: 72ch; }
 
 /* cards */
-.labs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 20px; }
+.labs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 18px; }
 .anims { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 16px; }
 .minis { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 14px; }
 .links3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 18px; }
@@ -97,3 +97,8 @@ footer { padding: 40px 0 48px; color: var(--muted); font-size: 0.95rem; }
 .card.locked a { cursor: default; text-decoration: none; }
 .lockmsg { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: var(--muted);
   border: 2px dashed var(--line); border-radius: 8px; padding: 6px 12px; }
+
+/* a card whose title and description sit above its image */
+.lab-card.text-first .body { order: -1; flex: 0 0 auto; }
+.lab-card.text-first a.cover { margin-top: auto; }
+.lab-card.text-first img { border-bottom: 0; border-top: 1px solid var(--line); }
