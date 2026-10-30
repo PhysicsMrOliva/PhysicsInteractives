@@ -149,6 +149,18 @@ table.mx td.cell { text-align: center; padding: 4px; min-width: 52px; }
 .done-card { border: 2px solid var(--known); }
 .ansl { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 1.1rem; }
 .hint { color: var(--muted); font-size: 0.93rem; }
+.task h3 .ns { color: var(--muted); font-weight: 700; }
+.navbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: -4px; }
+.navbar:empty { display: none; }
+.navbar button:disabled { opacity: 0.4; cursor: default; }
+.navlab { font-weight: 700; color: var(--acc); }
+.review { background: var(--tint); border-left: 4px solid var(--acc); padding: 8px 12px; border-radius: 0 8px 8px 0; margin: 0 0 12px; }
+.reviewbody { opacity: 0.92; }
+.reviewbody .bar, .reviewbody .fb button, .reviewbody #chkSub { display: none; }
+.vecfig { float: right; width: min(300px, 42%); margin: 0 0 10px 16px; border: 1px solid var(--line); border-radius: 8px; padding: 6px; background: var(--panel); }
+.vecfig svg { display: block; width: 100%; height: auto; } .vecfig text { font-family: inherit; }
+@media (max-width: 640px) { .vecfig { float: none; width: 100%; margin: 0 0 12px; } }
+.solveopts button.nrn { font-size: 1rem; font-style: italic; }
 mark.tgt { background: var(--hl); color: inherit; border-radius: 4px; padding: 0 3px; font-weight: 700; box-shadow: 0 0 0 1.5px var(--hlb); }
 s.z { text-decoration: line-through; text-decoration-color: var(--bad); text-decoration-thickness: 2.5px; color: var(--muted); }
 s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0; }
@@ -193,11 +205,12 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
 
   <main>
     <section class="panel card" id="probCard" aria-live="off"></section>
-    <section class="panel card task" id="task"></section>
     <section class="panel card" aria-labelledby="sheetH">
       <h2 id="sheetH" style="font-size:1.05rem">Your GUESS sheet</h2>
       <div id="sheet"></div>
     </section>
+    <div class="navbar" id="navbar" aria-label="Review completed steps"></div>
+    <section class="panel card task" id="task" aria-live="polite"></section>
   </main>
 </div>
 
@@ -430,7 +443,7 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
         parts: [
           { title: "Vertical motion (free fall)", set: "kin", lab: "y", vars: [K("s0", h, 1, `It starts at the top of the ${h} m cliff.`), K("sf", 0, 1, "It lands on the ground, y = 0."), K("ds", -h, 1, `Δy = y<sub>f</sub> − y<sub>0</sub> = 0 − ${h} m.`), K("v0", 0, 1, "Launched horizontally, so it has no vertical velocity at the start."), K("vf"), K("va"), K("a", -9.81, 1, hAy), K("dt")] },
           { title: "Horizontal motion (constant velocity)", set: "kin", lab: "x", carry: `From the vertical motion: the flight time is the same for both directions, Δt = ${sig(tD)} s.`,
-            vars: [K("s0", 0, 1, hOrigin), K("ds"), K("v0", v, 1), K("vf", v, 1, "No horizontal acceleration, so v<sub>fx</sub> = v<sub>0x</sub>."), K("va"), K("a", 0, 1, "Nothing pushes it sideways: a<sub>x</sub> = 0."), K("dt", tD, 1, "Use the flight time from the vertical motion.")] },
+            vars: [K("s0", 0, 1, hOrigin), K("ds"), K("v0", v, 1), K("vf", v, 1, "No horizontal acceleration, so v<sub>fx</sub> = v<sub>0x</sub>."), K("va", v, 1, "With a<sub>x</sub> = 0 the velocity never changes, so v<sub>avg,x</sub> = v<sub>0x</sub> = v<sub>fx</sub>."), K("a", 0, 1, "Nothing pushes it sideways: a<sub>x</sub> = 0."), K("dt", tD, 1, "Use the flight time from the vertical motion.")] },
           { title: "Impact velocity (trigonometry)", set: "trig", lab: "final", carry: `From earlier parts: v<sub>fx</sub> = ${v} m/s and v<sub>fy</sub> = ${sig(vyD)} m/s.`,
             vars: [K("vx", v, 1), K("vy", vyD, 1, "Use the final vertical velocity from the first part (negative: moving down)."), K("v"), K("th")] } ] }; } },
     { id: "alaunch", group: "ex", title: "Angled launch", sub: "Projectile · up and down",
@@ -447,7 +460,7 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
           { title: "DOWN to the ground", set: "kin", lab: "y", carry: `From the way up: it starts this part at the top, h<sub>top</sub> = ${sig(htop)} m, with v<sub>0y</sub> = 0.`,
             vars: [K("s0", htop, 1, `Start this part at the top: y<sub>0</sub> = h<sub>top</sub> = ${sig(htop)} m.`), K("sf", 0, 1, "It lands on the ground, y = 0."), K("ds"), K("v0", 0, 1, "At the top the vertical velocity is zero."), K("vf"), K("va"), K("a", -9.81, 1, hAy), K("dt")] },
           { title: "Horizontal motion", set: "kin", lab: "x", carry: `Total flight time = Δt<sub>up</sub> + Δt<sub>down</sub> = ${sig(tup)} s + ${sig(tdn)} s = ${sig(ttot)} s. From the components: v<sub>0x</sub> = ${sig(vx)} m/s.`,
-            vars: [K("s0", 0, 1, hOrigin), K("ds"), K("v0", vx, 1), K("vf", vx, 1, "No horizontal acceleration, so v<sub>fx</sub> = v<sub>0x</sub>."), K("va"), K("a", 0, 1, "a<sub>x</sub> = 0."), K("dt", ttot, 1, "Use the total flight time.")] },
+            vars: [K("s0", 0, 1, hOrigin), K("ds"), K("v0", vx, 1), K("vf", vx, 1, "No horizontal acceleration, so v<sub>fx</sub> = v<sub>0x</sub>."), K("va", vx, 1, "With a<sub>x</sub> = 0 the velocity never changes, so v<sub>avg,x</sub> = v<sub>0x</sub> = v<sub>fx</sub>."), K("a", 0, 1, "a<sub>x</sub> = 0."), K("dt", ttot, 1, "Use the total flight time.")] },
           { title: "Final velocity (trigonometry)", set: "trig", lab: "final", carry: `From earlier parts: v<sub>fx</sub> = ${sig(vx)} m/s and v<sub>fy</sub> = ${sig(vfy)} m/s.`,
             vars: [K("vx", vx, 1), K("vy", vfy, 1, "Use the final vertical velocity from the way down."), K("v"), K("th")] } ] }; } },
     // ---- practice problems: new random numbers each time (R holds them as display strings) ----
@@ -516,7 +529,7 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
   function prob() { return S.cur; }
   function startProblem(id, mode) {            // mode: "open" (default), "same", "new", "orig"
     S.pid = id; S.cur = build(id, mode || "open"); const p = prob();
-    S.pi = 0; S.log = p.parts.map(() => []); S.stage = null; S.done = false; S.psd = {};
+    S.pi = 0; S.log = p.parts.map(() => []); S.stage = null; S.done = false; S.psd = {}; S.hist = []; S.view = null; S.lastKey = null;
     S.sketchDoneP = !p.sketch; enterPart();
     renderAll();
   }
@@ -577,7 +590,7 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
       h += `<div class="q"><h4>${gName[kind]}: ${gLabel[lab]} graph</h4><div class="opts" data-q="g${i}">` +
         Object.keys(lib).map(id => `<button class="opt" data-v="${id}" aria-pressed="${S.picks["g" + i] === id}" aria-label="${id.replace(/-/g, " ")}">${graphSVG(kind, id)}</button>`).join("") + `</div><div class="qfb" id="fb-g${i}"></div></div>`; });
     h += `<div class="bar"><button class="btn" id="chkSketch">Check</button><button class="btn ghost" id="showSketch" hidden>Show the answers</button></div><p class="fb" id="sfb" role="status"></p>`;
-    $("task").innerHTML = h;
+    setTask(h);
   }
   function checkSketch(reveal) {
     const sp = sketchSpec(); let allOk = true;
@@ -598,9 +611,9 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
     let h = `<h3><span style="color:var(--pos)">G</span>iven &amp; <span style="color:var(--unk)">U</span>nknown</h3><p class="lead">Type each value the problem gives you (including hidden givens). Type <b>?</b> for each unknown. Use a negative sign for down or left.</p>`;
     h += `<table class="gt"><thead><tr><th>Quantity</th><th>Value</th><th>Units</th><th></th></tr></thead><tbody>` +
       P.vars.map(x => `<tr><td class="sym">${sym(x.key, P)}</td><td><input id="in-${x.key}" inputmode="text" autocomplete="off" spellcheck="false" value="${esc(S.entered[x.key] || "")}" aria-label="${sym(x.key, P).replace(/<[^>]+>/g, "")}"></td><td>${UNIT(x.key, P)}</td><td class="fb" id="gf-${x.key}"></td></tr>`).join("") + `</tbody></table>`;
-    h += `<p class="hint">${P.vars.some(x => x.key === "va") ? "v<sub>avg</sub> is never given directly: mark it ?. " : ""}Tip: values may be written in the problem, in the picture, or hidden in words like “from rest”.</p>`;
+    h += `<p class="hint">${P.vars.some(x => x.key === "va" && !x.given) ? "v<sub>avg</sub> usually isn’t given directly: mark it ? (when a = 0 it equals v<sub>0</sub> and v<sub>f</sub>). " : ""}Tip: values may be written in the problem, in the picture, or hidden in words like “from rest”.</p>`;
     h += `<div class="bar"><button class="btn" id="chkGivens">Check</button><button class="btn ghost" id="showGivens" ${S.gtries >= 1 ? "" : "hidden"}>Show the answers</button></div><p class="fb" id="gfb" role="status"></p>`;
-    $("task").innerHTML = h;
+    setTask(h);
   }
   const parseNum = s => { s = String(s).trim().replace(/−/g, "-").replace(/,/g, ""); if (s === "") return NaN; return Number(s); };
   function checkGivens(reveal) {
@@ -654,7 +667,7 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
     const done = cols.filter(c => S.colMarks[c]).length;
     h += `<div class="bar"><button class="btn" id="chkMx">Check</button><span class="hint">${done} of ${cols.length} columns marked</span>${S.mxTries >= 2 ? `<button class="btn ghost" id="showMx">Show the answers</button>` : ""}</div>
       <p class="fb ${msg ? msg.k : ""}" id="lfb" role="status">${msg ? msg.t : ""}</p>`;
-    $("task").innerHTML = h;
+    setTask(h);
   }
   function markCol(c) {
     S.colMarks[c] = S.colMarks[c] === S.mxTool ? undefined : S.mxTool;
@@ -666,7 +679,8 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
     if (reveal) cols.forEach(c => S.colMarks[c] = S.known.has(c) ? "k" : "u");
     S.colBad = cols.filter(c => S.colMarks[c] !== (S.known.has(c) ? "k" : "u"));
     if (!S.colBad.length) {
-      S.mxOK = true; renderLoop({ k: "ok", t: "The matrix matches your givens. Now find an equation with only one unknown." }); return;
+      renderMark({ k: "ok", t: "The matrix matches your givens." }); snap("Kinematic matrix");
+      S.mxOK = true; renderLoop({ k: "ok", t: "Now find an equation with only one unknown." }); return;
     }
     S.mxTries++;
     const unmarked = S.colBad.filter(c => !S.colMarks[c]).length;
@@ -720,6 +734,7 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
     for (let i = 0; i < r.length; i++) { const c = r[i]; if (c === "(") d++; else if (c === ")") d--;
       if (d === 0 && r.startsWith(" / ", i)) { const A = r.slice(0, i), B = r.slice(i + 3), w = x => (splitTerms(x).length > 1 || x.includes(" / ")) && !/^\(.*\)$/.test(x) ? "(" + x + ")" : x; return l + " = " + w(B) + " / " + w(A); } }
     return null; }
+  const NRN = "No rearranging needed";
   const zeroKeys = (id, P, u) => EQ[id].vars.filter(v => v !== u && S.known.has(v) && P.vars.find(x => x.key === v).v === 0);
 
   function renderLoop(msg) {
@@ -749,7 +764,7 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
       const u = S.sub.u;
       h += `<h3><span style="color:var(--vel)">S</span>olve (symbolic algebra)</h3><p class="lead">Rearrange the equation to isolate <mark class="tgt">${sym(u, P)}</mark>. Do the algebra before putting in any numbers.</p>
         <p class="big">${tmpl(S.sub.simp, P, null, u)}</p>
-        <div class="solveopts">${S.sub.opts.map((o, i) => `<button data-i="${i}" class="${S.sub.tried.includes(i) ? "wrong" : ""}">${tmpl(o, P, null, u)}</button>`).join("")}</div>
+        <div class="solveopts">${S.sub.opts.map((o, i) => `<button data-i="${i}" class="${S.sub.tried.includes(i) ? "wrong" : S.sub.right === i ? "right" : ""}${o === NRN ? " nrn" : ""}">${o === NRN ? `No rearranging needed: it’s already solved for ${sym(u, P)}` : tmpl(o, P, null, u)}</button>`).join("")}</div>
         ${fbp}<div class="bar"><button class="btn ghost" id="backEq">Choose a different equation</button></div>`;
     } else {
       const F = FORMS[S.eq][S.sub.u], u = S.sub.u;
@@ -759,7 +774,7 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
         <div class="subrow" style="margin-top:12px"><label for="subIn"><mark class="tgt">${sym(u, P)}</mark> =</label><input id="subIn" inputmode="decimal" autocomplete="off" spellcheck="false"><span>${UNIT(u, P)}</span><button class="btn" id="chkSub">Check</button></div>
         ${fbp}${S.sub.tries >= 2 ? `<div class="bar"><button class="btn ghost" id="showSub">Show the answer</button></div>` : ""}`;
     }
-    $("task").innerHTML = h;
+    setTask(h);
     if (S.sub && S.sub.stage === "sub") setTimeout(() => $("subIn") && $("subIn").focus(), 0);
   }
   function pickEq(id) {
@@ -771,6 +786,7 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
     const u = st.unk[0], F = FORMS[id][u];
     if (F.needV0zero && !(S.known.has("v0") && P.vars.find(x => x.key === "v0").v === 0))
       return renderLoop({ k: "bad", t: `Δt appears twice here (in Δt² and in ${sym("v0", P)}Δt), so you’d need the quadratic formula. Try another equation first.` });
+    renderLoop({ k: "ok", t: `${EQ[id].name}: ${sym(u, P)} is the only unknown.` }); snap(`Equation: ${EQ[id].name}`);
     S.sub = { stage: "simplify", u, zeros: zeroKeys(id, P, u), picked: [], simpOK: false, tried: [], tries: 0 };
     renderLoop();
   }
@@ -784,12 +800,21 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
     S.sub.simpOK = true; S.sub.simp = simpEq(EQ[id].form, z, false); S.sub.ok = simpSolved(F.ok, z);
     const bad = [];
     [...F.bad.map(b => simpSolved(b, z)), flipSign(S.sub.ok), invert(S.sub.ok)].forEach(b => { if (b && b !== S.sub.ok && !bad.includes(b) && bad.length < 3) bad.push(b); });
-    S.sub.opts = shuffle([S.sub.ok, ...bad], id.charCodeAt(1) * 31 + u.length * 7 + S.pi + z.length);
+    // if the unknown is already alone on the left, the right answer is "No rearranging needed"
+    S.sub.isolated = lhsOf(S.sub.simp) === "{" + u + "}";
+    S.sub.correct = S.sub.isolated ? NRN : S.sub.ok;
+    S.sub.opts = shuffle([S.sub.isolated ? NRN : S.sub.ok, ...bad.slice(0, S.sub.isolated ? 3 : 2)], id.charCodeAt(1) * 31 + u.length * 7 + S.pi + z.length).concat(S.sub.isolated ? [] : [NRN]);
     renderLoop({ k: "ok", t: z.length ? "Nice: the zero terms drop out." : "Right: nothing to cross out this time." });
   }
   function pickSolve(i) {
-    if (S.sub.opts[i] === S.sub.ok) { S.sub.stage = "sub"; renderLoop({ k: "ok", t: "Correct rearrangement. Now substitute." }); }
-    else { S.sub.tried.push(i); renderLoop({ k: "bad", t: "Not quite. Undo each operation step by step: whatever is added moves by subtracting, whatever multiplies moves by dividing." }); }
+    const P = curPart(), o = S.sub.opts[i];
+    if (o === S.sub.correct) {
+      S.sub.right = i; renderLoop({ k: "ok", t: S.sub.isolated ? `Right: ${sym(S.sub.u, P)} is already by itself, so go straight to substituting.` : "Correct rearrangement." });
+      snap(`Solve for ${sym(S.sub.u, P)}`); S.sub.stage = "sub"; S.sub.right = undefined; renderLoop({ k: "ok", t: "Now substitute." }); return; }
+    S.sub.tried.push(i);
+    renderLoop({ k: "bad", t: o === NRN ? `${sym(S.sub.u, P)} isn’t by itself on one side yet, so this one does need rearranging.`
+      : S.sub.isolated ? `Look at the equation again: ${sym(S.sub.u, P)} is already alone on the left side.`
+      : "Not quite. Undo each operation step by step: whatever is added moves by subtracting, whatever multiplies moves by dividing." });
   }
   function valStr(k, P) { const x = P.vars.find(v => v.key === k); const u = UNIT(k, P); return k === "th" ? `${sig(x.v)}°` : `(${sig(x.v)} ${u})`; }
   function checkSub(reveal) {
@@ -798,6 +823,8 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
     if (!isFinite(n)) return renderLoop({ k: "bad", t: "Enter a number." });
     const tol = Math.max(0.015 * Math.abs(x.v), 0.02);
     if (Math.abs(n - x.v) <= tol) {
+      const typed = reveal ? sig(x.v).replace("−", "-") : $("subIn").value;
+      renderLoop({ k: "ok", t: `Correct: ${sym(x.key, P)} = ${sig(x.v)} ${UNIT(x.key, P)}` }); $("subIn").value = typed; snap(`Substitute: ${sym(x.key, P)} = ${sig(x.v)} ${UNIT(x.key, P)}`);
       S.known.add(x.key);
       const F = FORMS[S.eq][S.sub.u];
       let subLine = tmpl(rhsOf(S.sub.ok), P, k => valStr(k, P));
@@ -823,7 +850,7 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
     if (last && p.total) h += `<p class="big" style="margin-top:12px">${p.total}</p>`;
     h += `<p class="hint">Does the answer make sense? Check the signs and the size against your sketch.</p>`;
     h += `<div class="bar">${last ? `<button class="btn" id="nextProb">Try another problem</button>` : `<button class="btn" id="nextPart">Next: ${esc(p.parts[S.pi + 1].title || "Part " + (S.pi + 2))}</button>`}</div>`;
-    $("task").innerHTML = h; $("task").classList.toggle("done-card", true);
+    setTask(h); $("task").classList.toggle("done-card", true);
   }
 
   // ---------- GUESS sheet ----------
@@ -856,6 +883,57 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
     $("sheet").innerHTML = h;
   }
 
+  // ---------- every live step goes through here: label, trig figure, review bar ----------
+  function setTask(h) {
+    S.view = null;
+    const P = curPart(), key = S.stage + (S.sub ? S.sub.stage : "") + S.pi;
+    let html = S.stage === "partdone" ? h : h.replace("<h3>", '<h3><span class="ns">Next step:</span> ');
+    if (P && P.set === "trig" && (S.stage === "givens" || S.stage === "loop")) html = `<div class="vecfig">${vecSVG(P)}</div>` + html;
+    $("task").innerHTML = html; renderNav();
+    if (key !== S.lastKey) { S.lastKey = key; const r = $("task").getBoundingClientRect();
+      if (r.top > window.innerHeight - 120 || r.top < 0) $("task").scrollIntoView({ block: "start", behavior: "smooth" }); }
+  }
+  // save a finished step so students can look back at it
+  function snap(label) {
+    const t = $("task");
+    t.querySelectorAll("input").forEach(i => { if (i.type === "checkbox") i.toggleAttribute("checked", i.checked); else i.setAttribute("value", i.value); });
+    S.hist.push({ label, html: t.innerHTML });
+  }
+  function renderNav() {
+    const n = S.hist.length, v = S.view;
+    const atLive = v === null;
+    $("navbar").innerHTML = n ? `<button class="btn ghost" id="navBack" ${v === 0 ? "disabled" : ""}>◀ Back</button>
+      <button class="btn ghost" id="navFwd" ${atLive ? "disabled" : ""}>Forward ▶</button>
+      ${atLive ? `<span class="hint">${n} finished step${n > 1 ? "s" : ""} to review</span>` : `<span class="navlab">Reviewing step ${v + 1} of ${n}</span><button class="btn" id="navLive">Back to current step</button>`}` : "";
+  }
+  function showReview(i) {
+    S.view = i; const e = S.hist[i];
+    $("task").innerHTML = `<p class="review">Reviewing a finished step: <b>${e.label}</b>. Use Forward or “Back to current step” to continue.</p><div inert class="reviewbody">${e.html.replace('<span class="ns">Next step:</span>', '<span class="ns">Finished step:</span>')}</div>`;
+    $("task").classList.remove("done-card"); renderNav();
+  }
+  // initial or final velocity vector with its components (trig parts)
+  function vecSVG(P) {
+    const g = k => P.vars.find(x => x.key === k), vx = g("vx").v, vy = g("vy").v, th = g("th").v, L = P.len || "m";
+    const show = S.stage === "loop", lab = (k, unit) => show ? (S.known.has(k) ? `${sig(g(k).v)}${unit}` : "?") : "";
+    const sy = k => sym(k, P).replace(/<sub>(.*?)<\/sub>/g, '<tspan baseline-shift="sub" font-size="10">$1</tspan>');
+    const W = 340, H = 200, up = vy >= 0, k = 110 / Math.hypot(vx, vy), ox = 120, oy = up ? 165 : 58, tx = ox + vx * k, ty = oy - vy * k;
+    const darr = (x1, y1, x2, y2, c, dash) => { const a = Math.atan2(y2 - y1, x2 - x1), h = 9;
+      return `<line x1="${x1}" y1="${y1}" x2="${x2 - Math.cos(a) * 4}" y2="${y2 - Math.sin(a) * 4}" stroke="${c}" stroke-width="3" ${dash ? 'stroke-dasharray="7 5"' : ""}/>` +
+        `<path d="M${x2} ${y2} L${(x2 - h * Math.cos(a - 0.45)).toFixed(1)} ${(y2 - h * Math.sin(a - 0.45)).toFixed(1)} L${(x2 - h * Math.cos(a + 0.45)).toFixed(1)} ${(y2 - h * Math.sin(a + 0.45)).toFixed(1)} Z" fill="${c}"/>`; };
+    const r = 28, ang = rad(th), ax = ox + r * Math.cos(ang), ay = oy - r * Math.sin(ang), mid = ang / 2;
+    const tl = (x, y, html, c, anchor = "start") => `<text x="${x}" y="${y}" font-size="13" font-weight="700" fill="${c}" text-anchor="${anchor}">${html}</text>`;
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${P.lab === "launch" ? "Launch" : "Final"} velocity vector and its components">
+      <text x="4" y="14" font-size="12" fill="var(--muted)">${P.lab === "launch" ? "Launch velocity" : "Final velocity (just before impact)"}</text>
+      <circle cx="${ox}" cy="${oy}" r="5" fill="var(--ink)"/>
+      ${darr(ox, oy, tx, oy, "var(--vel)", true)}${darr(tx, oy, tx, ty, "var(--acc)", true)}${darr(ox, oy, tx, ty, "var(--pos)", false)}
+      <path d="M${ox + r} ${oy} A${r} ${r} 0 0 ${up ? 0 : 1} ${ax.toFixed(1)} ${ay.toFixed(1)}" fill="none" stroke="var(--ink)" stroke-width="1.5"/>
+      ${tl(ox - 10, oy + (up ? -4 : 12), sy("th") + (show ? " = " + lab("th", "°") : ""), "var(--ink)", "end")}
+      ${tl(ox + 12, up ? oy + 22 : oy - 11, sy("vx") + (show ? " = " + lab("vx", " " + L + "/s") : ""), "var(--vel)")}
+      ${tl(tx + 8, (oy + ty) / 2 + 4, sy("vy") + (show ? " = " + lab("vy", " " + L + "/s") : ""), "var(--acc)")}
+      ${tl(tx, up ? ty - 10 : ty + 22, sy("v") + (show ? " = " + lab("v", " " + L + "/s") : ""), "var(--pos)", "middle")}
+    </svg>`;
+  }
+
   function renderAll() {
     renderList(); renderSteps(); renderProb(); renderSheet();
     $("task").classList.toggle("done-card", false);
@@ -870,6 +948,10 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
   // ======================================================================
   document.querySelector("aside").addEventListener("click", e => { const b = e.target.closest(".plist button"); if (b) startProblem(b.dataset.id); });
   $("reset").addEventListener("click", () => startProblem(S.pid, "same"));
+  $("navbar").addEventListener("click", e => { const id = e.target.id, n = S.hist.length;
+    if (id === "navBack") showReview(S.view === null ? n - 1 : Math.max(0, S.view - 1));
+    if (id === "navFwd") { if (S.view !== null && S.view < n - 1) showReview(S.view + 1); else renderAll(); }
+    if (id === "navLive") renderAll(); });
   $("probCard").addEventListener("click", e => { if (e.target.id === "newNums") startProblem(S.pid, "new"); if (e.target.id === "origNums") startProblem(S.pid, "orig"); });
   $("task").addEventListener("click", e => {
     const t = e.target;
@@ -877,10 +959,10 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
       opt.parentElement.querySelectorAll(".opt").forEach(b => { b.setAttribute("aria-pressed", String(b === opt)); b.classList.remove("right", "wrong"); }); return; }
     if (t.id === "chkSketch") return checkSketch(false);
     if (t.id === "showSketch") return checkSketch(true);
-    if (t.id === "toGivens") { if (!S.sketchDoneP) S.sketchDoneP = true; else S.psd[S.pi] = true; S.stage = curPart().sketch && !S.psd[S.pi] ? "sketch" : "givens"; S.picks = {}; return renderAll(); }
+    if (t.id === "toGivens") { snap("Picture, motion map & graphs"); if (!S.sketchDoneP) S.sketchDoneP = true; else S.psd[S.pi] = true; S.stage = curPart().sketch && !S.psd[S.pi] ? "sketch" : "givens"; S.picks = {}; return renderAll(); }
     if (t.id === "chkGivens") return checkGivens(false);
     if (t.id === "showGivens") return checkGivens(true);
-    if (t.id === "toLoop") { S.stage = "loop"; return renderAll(); }
+    if (t.id === "toLoop") { snap("Givens & unknowns"); S.stage = "loop"; return renderAll(); }
     const tb = t.closest(".toolbtn"); if (tb) { S.mxTool = tb.dataset.tool; return renderMark(); }
     const cb = t.closest("[data-col]"); if (cb && !S.mxOK) return markCol(cb.dataset.col);
     if (!S.mxOK && t.closest("table.marking td.cell")) { const td = t.closest("td.cell"), idx = [...td.parentElement.children].indexOf(td);
@@ -891,10 +973,10 @@ s.z mark.tgt { background: none; box-shadow: none; font-weight: 400; padding: 0;
     const so = t.closest(".solveopts button"); if (so) return pickSolve(Number(so.dataset.i));
     if (t.id === "backEq") { S.sub = null; S.eq = null; return renderLoop(); }
     if (t.id === "chkSimp") return checkSimp();
-    if (t.id === "toSolve") { S.sub.stage = "solve"; return renderLoop(); }
+    if (t.id === "toSolve") { snap(`Simplify (${EQ[S.eq].name})`); S.sub.stage = "solve"; return renderLoop(); }
     if (t.id === "chkSub") return checkSub(false);
     if (t.id === "showSub") return checkSub(true);
-    if (t.id === "nextPart") { S.pi++; enterPart(); return renderAll(); }
+    if (t.id === "nextPart") { snap("Part complete"); S.pi++; enterPart(); return renderAll(); }
     if (t.id === "nextProb") { const i = PROBLEMS.findIndex(p => p.id === S.pid); return startProblem(PROBLEMS[(i + 1) % PROBLEMS.length].id); }
   });
   $("task").addEventListener("keydown", e => {

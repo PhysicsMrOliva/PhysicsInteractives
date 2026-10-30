@@ -34,3 +34,19 @@ Each interactive can be locked until you open it. Locked interactives are grayed
 - **New labs** added to `interactives.html` appear on the teacher page automatically. Each lab page needs the short “lock check” script near its end (copy it from any existing lab).
 
 This is a convenience lock, not real security: GitHub Pages can’t check passwords, so a student who knows the direct address and switches off JavaScript could still open a lab.
+
+## Physics playground (easter eggs)
+
+The home, Interactives, Simulations and Tools pages hide a physics playground (not the labs themselves).
+Open it with the faded 🍎 in the footer, or type a secret word anywhere on the page:
+
+| Word | Effect |
+|---|---|
+| `gravity` | The title and cards fall and pile up; grab and throw them |
+| `zerog` | Zero gravity: everything floats and drifts |
+| `flip` | Reverse gravity: everything falls up |
+| `slippery` | Turn friction off (type again to turn it back on) |
+| `spin` | Click-drag anywhere to spin the page |
+| `reset` or Esc | Put everything back |
+
+To remove it, delete `eggs.js` and the `<script src="eggs.js" defer></script>` line near the end of each page.
