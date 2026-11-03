@@ -1,0 +1,856 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Newton’s Law Blocks: online lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+
+:root {
+  box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  --bg: #eaf1ee; --grid: #d3e0da; --panel: #ffffff; --ink: #15232b; --muted: #56666e; --line: #c4d3cc; --tint: #f3f7f5; --sky: #f7faf8;
+  --acc: #1f6fb4; --ok: #1a7f37; --okbg: #dff3e4; --bad: #b42318; --badbg: #fde7e4; --focus: #1f6fb4; --btn: #15232b; --btn-ink: #ffffff;
+  --wood: #e9cf9f; --wood2: #c9a46a; --band: #c0392b; --base: #b07a45; --table: #6b5a4a; --blockA: #1f6fb4; --blockB: #7a3fe0; --hit: #e07b00; --force: #1a7f37; --skin: #f1c69b; --skinline: #8a5a3a;
+  font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42; --tint: #1b282e; --sky: #121c21;
+  --acc: #5aa9ff; --ok: #6fd37a; --okbg: #17331f; --bad: #ff8a80; --badbg: #3d1c1a; --focus: #5aa9ff; --btn: #e5eef0; --btn-ink: #0f171b;
+  --wood: #c9a46a; --wood2: #8f6b3a; --band: #ff6b5e; --base: #9a6a3c; --table: #a08a76; --blockA: #5aa9ff; --blockB: #b28cff; --hit: #ffa53d; --force: #6fd37a; --skin: #e0b088; --skinline: #f1d3b8; } }
+:root[data-theme="dark"] {
+  --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42; --tint: #1b282e; --sky: #121c21;
+  --acc: #5aa9ff; --ok: #6fd37a; --okbg: #17331f; --bad: #ff8a80; --badbg: #3d1c1a; --focus: #5aa9ff; --btn: #e5eef0; --btn-ink: #0f171b;
+  --wood: #c9a46a; --wood2: #8f6b3a; --band: #ff6b5e; --base: #9a6a3c; --table: #a08a76; --blockA: #5aa9ff; --blockB: #b28cff; --hit: #ffa53d; --force: #6fd37a; --skin: #e0b088; --skinline: #f1d3b8; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+*, *::before, *::after { box-sizing: inherit; }
+body { margin: 0; color: var(--ink); background-color: var(--bg); line-height: 1.5;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 24px 24px; }
+header { max-width: 1180px; margin: 0 auto; padding: 28px 20px 8px; }
+h1 { font-size: clamp(1.6rem, 3.4vw, 2.4rem); margin: 0 0 4px; letter-spacing: -0.01em; }
+header .back { display: inline-block; margin-bottom: 10px; color: var(--ink); font-weight: 700; }
+header p { margin: 0; color: var(--muted); max-width: 86ch; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+
+.layout { max-width: 1180px; margin: 0 auto; padding: 12px 20px 48px; display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+aside.side { padding: 14px; position: sticky; top: 12px; }
+@media (max-width: 900px) { aside.side { position: static; } }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.steps button { width: 100%; text-align: left; font: inherit; border: 0; background: none; color: var(--muted); padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.steps button:disabled { cursor: default; opacity: 0.55; }
+.steps button[aria-current="step"] { background: var(--tint); color: var(--ink); font-weight: 700; }
+.steps button.done::before { content: "✓ "; color: var(--ok); font-weight: 700; }
+.steps .law { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 10px 8px 2px; }
+.card { padding: 18px 20px; }
+.card + .card { margin-top: 14px; }
+.lawtag { font-size: 0.85rem; font-weight: 700; color: var(--acc); text-transform: uppercase; letter-spacing: 0.04em; }
+h2 { margin: 2px 0 8px; font-size: 1.45rem; }
+h3 { margin: 0 0 6px; font-size: 1.1rem; }
+ol.setup { margin: 0 0 6px; padding-left: 1.3em; line-height: 1.55; }
+.simwrap canvas { width: 100%; height: 300px; display: block; background: var(--sky); border-radius: 8px; border: 1px solid var(--line); }
+.simwrap canvas.short { height: 230px; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+button.btn { font: inherit; font-weight: 700; border: 2px solid var(--btn); background: var(--btn); color: var(--btn-ink); border-radius: 8px; padding: 7px 16px; cursor: pointer; }
+button.btn.ghost { background: transparent; color: var(--ink); }
+button.btn:disabled { opacity: 0.4; cursor: default; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+select { font: inherit; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+.qsec { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 16px; }
+.qsec h3 .tag { font-size: 0.8rem; font-weight: 700; color: var(--muted); margin-left: 6px; }
+.qsec.locked { opacity: 0.85; }
+.hint { color: var(--muted); font-size: 0.93rem; }
+textarea { width: 100%; min-height: 84px; font: inherit; padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); resize: vertical; }
+textarea:disabled { background: var(--tint); }
+.choices { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+.choices label { display: inline-flex; gap: 8px; align-items: center; border: 1.5px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+.choices label.right { border-color: var(--ok); background: var(--okbg); }
+.choices label.wrong { border-color: var(--bad); background: var(--badbg); }
+.choices input { width: 18px; height: 18px; }
+.fb { font-weight: 700; margin: 4px 0 0; min-height: 1.3em; }
+.fb.ok { color: var(--ok); } .fb.bad { color: var(--bad); }
+.result { font-weight: 700; padding: 8px 12px; border-radius: 8px; background: var(--tint); margin-top: 10px; }
+.result:empty { display: none; }
+.locknote { font-size: 0.9rem; color: var(--acc); font-weight: 700; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+@media (max-width: 600px) { .grid2 { grid-template-columns: 1fr; } }
+input[type=text] { font: inherit; padding: 7px 10px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); width: 100%; }
+label.fld { font-weight: 700; display: grid; gap: 4px; }
+.summary li { margin: 6px 0; line-height: 1.5; }
+.done-hero { text-align: center; border: 3px solid var(--ok); }
+.done-hero .big { font-size: 3rem; line-height: 1; color: var(--ok); }
+.done-hero .who { font-size: 1.4rem; font-weight: 700; margin: 6px 0 2px; }
+.donelist { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px 14px; text-align: left; margin: 14px auto; max-width: 820px; }
+.donelist span::before { content: "✓ "; color: var(--ok); font-weight: 700; }
+.warn { color: var(--bad); font-weight: 700; }
+p.stem { font-size: 1.06rem; line-height: 2.3; margin: 6px 0 0; }
+.blank { font: inherit; padding: 3px 8px; border: 0; border-bottom: 2px solid var(--acc); border-radius: 4px 4px 0 0; background: var(--tint); color: var(--ink); width: 15ch; }
+.blank.wide { width: min(36ch, 100%); } .blank.num { width: 7ch; text-align: center; }
+select.blank { width: auto; }
+.blank.ok { border-bottom-color: var(--ok); background: var(--okbg); } .blank.bad { border-bottom-color: var(--bad); background: var(--badbg); }
+.blank:disabled { opacity: 0.5; }
+p.stemfb { margin: 0 0 4px; }
+canvas.demo { width: 100%; height: 170px; display: block; background: var(--sky); border-radius: 8px; border: 1px solid var(--line); }
+canvas.stopcv { width: 100%; height: 230px; display: block; background: var(--sky); border-radius: 8px; border: 1px solid var(--line); }
+.stopwrap { display: grid; grid-template-columns: minmax(0, 420px) 1fr; gap: 12px; align-items: center; margin: 4px 0 12px; }
+.stopwrap canvas.stopcv.small { height: 170px; }
+@media (max-width: 640px) { .stopwrap { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../interactives.html">Back to Interactives</a>
+  <h1>Newton’s Law Blocks: online lab</h1>
+  <p>For students who missed the lab in class. Work through all 9 challenges with the simulation: <b>predict</b> first, then run it and <b>observe</b>, then <b>reflect</b>. Your work saves in this browser as you go. At the end, download a PDF of your answers (or screenshot the completion screen) to turn in.</p>
+</header>
+
+<div class="layout">
+  <aside class="panel side" aria-label="Challenges">
+    <ol class="steps" id="steps"></ol>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<script>
+/* ===== Newton's Law Blocks: shared simulation (side view) =====
+   Units: metres, seconds, kilograms. Each rubber band pulls like a spring (k per band) until it goes slack.
+   One "block" has mass M. Two bands = 2× force, two blocks = 2× mass, so a ∝ (bands)/(blocks). */
+const NLB = (() => {
+  const K = 20, M = 0.5, L0 = 0.25, PULL = 0.80, BX = 1.25, BBW = 0.07, BL = 0.20, BH = 0.07, G = 9.81;
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#888";
+
+  // ---------- race: lanes race toward the baseboard ----------
+  function Race(lanes) {
+    this.type = "race"; this.t = 0; this.xr = [-0.3, 1.42];
+    this.lanes = lanes.map(l => ({ ...l, xf: BX - L0 - PULL, x0: BX - L0 - PULL, v: 0, hit: false, tHit: null, vHit: 0 }));
+  }
+  // e = 0: resting with the bands just straight; e = 1: pulled back 80 cm, ready to release
+  Race.prototype.setPull = function (e) { this.lanes.forEach(l => { l.xf = (BX - L0) + (l.x0 - (BX - L0)) * e; }); };
+  Race.prototype.hands = function () { return this.lanes.map((l, i) => ({ lane: i, x: l.xf - BL, dir: 1, rest: BX - L0, front: l.xf })); };
+  Race.prototype.step = function (dt) {
+    this.t += dt;
+    this.lanes.forEach(l => {
+      if (l.hit) return;
+      const s = BX - l.xf - L0, F = s > 0 ? l.bands * K * s : 0;
+      l.v += F / (l.blocks * M) * dt; l.xf += l.v * dt;
+      if (l.xf >= BX) { l.xf = BX; l.vHit = l.v; l.v = 0; l.hit = true; l.tHit = this.t; }
+    });
+  };
+  Race.prototype.done = function () { return this.lanes.every(l => l.hit); };
+  Race.prototype.result = function () {
+    const [a, b] = this.lanes; if (!b) return null;
+    const d = a.tHit - b.tHit; return Math.abs(d) < 0.002 ? "tie" : d < 0 ? "A" : "B";
+  };
+
+  // ---------- ride along / backstop: one lane with a loose block on top ----------
+  function Ride(backstop) {
+    this.type = "ride"; this.t = 0; this.xr = [-0.3, 2.15]; this.backstop = backstop;
+    this.A = { xf: BX - L0 - PULL, v: 0, hit: false };
+    this.top = { xf: BX - L0 - PULL, y: BH, v: 0, vy: 0, state: backstop ? "riding" : "sliding" };
+    this.mu = 0.25; this.muTable = 0.9; this.A.x0 = this.A.xf; this.top.x0 = this.top.xf;
+  }
+  Ride.prototype.setPull = function (e) { this.A.xf = (BX - L0) + (this.A.x0 - (BX - L0)) * e; this.top.xf = this.A.xf; };
+  Ride.prototype.hands = function () { return [{ lane: 0, x: this.A.xf - BL, dir: 1, rest: BX - L0, front: this.A.xf }]; };
+  Ride.prototype.step = function (dt) {
+    this.t += dt; const A = this.A, T = this.top;
+    if (!A.hit) {
+      const s = BX - A.xf - L0, F = s > 0 ? K * s : 0, m = M + (T.state === "riding" ? M : 0);
+      A.v += F / m * dt; A.xf += A.v * dt;
+      if (A.xf >= BX) { A.xf = BX; A.hit = true; if (T.state === "riding") T.state = "sliding"; A.v = 0; }
+    }
+    if (T.state === "riding") { T.xf = A.xf; T.v = A.v; return; }
+    if (T.state === "sliding") {               // friction from block A (or the baseboard top) acts toward A's velocity
+      const support = (T.xf - BL / 2 >= A.xf - BL && T.xf - BL / 2 <= A.xf) || (T.xf - BL / 2 >= BX && T.xf - BL / 2 <= BX + BBW);
+      if (!support) { T.state = "falling"; return; }
+      const rel = A.v - T.v, onBase = T.xf - BL / 2 > A.xf;
+      const target = onBase || A.hit ? 0 : A.v;
+      const dv = this.mu * G * dt;
+      if (Math.abs(target - T.v) <= dv) T.v = target; else T.v += Math.sign(target - T.v) * dv;
+      void rel; T.xf += T.v * dt;
+      if (A.hit && T.v === 0 && T.xf - BL / 2 <= A.xf) T.state = "resting";
+    } else if (T.state === "falling") {
+      T.vy -= G * dt; T.y += T.vy * dt; T.xf += T.v * dt;
+      const floor = (T.xf - BL / 2 >= A.xf - BL && T.xf - BL / 2 <= A.xf) ? BH : 0;
+      if (T.y <= floor) { T.y = floor; T.vy = 0; T.state = floor ? "sliding" : "table"; }
+    } else if (T.state === "table") {
+      const dv = this.muTable * G * dt; T.v = Math.abs(T.v) <= dv ? 0 : T.v - Math.sign(T.v) * dv; T.xf += T.v * dt;
+      if (T.xf > this.xr[1] - 0.02) { T.xf = this.xr[1] - 0.02; T.v = 0; }
+      if (T.v === 0) T.state = "stopped";
+    }
+  };
+  Ride.prototype.done = function () { return this.A.hit && (this.top.state === "stopped" || this.top.state === "resting" || this.t > 3); };
+
+  // ---------- tug of war: blocks joined through a paper clip ----------
+  function Tug(A, B, pullA, pullB) {
+    this.type = "tug"; this.t = 0; this.xr = [-0.36, 1.96]; this.c0 = 0.8;
+    pullA = pullA == null ? PULL / 2 : pullA; pullB = pullB == null ? PULL / 2 : pullB;
+    this.A = { ...A, xf: this.c0 - L0 - pullA, v: 0 }; this.B = { ...B, xf: this.c0 + L0 + pullB, v: 0 };
+    this.met = false; this.xMeet = null; this.T = 0;
+    this.com = ((this.A.xf - BL / 2) * A.blocks + (this.B.xf + BL / 2) * B.blocks) / (A.blocks + B.blocks);
+    this.startA = this.A.xf; this.startB = this.B.xf;
+  }
+  Tug.prototype.setPull = function (e) { this.A.xf = (this.c0 - L0) + (this.startA - (this.c0 - L0)) * e; this.B.xf = (this.c0 + L0) + (this.startB - (this.c0 + L0)) * e; };
+  Tug.prototype.hands = function () { return [{ lane: 0, x: this.A.xf - BL, dir: 1, rest: this.c0 - L0, front: this.A.xf }, { lane: 0, x: this.B.xf + BL, dir: -1, rest: this.c0 + L0, front: this.B.xf }]; };
+  Tug.prototype.step = function (dt) {
+    if (this.met) return; this.t += dt;
+    const A = this.A, B = this.B, kA = A.bands * K, kB = B.bands * K, S = (B.xf - A.xf) - 2 * L0;
+    this.T = S > 0 ? S * kA * kB / (kA + kB) : 0;
+    A.v += this.T / (A.blocks * M) * dt; B.v -= this.T / (B.blocks * M) * dt;
+    A.xf += A.v * dt; B.xf += B.v * dt;
+    if (A.xf >= B.xf) {                          // they collide and stop together
+      const mid = (A.xf * A.blocks + B.xf * B.blocks) / (A.blocks + B.blocks);
+      A.xf = B.xf = mid; A.v = B.v = 0; this.met = true; this.xMeet = mid; this.tMeet = this.t;
+    }
+  };
+  Tug.prototype.done = function () { return this.met; };
+  Tug.prototype.stretch = function () { return (this.B.xf - this.A.xf) - 2 * L0; };
+  Tug.prototype.clip = function () {                 // the paper clip sits where the two sides' pulls balance
+    const A = this.A, B = this.B, kA = A.bands * K, kB = B.bands * K, S = this.stretch();
+    return S > 0 ? A.xf + L0 + S * kB / (kA + kB) : (A.xf + B.xf) / 2;
+  };
+
+  // ---------- drawing ----------
+  function drawScene(cv, sim, opt) {
+    opt = opt || {};
+    const d = window.devicePixelRatio || 1, r = cv.getBoundingClientRect();
+    const W = Math.max(1, r.width), H = Math.max(1, r.height);
+    if (cv.width !== Math.round(W * d) || cv.height !== Math.round(H * d)) { cv.width = Math.round(W * d); cv.height = Math.round(H * d); }
+    const ctx = cv.getContext("2d"); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, W, H);
+    const C = { ink: css("--ink"), muted: css("--muted"), line: css("--line"), wood: css("--wood"), wood2: css("--wood2"), band: css("--band"),
+      base: css("--base"), table: css("--table"), A: css("--blockA"), B: css("--blockB"), hit: css("--hit"), force: css("--force") };
+    const [x0, x1] = sim.xr, padL = 16, padR = 16, k = (W - padL - padR) / (x1 - x0), X = x => padL + (x - x0) * k;
+    ctx.font = "13px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    const lanes = sim.type === "race" ? sim.lanes.length : 1, laneH = H / lanes;
+    const bh = Math.min(BH * k, laneH * 0.16), blockW = BL * k;
+
+    function woodBlock(x, y, w, h, tint, label) {
+      ctx.fillStyle = C.wood; ctx.strokeStyle = C.ink; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.roundRect(x, y, w, h, 3); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = C.wood2; ctx.lineWidth = 1;
+      for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(x + 4, y + h * i / 4); ctx.bezierCurveTo(x + w * 0.3, y + h * i / 4 - 2, x + w * 0.6, y + h * i / 4 + 2, x + w - 4, y + h * i / 4); ctx.stroke(); }
+      if (tint) { ctx.fillStyle = tint; ctx.globalAlpha = 0.18; ctx.fillRect(x, y, w, h); ctx.globalAlpha = 1; }
+      if (label) { ctx.fillStyle = C.ink; ctx.font = "bold 13px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillText(label, x + w / 2, y + h / 2 + 5); ctx.font = "13px 'Atkinson Hyperlegible', system-ui, sans-serif"; }
+    }
+    function stack(xf, ground, blocks, tint, label, dir) {     // dir 1: front on the right
+      const xl = dir > 0 ? X(xf) - blockW : X(xf);
+      for (let i = 0; i < blocks; i++) woodBlock(xl, ground - bh * (i + 1), blockW, bh, tint, i === 0 ? label : "");
+      if (blocks > 1) { ctx.strokeStyle = C.band; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(xl + blockW * 0.5, ground - bh * blocks); ctx.lineTo(xl + blockW * 0.5, ground - 2); ctx.stroke(); }
+      return xl;
+    }
+    function bands(xa, xb, y, n, taut) {                      // n parallel rubber bands from xa to xb (px)
+      ctx.strokeStyle = C.band; ctx.lineWidth = 2.4; ctx.lineCap = "round";
+      for (let i = 0; i < n; i++) {
+        const dy = (i - (n - 1) / 2) * 4;
+        ctx.beginPath(); ctx.moveTo(xa, y + dy);
+        if (taut) ctx.lineTo(xb, y + dy);
+        else { const sag = Math.max(6, (Math.abs(xb - xa) * 0.25)); ctx.quadraticCurveTo((xa + xb) / 2, y + dy + sag, xb, y + dy); }
+        ctx.stroke();
+      }
+    }
+    function baseboard(ground) {
+      ctx.fillStyle = C.base; ctx.strokeStyle = C.ink; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.roundRect(X(BX), ground - bh, BBW * k, bh, 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(X(BX) + BBW * k * 0.5, ground - bh * 0.5, 2.5, 0, 7); ctx.fill();
+    }
+    function table(ground, xa, xb) { ctx.strokeStyle = C.table; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(xa, ground); ctx.lineTo(xb, ground); ctx.stroke(); }
+
+    if (sim.type === "race") {
+      sim.lanes.forEach((l, i) => {
+        const g = laneH * (i + 1) - 18;
+        table(g, 0, W); baseboard(g);
+        const anchor = X(BX), front = X(l.xf), taut = BX - l.xf - L0 > 0;
+        bands(front, anchor, g - bh * 0.5, l.bands, taut);
+        stack(l.xf, g, l.blocks, l.name === "A" ? C.A : C.B, "", 1);
+        ctx.fillStyle = l.name === "A" ? C.A : C.B; ctx.font = "bold 15px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.textAlign = "left";
+        ctx.fillText(`Block ${l.name}`, 10, laneH * i + 20);
+        ctx.font = "13px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.fillStyle = C.muted;
+        ctx.fillText(`${l.blocks} block${l.blocks > 1 ? "s" : ""} · ${l.bands} rubber band${l.bands > 1 ? "s" : ""}`, 82, laneH * i + 20);
+        if (l.hit) {
+          ctx.strokeStyle = C.hit; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(X(BX), g - bh * 0.5, 16, 0, 7); ctx.stroke();
+          ctx.fillStyle = C.hit; ctx.textAlign = "right"; ctx.font = "bold 13px 'Atkinson Hyperlegible', system-ui, sans-serif";
+          ctx.fillText(`hit at ${l.tHit.toFixed(3)} s`, X(BX) - 22, laneH * i + 20);
+        }
+        if (opt.showStart) { ctx.setLineDash([4, 4]); ctx.strokeStyle = C.muted; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(BX - L0 - PULL), g - bh * 2.5); ctx.lineTo(X(BX - L0 - PULL), g + 4); ctx.stroke(); ctx.setLineDash([]); }
+      });
+      if (sim.lanes.length > 1) { ctx.strokeStyle = C.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, laneH); ctx.lineTo(W, laneH); ctx.stroke(); }
+    }
+    if (sim.type === "ride") {
+      const g = H - 26, A = sim.A, T = sim.top;
+      table(g, 0, W); baseboard(g);
+      bands(X(A.xf), X(BX), g - bh * 0.5, 1, BX - A.xf - L0 > 0);
+      const xl = stack(A.xf, g, 1, C.A, "A", 1);
+      // backstop at the back of block A
+      ctx.fillStyle = C.ink;
+      ctx.fillStyle = "#3b4a52";
+      if (sim.backstop) ctx.fillRect(xl - 5, g - bh * 1.85, 5, bh * 0.96); else ctx.fillRect(xl - 5, g - bh * 0.98, 5, bh * 0.96);
+      // the loose block on top
+      const tx = X(T.xf) - blockW, ty = g - T.y * (bh / BH) - bh;
+      woodBlock(tx, ty, blockW, bh, C.B, "C");
+      ctx.fillStyle = C.muted; ctx.textAlign = "left"; ctx.fillText(sim.backstop ? "Backstop UP" : "Backstop DOWN", 10, 20);
+    }
+    if (sim.type === "tug") {
+      const g = H - 30, A = sim.A, B = sim.B;
+      table(g, 0, W);
+      ctx.setLineDash([3, 4]); ctx.strokeStyle = C.muted; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(sim.c0), g + 2); ctx.lineTo(X(sim.c0), g + 14); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = C.muted; ctx.textAlign = "center"; ctx.fillText("center tape", X(sim.c0), g + 26);
+      const c = sim.clip(), taut = sim.stretch() > 0;
+      bands(X(A.xf), X(c), g - bh * 0.5, A.bands, taut); bands(X(c), X(B.xf), g - bh * 0.5, B.bands, taut);
+      ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(X(c) - 4, g - bh * 0.5 - 4, 8, 8);
+      stack(A.xf, g, A.blocks, C.A, "A", 1); stack(B.xf, g, B.blocks, C.B, "B", -1);
+      if (opt.showForces && sim.T > 0) {
+        const f = Math.min(80, 6 + sim.T * 1.4);
+        arrow(ctx, X(A.xf) - blockW / 2, g - bh * (A.blocks + 0.6), X(A.xf) - blockW / 2 + f, g - bh * (A.blocks + 0.6), C.force);
+        arrow(ctx, X(B.xf) + blockW / 2, g - bh * (B.blocks + 0.6), X(B.xf) + blockW / 2 - f, g - bh * (B.blocks + 0.6), C.force);
+      }
+      if (sim.met) {
+        ctx.strokeStyle = C.hit; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X(sim.xMeet), 30); ctx.lineTo(X(sim.xMeet), g); ctx.stroke();
+        ctx.fillStyle = C.hit; ctx.textAlign = "center"; ctx.font = "bold 13px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.fillText("they meet here", X(sim.xMeet), 22);
+        if (opt.showStarts) {
+          ctx.setLineDash([4, 4]); ctx.strokeStyle = C.muted; ctx.lineWidth = 1;
+          [sim.startA, sim.startB].forEach(x => { ctx.beginPath(); ctx.moveTo(X(x), g - bh * 3); ctx.lineTo(X(x), g); ctx.stroke(); });
+          ctx.setLineDash([]);
+          ctx.font = "12px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.fillStyle = C.muted;
+          ctx.fillText(`A moved ${((sim.xMeet - sim.startA) * 100).toFixed(0)} cm`, (X(sim.startA) + X(sim.xMeet)) / 2, g - bh * 3.3);
+          ctx.fillText(`B moved ${((sim.startB - sim.xMeet) * 100).toFixed(0)} cm`, (X(sim.startB) + X(sim.xMeet)) / 2, g - bh * 3.3);
+        }
+      }
+    }
+    if (opt.hand && sim.hands) {
+      const hd = opt.hand, s = Math.max(0.55, Math.min(1.2, bh / 22));
+      sim.hands().forEach(hh => {
+        const g = sim.type === "race" ? laneH * (hh.lane + 1) - 18 : sim.type === "ride" ? H - 26 : H - 30;
+        if (!hd.open && hd.dim) {                     // how far the block has been pulled back
+          const xa = X(hh.rest), xb = X(hh.front), yy = g - bh * (sim.type === "race" ? 1.6 : 2.6) - (sim.type === "tug" ? 6 : 0);
+          const cm = Math.round(Math.abs(hh.rest - hh.front) * 100);
+          if (cm > 1) {
+            ctx.strokeStyle = C.muted; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(xa, yy); ctx.lineTo(xb, yy);
+            ctx.moveTo(xa, yy - 5); ctx.lineTo(xa, yy + 5); ctx.moveTo(xb, yy - 5); ctx.lineTo(xb, yy + 5); ctx.stroke();
+            ctx.fillStyle = C.ink; ctx.textAlign = "center"; ctx.font = "bold 13px 'Atkinson Hyperlegible', system-ui, sans-serif";
+            ctx.fillText(`${cm} cm`, (xa + xb) / 2, yy - 6);
+          }
+        }
+        drawHand(ctx, X(hh.x) - hh.dir * hd.retreat, g - bh * 0.5, s, hh.dir, hd.open, hd.alpha);
+        if (hd.say) { ctx.fillStyle = C.hit; ctx.textAlign = "center"; ctx.font = "bold 14px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.fillText(hd.say, X(hh.x) - hh.dir * 58 * s, g - bh * 0.5 - 16 * s); }
+      });
+    }
+    ctx.fillStyle = C.muted; ctx.textAlign = "right"; ctx.font = "12px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    ctx.fillText(opt.hand && opt.hand.pulling ? "pulling back…" : `t = ${sim.t.toFixed(3)} s`, W - 10, 16);
+  }
+  // a simple hand: forearm, palm and fingers gripping the back face of a block (dir 1: hand on the left)
+  function drawHand(ctx, x, y, s, dir, open, alpha) {
+    const rr = (x0, y0, w, h, r) => { ctx.beginPath(); ctx.roundRect(x0 * s, y0 * s, w * s, h * s, r * s); ctx.fill(); ctx.stroke(); };
+    ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1); ctx.globalAlpha = alpha;
+    ctx.fillStyle = css("--skin"); ctx.strokeStyle = css("--skinline"); ctx.lineWidth = 1.3;
+    rr(-78, -8, 52, 16, 6);                         // forearm
+    rr(-34, -14, 28, 28, 9);                        // palm
+    if (!open) { for (let i = 0; i < 4; i++) rr(-10, -13 + i * 6.6, 16, 5.8, 2.9); rr(-26, -21, 20, 8, 4); }        // fingers wrapped onto the block, thumb on top
+    else { for (let i = 0; i < 4; i++) rr(-12 - i * 1.5, -17 + i * 9, 13, 6, 3); rr(-30, -26, 9, 16, 4.5); }       // open hand letting go
+    ctx.restore();
+  }
+  function arrow(ctx, x1, y1, x2, y2, c) {
+    const a = Math.atan2(y2 - y1, x2 - x1), h = 9; ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2 - Math.cos(a) * 6, y2 - Math.sin(a) * 6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x2 - h * Math.cos(a - 0.45), y2 - h * Math.sin(a - 0.45)); ctx.lineTo(x2 - h * Math.cos(a + 0.45), y2 - h * Math.sin(a + 0.45)); ctx.closePath(); ctx.fill();
+  }
+
+  // ---------- a player: runs a sim in slow motion on a canvas ----------
+  function Player(cv, make, opt) {
+    this.cv = cv; this.make = make; this.opt = opt || {}; this.rate = 0.125; this.running = false; this.onDone = null; this.raf = 0;
+    this.sim = make(); this.ready();
+  }
+  // resting position, hand on the block(s), ready to pull back
+  Player.prototype.ready = function () { if (this.sim.setPull) { this.sim.setPull(0); this.opt.hand = { open: false, retreat: 0, alpha: 1, dim: true }; } this.draw(); };
+  Player.prototype.show = function (sim) { cancelAnimationFrame(this.raf); this.running = false; this.sim = sim; this.opt.hand = null; this.draw(); };
+  Player.prototype.draw = function () { drawScene(this.cv, this.sim, this.opt); };
+  Player.prototype.reset = function (make) { if (make) this.make = make; cancelAnimationFrame(this.raf); this.running = false; this.sim = this.make(); this.ready(); };
+  Player.prototype.run = function () {
+    this.reset(); this.running = true;
+    const PULL_MS = 1200, HOLD_MS = 450, LET_GO_MS = 600, ease = f => f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+    const t0 = performance.now(), canPull = !!this.sim.setPull; let last = 0, released = 0;
+    const tick = now => {
+      const el = now - t0;
+      if (canPull && el < PULL_MS) {                                          // 1. the hand pulls the block(s) back 80 cm
+        this.sim.setPull(ease(el / PULL_MS)); this.opt.hand = { open: false, retreat: 0, alpha: 1, dim: true, pulling: true }; this.draw();
+        this.raf = requestAnimationFrame(tick); return;
+      }
+      if (canPull && el < PULL_MS + HOLD_MS) {                                // 2. hold it there for a moment
+        this.sim.setPull(1); this.opt.hand = { open: false, retreat: 0, alpha: 1, dim: true, pulling: true, say: "Release!" }; this.draw();
+        this.raf = requestAnimationFrame(tick); return;
+      }
+      if (!released) { released = now; last = now; }                          // 3. let go and run the physics
+      const g = Math.min(1, (now - released) / LET_GO_MS);
+      this.opt.hand = canPull && g < 1 ? { open: true, retreat: 46 * g, alpha: 1 - g, dim: false } : null;
+      const dt = Math.min(0.05, (now - last) / 1000) * this.rate; last = now;
+      const n = Math.max(1, Math.ceil(dt / 0.0004)); for (let i = 0; i < n; i++) this.sim.step(dt / n);
+      this.draw();
+      if (this.sim.done() && !this.opt.hand) { this.running = false; if (this.onDone) this.onDone(this.sim); return; }
+      this.raf = requestAnimationFrame(tick);
+    };
+    this.raf = requestAnimationFrame(tick);
+  };
+  // run a sim instantly (no animation) to get its outcome
+  function quick(sim) { let i = 0; while (!sim.done() && i++ < 200000) sim.step(0.0004); return sim; }
+
+  return { Race, Ride, Tug, Player, quick, drawScene, consts: { K, M, L0, PULL } };
+})();
+
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const MIN = 12;                                  // shortest answer we accept (characters)
+  const RATIO = [["0.25", "¼ as much"], ["0.5", "½ as much"], ["1", "the same"], ["2", "2× as much"], ["4", "4× as much"]];
+  const RACE = (bB, nB) => () => new NLB.Race([{ name: "A", blocks: 1, bands: 1 }, { name: "B", blocks: bB, bands: nB }]);
+  const ABT = [["A", "Block A"], ["B", "Block B"], ["tie", "It’s a tie!"]];
+  const LAW = { 1: "Newton’s 1st Law", 2: "Newton’s 2nd Law", 3: "Newton’s 3rd Law" };
+
+  // ---------- the 9 challenges ----------
+  // Observation sentence stems: {key} marks a blank. Blank types: text (their own words), num (read from the run, checked), sel (checked).
+  const RACE_STEMS = [
+    { s: "The block that hit the baseboard first was {first}.", b: { first: { t: "sel", opts: [["A", "Block A"], ["B", "Block B"], ["tie", "neither: it was a tie"]], ans: m => m.win } } },
+    { s: "Block A hit at {tA} s and Block B hit at {tB} s.", b: { tA: { t: "num", ans: m => m.tA, tol: 0.004 }, tB: { t: "num", ans: m => m.tB, tol: 0.004 } } },
+    { s: "Compared with Block A, Block B {cmp}.", b: { cmp: { t: "text", ph: "how did B’s motion compare?" } } }
+  ];
+  const CM = (key, alt) => ({ t: "num", ans: m => m[key], tol: 3, alt });
+  const CH = [
+    { id: 1, law: 1, title: "Ride Along", short: true, sim: () => new NLB.Ride(false),
+      setup: ["The backstop on Block A is <b>down</b>.", "Block A’s rubber band is connected to the baseboard.", "An extra block, <b>Block C</b>, is placed on top of Block A.", "Block A is pulled back about 80 cm and released."],
+      ask: "What happens to Block C (the block on top) when Block A is released?",
+      stems: [{ s: "When Block A was released, Block C {what}.", b: { what: { t: "text", ph: "what Block C did" } } },
+        { s: "Block C ended up {where}, about {cm} cm from where it started.", b: { where: { t: "text", ph: "where it ended up" }, cm: CM("cMoved") } },
+        { s: "I think this happened because {why}.", b: { why: { t: "text", ph: "your explanation", wide: true } } }] },
+    { id: 2, law: 1, title: "Backstop", short: true, sim: () => new NLB.Ride(true),
+      setup: ["The backstop on Block A is <b>up</b>.", "Block C rests on top of Block A, against the backstop.", "Block A (not Block C) is pulled back about 80 cm and released."],
+      ask: "What happens to Block C this time, especially when Block A hits the baseboard?",
+      stems: [{ s: "While Block A was speeding up, Block C {during}.", b: { during: { t: "text", ph: "what Block C did" } } },
+        { s: "When Block A hit the baseboard, Block C {hit}.", b: { hit: { t: "text", ph: "what Block C did then" } } },
+        { s: "Block C ended up about {cm} cm from where it started.", b: { cm: { t: "num", ans: m => m.cMoved, tol: 10 } } }] },
+    { id: 3, law: 2, title: "Race between identical blocks and forces", race: true, sim: RACE(1, 1), stems: RACE_STEMS,
+      setup: ["Block A has 1 rubber band connected to the baseboard.", "Block B has <b>one</b> of its rubber bands connected (the extra band is tucked away).", "Both blocks are pulled back the same distance, about 80 cm, and released at the same time."],
+      ask: "Which block will hit the baseboard first?", ratio: { q: "Compared with Block A, Block B’s acceleration was…", ans: "1" } },
+    { id: 4, law: 2, title: "Double the Mass, Same Force", race: true, sim: RACE(2, 1), stems: RACE_STEMS,
+      setup: ["Same rubber bands as Challenge #3 (1 band each).", "An extra block is strapped on top of Block B, so <b>Block B has 2 blocks</b> of mass.", "Both are pulled back about 80 cm and released at the same time."],
+      ask: "Which block will hit first? Why?", ratio: { q: "Block B has twice the mass with the same force. Its acceleration was…", ans: "0.5" },
+      more: { label: "MORE MASS! Race with 3 blocks on B", sim: RACE(3, 1), q: "MORE MASS! With a 3rd block on Block B, how does adding more mass affect the motion of the block?" } },
+    { id: 5, law: 2, title: "Double the Force, Same Mass", race: true, sim: RACE(1, 2), stems: RACE_STEMS,
+      setup: ["The extra blocks are removed.", "<b>Both</b> of Block B’s rubber bands are connected, so Block B has 2 bands; Block A still has 1.", "Both are pulled back about 80 cm and released at the same time."],
+      ask: "Which block will hit first?", ratio: { q: "Block B has twice the force with the same mass. Its acceleration was…", ans: "2" } },
+    { id: 6, law: 2, title: "Double the Force AND Double the Mass", race: true, sim: RACE(2, 2), stems: RACE_STEMS,
+      setup: ["Block A: 1 rubber band, 1 block.", "Block B: <b>2 rubber bands</b> and an extra block strapped on top (<b>2 blocks</b>).", "Both are pulled back about 80 cm and released at the same time."],
+      ask: "Which block will hit first? Why?", ratio: { q: "Block B has 2× the force AND 2× the mass. Its acceleration was…", ans: "1" } },
+    { id: 7, law: 3, title: "Tug of War", tug: true, sim: () => new NLB.Tug({ name: "A", blocks: 1, bands: 1 }, { name: "B", blocks: 1, bands: 1 }),
+      setup: ["The blocks are taken off the baseboard. Their rubber bands are hooked to each other with a paper clip.", "One person pulls the blocks away from each other and releases them.", "Then try it again pulling Block A farther back than Block B."],
+      ask: "When the blocks pull together, where do they meet? Does pulling one block farther back change where they meet?",
+      alt: { label: "Pull A farther than B", sim: () => new NLB.Tug({ name: "A", blocks: 1, bands: 1 }, { name: "B", blocks: 1, bands: 1 }, 0.55, 0.25) },
+      stems: [{ s: "With equal pulls, Block A moved {dA} cm and Block B moved {dB} cm, so they met {met}.", b: { dA: CM("dA"), dB: CM("dB"), met: { t: "text", ph: "where they met" } } },
+        { s: "When I pulled Block A farther, Block A moved {aA} cm and Block B moved {aB} cm, so they met {amet}.", b: { aA: CM("aA", true), aB: CM("aB", true), amet: { t: "text", ph: "where they met", alt: true } } }] },
+    { id: 8, law: 3, title: "Tug of War, More Mass", tug: true, sim: () => new NLB.Tug({ name: "A", blocks: 1, bands: 1 }, { name: "B", blocks: 2, bands: 1 }),
+      setup: ["An extra block is strapped on top of Block B (<b>2 blocks</b>). Each block has 1 rubber band.", "The blocks are pulled apart and released."],
+      ask: "Where will they meet? Which block feels the greater force?",
+      stems: [{ s: "Block A moved {dA} cm and Block B moved {dB} cm before they met.", b: { dA: CM("dA"), dB: CM("dB") } },
+        { s: "They met {met}.", b: { met: { t: "text", ph: "where they met" } } },
+        { s: "The block that moved farther was {far} because {why}.", b: { far: { t: "sel", opts: [["A", "Block A"], ["B", "Block B"], ["same", "neither"]], ans: () => "A" }, why: { t: "text", ph: "your explanation", wide: true } } }],
+      think: [{ q: "Which block felt the greater force?", opts: [["A", "Block A"], ["B", "Block B"], ["same", "The same size"]], ans: "same",
+        why: "The same stretched rubber bands pull on both blocks. One block just has more mass." }] },
+    { id: 9, law: 3, title: "Tug of War, More Force, Same Mass", tug: true, sim: () => new NLB.Tug({ name: "A", blocks: 1, bands: 1 }, { name: "B", blocks: 1, bands: 2 }),
+      setup: ["The extra block is removed from Block B.", "Block B’s <b>second</b> set of rubber bands is also connected to the paper clip (B has 2 bands, A has 1).", "The blocks are pulled apart and released."],
+      ask: "Where will they meet? How is this different from the first Tug of War? Which block feels the larger force?",
+      stems: [{ s: "Block A moved {dA} cm and Block B moved {dB} cm before they met.", b: { dA: CM("dA"), dB: CM("dB") } },
+        { s: "Compared with the first Tug of War, {cmp}.", b: { cmp: { t: "text", ph: "what was the same or different?", wide: true } } }],
+      think: [{ q: "Which block felt the larger force?", opts: [["A", "Block A"], ["B", "Block B (it has 2 bands)"], ["same", "The same size"]], ans: "same",
+        why: "The bands are joined through one paper clip, so they pull on both blocks with the same force." }] }
+  ];
+  // what the simulation actually shows, used to check the number and choice blanks
+  const measured = {};
+  function measure(c) {
+    if (measured[c.id]) return measured[c.id];
+    const sim = NLB.quick(c.sim()), m = {};
+    if (sim.type === "race") { m.tA = +sim.lanes[0].tHit.toFixed(3); m.tB = +sim.lanes[1].tHit.toFixed(3); m.win = sim.result(); }
+    if (sim.type === "ride") m.cMoved = Math.round((sim.top.xf - sim.top.x0) * 100);
+    if (sim.type === "tug") { m.dA = Math.round((sim.xMeet - sim.startA) * 100); m.dB = Math.round((sim.startB - sim.xMeet) * 100);
+      if (c.alt) { const s2 = NLB.quick(c.alt.sim()); m.aA = Math.round((s2.xMeet - s2.startA) * 100); m.aB = Math.round((s2.startB - s2.xMeet) * 100); } }
+    return (measured[c.id] = m);
+  }
+  const blanks = c => c.stems.flatMap(st => Object.entries(st.b));
+  function blankOK(c, k, d) {
+    const v = (A(c.id).bl[k] || "").trim();
+    if (d.t === "text") return v.length >= 2;
+    if (d.t === "sel") return v === d.ans(measure(c));
+    const n = Number(v.replace(",", ".").replace("−", "-")); return v !== "" && isFinite(n) && Math.abs(n - d.ans(measure(c))) <= d.tol;
+  }
+
+  // ---------- saved work ----------
+  const KEY = "nlb-online-lab-v1";
+  let S = { name: "", period: "", step: 0, a: {}, finished: null };
+  try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s && s.a) S = s; } catch (e) {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+  const A = id => (S.a[id] = S.a[id] || { pred: "", why: "", locked: false, ran: false, ranMore: false, ranAlt: false, chk: {}, bl: {}, think: {}, obs: "", ratio: "", refl: "", more: "", tried: false });
+  const long = s => (s || "").trim().length >= MIN;
+  function complete(c) {
+    const a = A(c.id);
+    a.bl = a.bl || {}; a.think = a.think || {};
+    if (!a.locked || !a.ran || !long(a.refl)) return false;
+    if (blanks(c).some(([k, d]) => !blankOK(c, k, d))) return false;
+    if (c.race && a.ratio !== c.ratio.ans) return false;
+    if (c.think && c.think.some((k, i) => a.think[i] !== k.ans)) return false;
+    if (c.more && (!a.ranMore || !long(a.more))) return false;
+    if (c.alt && !a.ranAlt) return false;
+    return true;
+  }
+  const lastOpen = () => { let i = 1; while (i <= CH.length && complete(CH[i - 1])) i++; return i; };   // 1..9, or 10 when all done
+  const introDone = () => (S.name || "").trim().length >= 2 && (S.period || "").trim().length >= 1;
+
+  // ---------- backstop close-up ----------
+  // the backstop is a plate on the back face of Block A that slides up and down.
+  // pos 1 = UP (sticks up above Block A, right behind Block C); pos 0 = DOWN (its top level with Block A's top)
+  function drawBackstop(cv, pos, showC, moving, dirUp) {
+    const d = window.devicePixelRatio || 1, r = cv.getBoundingClientRect(), W = Math.max(1, r.width), H = Math.max(1, r.height);
+    if (cv.width !== Math.round(W * d) || cv.height !== Math.round(H * d)) { cv.width = Math.round(W * d); cv.height = Math.round(H * d); }
+    const ctx = cv.getContext("2d"); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, W, H);
+    const v = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    const ink = v("--ink"), muted = v("--muted"), wood = v("--wood"), grain = v("--wood2"), band = v("--band");
+    const g = H - 22, bw = Math.min(W * 0.42, 300), bh = Math.min(bw * 0.24, (H - 70) / 2.1), bx = Math.max(60, (W - bw) / 2 - 30), by = g - bh;
+    const block = (x, y, w, h, label, tint) => { ctx.fillStyle = wood; ctx.strokeStyle = ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.roundRect(x, y, w, h, 4); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = grain; ctx.lineWidth = 1; for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(x + 6, y + h * i / 4); ctx.bezierCurveTo(x + w * .3, y + h * i / 4 - 2, x + w * .6, y + h * i / 4 + 2, x + w - 6, y + h * i / 4); ctx.stroke(); }
+      if (tint) { ctx.fillStyle = tint; ctx.globalAlpha = .18; ctx.fillRect(x, y, w, h); ctx.globalAlpha = 1; }
+      ctx.fillStyle = ink; ctx.font = "bold 16px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillText(label, x + w / 2, y + h / 2 + 6); };
+    ctx.strokeStyle = v("--table"); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, g); ctx.lineTo(W, g); ctx.stroke();
+    // rubber band loop at the front of the block
+    ctx.strokeStyle = band; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(bx + bw, by + bh * .45); ctx.quadraticCurveTo(bx + bw + 60, by + bh * .2, bx + bw + 100, by + bh * .5); ctx.quadraticCurveTo(bx + bw + 60, by + bh * .8, bx + bw, by + bh * .6); ctx.stroke();
+    ctx.fillStyle = muted; ctx.font = "13px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.textAlign = "right"; ctx.fillText("rubber band (front)", Math.min(W - 8, bx + bw + 130), g + 16);
+    ctx.textAlign = "left"; ctx.fillText("back", Math.max(4, bx - 44), g + 16);
+    block(bx, by, bw, bh, "A", v("--blockA"));
+    if (showC()) block(bx, by - bh, bw, bh, "C", v("--blockB"));          // Block C is the same size as Block A
+    // the sliding plate, on the back face of Block A
+    const pt = 9, plen = bh * 0.96, top = by + 2 - pos * (bh * 0.85), px = bx - pt;
+    ctx.fillStyle = "#3b4a52"; ctx.strokeStyle = ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.roundRect(px, top, pt, plen, 2); ctx.fill(); ctx.stroke();
+    // two guide brackets that hold the plate against Block A
+    ctx.fillStyle = "#c9d3d8"; [by + bh * 0.25, by + bh * 0.7].forEach(y => { ctx.beginPath(); ctx.roundRect(px - 4, y - 3, pt + 6, 6, 2); ctx.fill(); ctx.stroke(); });
+    if (moving) {                                     // vertical arrow showing the slide
+      const ax = px - 20, y1 = dirUp ? by + bh * 0.8 : by - bh * 0.5, y2 = dirUp ? by - bh * 0.6 : by + bh * 0.7;
+      ctx.strokeStyle = v("--hit"); ctx.fillStyle = v("--hit"); ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(ax, y1); ctx.lineTo(ax, y2 + (dirUp ? 8 : -8)); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ax, y2); ctx.lineTo(ax - 7, y2 + (dirUp ? 11 : -11)); ctx.lineTo(ax + 7, y2 + (dirUp ? 11 : -11)); ctx.closePath(); ctx.fill();
+    }
+    const up = pos > 0.5;
+    ctx.fillStyle = ink; ctx.font = "bold 15px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.textAlign = "left";
+    ctx.fillText(moving ? "sliding…" : up ? "Backstop UP" : "Backstop DOWN", 12, 22);
+    ctx.font = "13px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.fillStyle = muted;
+    if (!moving) ctx.fillText(up ? (showC() ? "It sticks up right behind Block C, so it pushes Block C along" : "It sticks up above the top of Block A")
+                                 : (showC() ? "Its top is level with Block A: nothing is behind Block C" : "Its top is level with the top of Block A"), 12, 42);
+  }
+  function backstopAnimator(cv, startUp, showC) {
+    let pos = startUp ? 1 : 0, raf = 0;
+    const draw = (moving, dirUp) => { if (cv.isConnected) drawBackstop(cv, pos, showC, moving, dirUp); };   // stop quietly once the page has changed
+    draw(false);
+    return {
+      draw: () => draw(false),
+      set: up => { cancelAnimationFrame(raf); pos = up ? 1 : 0; draw(false); },
+      go: (up, fromOther) => {
+        cancelAnimationFrame(raf); if (fromOther) pos = up ? 0 : 1;
+        const from = pos, to = up ? 1 : 0; if (from === to) { draw(false); return; }
+        const t0 = performance.now(), ease = f => f < .5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+        const tick = now => { if (!cv.isConnected) return; const f = Math.min(1, (now - t0) / 900); pos = from + (to - from) * ease(f); draw(f < 1, up); if (f < 1) raf = requestAnimationFrame(tick); };
+        raf = requestAnimationFrame(tick);
+      }
+    };
+  }
+
+  // ---------- side list ----------
+  function renderSteps() {
+    const open = lastOpen(), items = [];
+    items.push(`<li><button data-go="0" ${S.step === 0 ? 'aria-current="step"' : ""} class="${introDone() ? "done" : ""}">Start</button></li>`);
+    let law = 0;
+    CH.forEach(c => {
+      if (c.law !== law) { law = c.law; items.push(`<li class="law">${LAW[law]}</li>`); }
+      const can = introDone() && c.id <= open;
+      items.push(`<li><button data-go="${c.id}" ${S.step === c.id ? 'aria-current="step"' : ""} class="${complete(c) ? "done" : ""}" ${can ? "" : "disabled"}>#${c.id} ${esc(c.title)}</button></li>`);
+    });
+    items.push(`<li class="law">Finish</li><li><button data-go="10" ${S.step === 10 ? 'aria-current="step"' : ""} ${open > CH.length ? "" : "disabled"}>Summary &amp; turn in</button></li>`);
+    $("steps").innerHTML = items.join("");
+  }
+  $("steps").addEventListener("click", e => { const b = e.target.closest("button[data-go]"); if (!b || b.disabled) return; go(+b.dataset.go); });
+  function go(n) { S.step = n; save(); render(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+
+  // ---------- pages ----------
+  let player = null, keep = null;                    // keep: the last finished run, shown again after a redraw
+  function render() {
+    renderSteps(); if (player) { cancelAnimationFrame(player.raf); player = null; }
+    if (S.step === 0) return renderIntro();
+    if (S.step === 10) return renderFinish();
+    renderChallenge(CH[S.step - 1]);
+  }
+  function renderIntro() {
+    $("main").innerHTML = `<section class="panel card">
+      <h2>Before you start</h2>
+      <p>In the classroom version of this lab, two wooden blocks with rubber bands are launched at a baseboard. You will use a simulation of the same setup.</p>
+      <div class="grid2" style="margin:12px 0"><div><h3>Block A</h3><ul><li>1 set of rubber bands</li><li>A backstop that rotates up or down</li></ul></div>
+      <div><h3>Block B</h3><ul><li>2 sets of rubber bands</li><li>Side pegs to strap extra blocks on top</li></ul></div></div>
+      </section>
+      <section class="panel card"><h2>Meet Block A</h2>
+      <h3>Launching a block</h3>
+      <p>Block A’s rubber band is hooked to the baseboard. The block is pulled back about 80 cm, stretching the rubber band, and then let go. Try it:</p>
+      <div class="simwrap"><canvas id="demoLaunch" class="demo" role="img" aria-label="Block A being pulled back 80 cm and released"></canvas></div>
+      <div class="bar"><button class="btn" id="demoGo">Pull back and release</button><span class="hint" id="demoRes" role="status" aria-live="polite"></span></div>
+      <h3 style="margin-top:18px">The backstop</h3>
+      <p>Block A has a <b>backstop</b>: a small plate at the back of the block that slides <b>up</b> or <b>down</b>. Up, it sticks up above the top of Block A, so it can push a block sitting on top. Down, its top is level with Block A, so it’s out of the way. You will use it in Challenges #1 and #2.</p>
+      <div class="simwrap"><canvas id="demoStop" class="stopcv" role="img" aria-label="Close-up of Block A with its backstop sliding up and down"></canvas></div>
+      <div class="bar"><button class="btn ghost" id="stopUp">Slide backstop up</button><button class="btn ghost" id="stopDown">Slide backstop down</button>
+        <label class="hint"><input type="checkbox" id="stopC" checked> Put Block C on top</label></div>
+      </section>
+      <section class="panel card">
+      <h3>For each challenge</h3>
+      <ol class="setup"><li><b>Predict</b> what will happen. Your prediction locks when you run the simulation: <b>do not change your predictions!</b></li>
+      <li><b>Observe</b>: run the simulation (replay it as often as you like) and describe what actually happened.</li>
+      <li><b>Reflect</b> on any differences between your prediction and the outcome.</li></ol>
+      <p class="hint">The simulation runs in slow motion so you can see it. Each rubber band pulls with the same force, and each block has the same mass.</p>
+      <div class="grid2" style="margin-top:14px"><label class="fld">Your name<input type="text" id="nm" value="${esc(S.name)}" autocomplete="name"></label>
+      <label class="fld">Class period<input type="text" id="pd" value="${esc(S.period)}"></label></div>
+      <p class="fb bad" id="ifb"></p>
+      <div class="bar"><button class="btn" id="begin">${lastOpen() > 1 ? "Continue where I left off" : "Start Challenge #1"}</button></div></section>`;
+    // launch demo: Block A alone
+    const dp = new NLB.Player($("demoLaunch"), () => new NLB.Race([{ name: "A", blocks: 1, bands: 1 }]), {});
+    dp.onDone = sim => { $("demoRes").textContent = `Block A hit the baseboard ${sim.lanes[0].tHit.toFixed(3)} s after it was let go (shown in slow motion).`; $("demoGo").textContent = "Do it again"; };
+    $("demoGo").addEventListener("click", () => { $("demoRes").textContent = ""; dp.run(); });
+    // backstop close-up
+    const bs = backstopAnimator($("demoStop"), false, () => !$("stopC") || $("stopC").checked);
+    setTimeout(() => bs.go(true, true), 500);      // starts down, swings up
+    $("stopUp").addEventListener("click", () => bs.go(true)); $("stopDown").addEventListener("click", () => bs.go(false));
+    $("stopC").addEventListener("change", () => bs.draw());
+    $("nm").addEventListener("input", e => { S.name = e.target.value; save(); renderSteps(); });
+    $("pd").addEventListener("input", e => { S.period = e.target.value; save(); renderSteps(); });
+    $("begin").addEventListener("click", () => {
+      if ((S.name || "").trim().length < 2 || !(S.period || "").trim()) { $("ifb").textContent = "Enter your name and class period first."; return; }
+      go(Math.min(lastOpen(), CH.length));
+    });
+  }
+
+  function choiceHTML(name, opts, val, disabled, mark) {
+    return `<div class="choices" role="radiogroup">${opts.map(([v, t]) => `<label class="${mark && val === v ? (mark === v ? "right" : "wrong") : ""}"><input type="radio" name="${name}" value="${v}" ${val === v ? "checked" : ""} ${disabled ? "disabled" : ""}>${t}</label>`).join("")}</div>`;
+  }
+  function renderChallenge(c) {
+    const a = A(c.id), simShown = true;
+    let h = `<section class="panel card"><div class="lawtag">${LAW[c.law]}</div><h2>Challenge #${c.id}: ${esc(c.title)}</h2>
+      <ol class="setup">${c.setup.map(s => `<li>${s}</li>`).join("")}</ol>
+      ${c.short ? `<div class="stopwrap"><canvas id="stopCv" class="stopcv small" role="img" aria-label="Close-up of Block A with the backstop ${c.id === 1 ? "down" : "up"}"></canvas>
+        <div><p class="hint" style="margin:0 0 6px">Close-up: the backstop is <b>${c.id === 1 ? "down" : "up"}</b> for this challenge.</p><button class="btn ghost" id="stopAgain">Show it again</button></div></div>` : ""}
+      <div class="simwrap"><canvas id="cv" class="${c.short ? "short" : ""}" role="img" aria-label="Simulation of Challenge ${c.id}"></canvas></div>
+      <div class="bar"><button class="btn" id="run" ${a.locked ? "" : "disabled"}>${a.ran ? "Replay" : "Run the simulation"}</button>
+        ${c.alt ? `<button class="btn ghost" id="runAlt" ${a.ran ? "" : "disabled"}>${c.alt.label}</button>` : ""}
+        ${c.more ? `<button class="btn ghost" id="runMore" ${a.ran ? "" : "disabled"}>${c.more.label}</button>` : ""}
+        <label class="hint">Speed <select id="spd"><option value="0.0625">1/16 (very slow)</option><option value="0.125" selected>1/8 (slow motion)</option><option value="0.25">1/4</option><option value="1">real time</option></select></label>
+        ${a.locked ? "" : `<span class="locknote">Make and lock your prediction below to run it.</span>`}</div>
+      <div class="result" id="res" role="status" aria-live="polite"></div>`;
+    // prediction
+    h += `<div class="qsec ${a.locked ? "locked" : ""}"><h3>Prediction <span class="tag">${a.locked ? "locked" : "before you run anything"}</span></h3><p>${c.ask}</p>`;
+    if (c.race) h += choiceHTML("pred", ABT, a.pred, a.locked) + `<label class="hint" for="why">Why do you think so?</label>`;
+    h += `<textarea id="why" ${a.locked ? "disabled" : ""} placeholder="${c.race ? "Explain your reasoning" : "Describe what you think will happen"}">${esc(a.why)}</textarea>
+      ${a.locked ? "" : `<div class="bar"><button class="btn" id="lock">Lock in my prediction</button></div><p class="fb bad" id="pfb"></p>`}</div>`;
+    // observation and the rest, after running
+    if (a.ran) {
+      h += `<div class="qsec"><h3>Observation</h3><p class="hint">Complete each sentence with what you saw in the simulation. Numbers come from the readout under the simulation (replay it as often as you need).</p>`;
+      c.stems.forEach(st => {
+        const needAlt = Object.values(st.b).some(d => d.alt) && !a.ranAlt;
+        let bad = [];
+        const line = st.s.replace(/\{(\w+)\}/g, (_, k) => {
+          const d = st.b[k], v = a.bl[k] || "", ok = blankOK(c, k, d), mark = a.tried && !needAlt ? (ok ? " ok" : " bad") : "";
+          if (a.tried && !ok && !needAlt) bad.push(d);
+          if (d.t === "sel") return `<select class="blank${mark}" data-k="${k}" ${needAlt ? "disabled" : ""} aria-label="choose"><option value="">choose…</option>${d.opts.map(([ov, ot]) => `<option value="${ov}" ${v === ov ? "selected" : ""}>${ot}</option>`).join("")}</select>`;
+          if (d.t === "num") return `<input class="blank num${mark}" data-k="${k}" inputmode="decimal" autocomplete="off" value="${esc(v)}" ${needAlt ? "disabled" : ""} aria-label="number">`;
+          return `<input class="blank${d.wide ? " wide" : ""}${mark}" data-k="${k}" autocomplete="off" placeholder="${esc(d.ph || "")}" value="${esc(v)}" ${needAlt ? "disabled" : ""} aria-label="${esc(d.ph || "your words")}">`;
+        });
+        const msg = needAlt ? `<span class="hint">Run “${c.alt.label}” first.</span>` : bad.length ? `<span class="fb bad">${bad.some(d => d.t !== "text") ? "Check this against the simulation (the numbers are shown under it)." : "Fill in each blank in your own words."}</span>` : "";
+        h += `<p class="stem">${line}</p>${msg ? `<p class="stemfb">${msg}</p>` : ""}`;
+      });
+      h += `<div class="bar" style="margin-top:4px"><button class="btn ghost" id="chkObs">Check my observations</button></div>
+        <label for="obs" class="hint" style="display:block;margin-top:10px">Anything else you noticed? (optional)</label><textarea id="obs" style="min-height:60px">${esc(a.obs)}</textarea></div>`;
+      (c.think || []).forEach((k, i) => {
+        const v = a.think[i];
+        h += `<div class="qsec"><h3>Thinking it through</h3><p>${k.q}</p>` + choiceHTML("think" + i, k.opts, v, false, v ? k.ans : null) +
+          `<p class="fb ${v ? (v === k.ans ? "ok" : "bad") : ""}">${v ? (v === k.ans ? "Correct. " + k.why : "Not quite. " + k.why) : ""}</p></div>`;
+      });
+      if (c.race) {
+        h += `<div class="qsec"><h3>Thinking proportionally</h3><p>${c.ratio.q}</p>` + choiceHTML("ratio", RATIO, a.ratio, false, a.ratio ? c.ratio.ans : null) +
+          `<p class="fb ${a.ratio ? (a.ratio === c.ratio.ans ? "ok" : "bad") : ""}">${a.ratio ? (a.ratio === c.ratio.ans ? ratioWhy(c) : "Not quite. Think about a = F/m: how many times bigger is the force, and how many times bigger is the mass?") : ""}</p></div>`;
+      }
+      if (c.more) h += `<div class="qsec"><h3>More mass</h3><p>${c.more.q}</p>${a.ranMore ? "" : `<p class="hint">Run “${c.more.label}” first.</p>`}<textarea id="more" ${a.ranMore ? "" : "disabled"}>${esc(a.more)}</textarea></div>`;
+      h += `<div class="qsec"><h3>Reflection</h3><p>Were you surprised by the results, or was your prediction confirmed? What do you think this experiment illustrates about the way the universe works?</p>
+        <textarea id="refl">${esc(a.refl)}</textarea></div>`;
+      const ok = complete(c);
+      h += `<div class="bar"><button class="btn" id="next" ${ok ? "" : "disabled"}>${c.id < CH.length ? `Next: Challenge #${c.id + 1}` : "Finish: summary & turn in"}</button>
+        <span class="hint" id="todo">${ok ? "" : todo(c)}</span></div>`;
+    }
+    h += `</section>`;
+    $("main").innerHTML = h;
+
+    if (c.short) {                                   // backstop close-up swings into this challenge's position
+      const up = c.id === 2, an = backstopAnimator($("stopCv"), !up, () => true);
+      setTimeout(() => an.go(up), 400);
+      $("stopAgain").addEventListener("click", () => { an.set(!up); setTimeout(() => an.go(up), 250); });
+    }
+    // simulation player
+    const cv = $("cv");
+    player = new NLB.Player(cv, c.sim, { showStarts: true });
+    if (keep && keep.cid === c.id) { player.show(keep.sim); $("res").textContent = keep.msg; $("spd").value = String(keep.rate); }
+    player.rate = +$("spd").value;
+    $("spd").addEventListener("change", e => player.rate = +e.target.value);
+    const report = (sim, kind) => {
+      let t = "";
+      if (sim.type === "race") { const [x, y] = sim.lanes; t = `Block A hit at ${x.tHit.toFixed(3)} s and Block B at ${y.tHit.toFixed(3)} s: ${sim.result() === "tie" ? "a tie!" : "Block " + sim.result() + " hit first."}`; }
+      if (sim.type === "ride") t = `Block C moved ${Math.round((sim.top.xf - sim.top.x0) * 100)} cm from where it started.`;
+      if (sim.type === "tug") { const d = sim.xMeet - sim.c0, cm = Math.abs(d * 100).toFixed(0);
+        t = (Math.abs(d) < 0.005 ? "They met right at the center tape." : `They met ${cm} cm ${d < 0 ? "left" : "right"} of the center tape.`) +
+          ` Block A moved ${((sim.xMeet - sim.startA) * 100).toFixed(0)} cm and Block B moved ${((sim.startB - sim.xMeet) * 100).toFixed(0)} cm.`; }
+      $("res").textContent = t; keep = { cid: c.id, sim, msg: t, rate: player.rate };
+      if (kind === "main" && !a.ran) { a.ran = true; save(); render(); }
+      if (kind === "more" && !a.ranMore) { a.ranMore = true; save(); renderChallenge(c); renderSteps(); }
+      if (kind === "alt" && !a.ranAlt) { a.ranAlt = true; save(); renderChallenge(c); renderSteps(); }
+    };
+    const runWith = (make, kind) => { player.reset(make); player.onDone = sim => report(sim, kind); player.run(); };
+    $("run").addEventListener("click", () => runWith(c.sim, "main"));
+    if (c.alt && $("runAlt")) $("runAlt").addEventListener("click", () => runWith(c.alt.sim, "alt"));
+    if (c.more && $("runMore")) $("runMore").addEventListener("click", () => runWith(c.more.sim, "more"));
+
+    // inputs
+    $("main").querySelectorAll("input[type=radio]").forEach(r => r.addEventListener("change", e => {
+      const n = e.target.name, v = e.target.value;
+      if (n === "pred") a.pred = v; else if (n === "ratio") a.ratio = v; else if (n.startsWith("think")) a.think[+n.slice(5)] = v;
+      save(); if (n !== "pred") { const y = window.scrollY; renderChallenge(c); renderSteps(); window.scrollTo(0, y); }
+    }));
+    const bind = (id, key) => { const el = $(id); if (el) el.addEventListener("input", e => { a[key] = e.target.value; save(); refreshNext(c); }); };
+    bind("why", "why"); bind("obs", "obs"); bind("refl", "refl"); bind("more", "more");
+    $("main").querySelectorAll(".blank").forEach(el => el.addEventListener(el.tagName === "SELECT" ? "change" : "input", e => {
+      a.bl[e.target.dataset.k] = e.target.value; save(); refreshNext(c);
+      if (a.tried) { const ok = blankOK(c, e.target.dataset.k, blanks(c).find(([k]) => k === e.target.dataset.k)[1]); e.target.classList.toggle("ok", ok); e.target.classList.toggle("bad", !ok); }
+    }));
+    if ($("chkObs")) $("chkObs").addEventListener("click", () => { a.tried = true; save(); const y = window.scrollY; renderChallenge(c); renderSteps(); window.scrollTo(0, y); });
+    if ($("lock")) $("lock").addEventListener("click", () => {
+      if (c.race && !a.pred) { $("pfb").textContent = "Choose Block A, Block B or a tie."; return; }
+      if (!long(a.why)) { $("pfb").textContent = `Write a little more (at least ${MIN} characters).`; return; }
+      a.locked = true; save(); renderChallenge(c); renderSteps();
+    });
+    if ($("next")) $("next").addEventListener("click", () => go(c.id + 1));
+  }
+  function refreshNext(c) {
+    const ok = complete(c); if ($("next")) $("next").disabled = !ok; if ($("todo")) $("todo").textContent = ok ? "" : todo(c);
+    renderSteps();
+  }
+  function todo(c) {
+    const a = A(c.id), t = [];
+    if (blanks(c).some(([k, d]) => !blankOK(c, k, d))) t.push("the observation sentences");
+    if (c.think && c.think.some((k, i) => a.think[i] !== k.ans)) t.push("the thinking question");
+    if (c.race && a.ratio !== c.ratio.ans) t.push("the proportional reasoning question");
+    if (c.alt && !a.ranAlt) t.push(`run “${c.alt.label}”`);
+    if (c.more && !a.ranMore) t.push(`run “${c.more.label}”`);
+    if (c.more && !long(a.more)) t.push("the more-mass question");
+    if (!long(a.refl)) t.push("your reflection");
+    return t.length ? "Still to do: " + t.join(", ") + "." : "";
+  }
+  function ratioWhy(c) {
+    return { 3: "Correct: same force and same mass, so the same acceleration.", 4: "Correct: 2× the mass with the same force gives ½ the acceleration (a = F/m).",
+      5: "Correct: 2× the force on the same mass gives 2× the acceleration.", 6: "Correct: 2× the force divided by 2× the mass gives the same acceleration (2F/2m = F/m)." }[c.id];
+  }
+
+  // ---------- finish ----------
+  function renderFinish() {
+    if (!S.finished) { S.finished = new Date().toISOString(); save(); }
+    const when = new Date(S.finished);
+    $("main").innerHTML = `<section class="panel card done-hero" id="cert">
+        <div class="big" aria-hidden="true">✓</div><h2>Newton’s Law Blocks: complete</h2>
+        <p class="who">${esc(S.name)}</p><p>Period ${esc(S.period)} · finished ${when.toLocaleDateString()} at ${when.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</p>
+        <div class="donelist">${CH.map(c => `<span>#${c.id} ${esc(c.title)}</span>`).join("")}</div>
+        <div class="bar" style="justify-content:center"><button class="btn" id="pdf">Download PDF of my answers</button><button class="btn ghost" id="review">Review my answers</button></div>
+        <p class="hint">Turn in the PDF, or take a screenshot of this screen, the way your teacher asked.</p></section>
+      <section class="panel card summary"><h2>Summary: record these in your notes!</h2><p>Make sure you can identify these laws in your observations of the challenges.</p>
+        <h3>Newton’s 1st Law</h3><ul><li>An object at rest will stay at rest unless acted on by an unbalanced force (net force).</li><li>An object in motion will continue to move in a straight line at constant speed unless acted upon by an unbalanced force (net force).</li><li>To change an object’s motion, there must be an unbalanced force (net force).</li></ul>
+        <h3>Newton’s 2nd Law</h3><ul><li>If there is a net force on an object, its acceleration equals the net force divided by its mass: <b>a = F<sub>net</sub> / m</b>, or <b>F<sub>net</sub> = ma</b>.</li><li>The larger the net force, the greater the acceleration (same mass). 2× the force → 2× the acceleration.</li><li>The larger the mass, the smaller the acceleration (same force). 2× the mass → ½ the acceleration.</li></ul>
+        <h3>Newton’s 3rd Law</h3><ul><li>Forces are an interaction between two objects. Both objects feel the same size force, in opposite directions.</li><li>It’s often stated as “for every action there is an equal and opposite reaction,” but the two forces always happen together: it is one interaction.</li></ul></section>`;
+    $("pdf").addEventListener("click", makePDF);
+    $("review").addEventListener("click", () => go(1));
+  }
+
+  // ---------- PDF ----------
+  function snapshot(c) {                              // final frame of the challenge, drawn off-screen
+    const cv = document.createElement("canvas"); cv.style.cssText = "position:absolute;left:-9999px;top:0;width:640px;height:" + (c.short ? 200 : 240) + "px";
+    document.body.appendChild(cv);
+    const de = document.documentElement, prev = de.getAttribute("data-theme");
+    de.setAttribute("data-theme", "light");                      // print-friendly colours
+    const sim = NLB.quick(c.sim()); NLB.drawScene(cv, sim, { showStarts: true });
+    const out = document.createElement("canvas"); out.width = cv.width; out.height = cv.height;
+    const o = out.getContext("2d"); o.fillStyle = "#f7faf8"; o.fillRect(0, 0, out.width, out.height); o.drawImage(cv, 0, 0);
+    if (prev) de.setAttribute("data-theme", prev); else de.removeAttribute("data-theme");
+    const url = out.toDataURL("image/jpeg", 0.88); cv.remove(); return url;
+  }
+  function makePDF() {
+    const plain = s => String(s == null ? "" : s).replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/[–—]/g, "-").replace(/→/g, "->").replace(/…/g, "...").replace(/[^\x00-\xff]/g, "?");
+    if (!window.jspdf) { window.print(); return; }
+    const doc = new window.jspdf.jsPDF({ unit: "pt", format: "letter" }), W = 612, M = 54, TW = W - 2 * M;
+    let y = M;
+    const need = h => { if (y + h > 792 - M) { doc.addPage(); y = M; } };
+    const text = (t, size, bold, color) => { doc.setFont("helvetica", bold ? "bold" : "normal"); doc.setFontSize(size); doc.setTextColor(...(color || [20, 30, 35]));
+      doc.splitTextToSize(plain(t), TW).forEach(line => { need(size * 1.35); doc.text(line, M, y + size); y += size * 1.35; }); };
+    const field = (label, val) => { text(label, 10.5, true, [40, 60, 70]); text(val || "(blank)", 10.5, false); y += 4; };
+    text("ACT: Newton's Law Blocks (online lab)", 18, true); y += 2;
+    text(`Name: ${S.name}     Period: ${S.period}     Completed: ${new Date(S.finished).toLocaleString()}`, 11, false); y += 6;
+    doc.setDrawColor(180); doc.line(M, y, W - M, y); y += 12;
+    const lab = (opts, v) => (opts.find(o => o[0] === v) || [v, v || "(none)"])[1];
+    CH.forEach(c => {
+      const a = A(c.id);
+      need(200); text(`${LAW[c.law]} - Challenge #${c.id}: ${c.title}`, 13, true, [31, 111, 180]); y += 2;
+      try { const img = snapshot(c), h = (c.short ? 200 : 240) * TW / 640 * 0.6; need(h + 6); doc.addImage(img, "JPEG", M, y, TW * 0.6, h); y += h + 8; } catch (e) {}
+      field("Prediction:", (c.race ? lab(ABT, a.pred) + ". " : "") + a.why);
+      const sentences = c.stems.map(st => st.s.replace(/\{(\w+)\}/g, (_, k) => { const d = st.b[k], v = (a.bl || {})[k] || "____";
+        return "[" + (d.t === "sel" ? lab(d.opts, v) : v) + "]"; })).join(" ");
+      field("Observation:", sentences + (a.obs && a.obs.trim() ? " " + a.obs.trim() : ""));
+      (c.think || []).forEach((k, i) => field(k.q, lab(k.opts, (a.think || {})[i])));
+      if (c.race) field("Thinking proportionally - " + c.ratio.q, "Block B's acceleration was " + lab(RATIO, a.ratio) + " compared with Block A's.");
+      if (c.more) field(c.more.q, a.more);
+      field("Reflection:", a.refl);
+      y += 8;
+    });
+    doc.save(`Newtons-Law-Blocks-${plain(S.name).replace(/[^A-Za-z0-9]+/g, "-")}.pdf`);
+  }
+
+  if (S.step && S.step > 0 && !introDone()) S.step = 0;
+  render();
+  window.addEventListener("resize", () => { if (player) player.draw(); });
+})();
+</script>
+<!-- lock check: hides this interactive until the teacher opens it (settings in ../availability.json) -->
+<script>
+(function () {
+  var id = location.pathname.split("/").pop().replace(".html", "");
+  fetch("../availability.json?t=" + Date.now(), { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (cfg) {
+      if (!cfg || !cfg.labs || cfg.labs[id] !== false) return;
+      var teacher = false; try { teacher = localStorage.getItem("teacherPreview") === "1"; } catch (e) {}
+      var font = "font-family:'Atkinson Hyperlegible','Segoe UI',system-ui,sans-serif;";
+      if (teacher) {
+        var b = document.createElement("div");
+        b.setAttribute("role", "status");
+        b.style.cssText = font + "position:sticky;top:0;z-index:50;background:#7a3fe0;color:#fff;font-weight:700;text-align:center;padding:8px 12px;";
+        b.textContent = "Teacher preview: this interactive is locked for students.";
+        document.body.prepend(b);
+        return;
+      }
+      var o = document.createElement("div");
+      o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-labelledby", "lockTitle");
+      o.style.cssText = font + "position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:var(--bg,#eaf1ee);";
+      o.innerHTML = '<div style="max-width:520px;background:var(--panel,#fff);color:var(--ink,#15232b);border:1px solid var(--line,#c4d3cc);border-radius:12px;padding:28px;text-align:center">' +
+        '<h1 id="lockTitle" style="margin:0 0 8px;font-size:1.6rem">Not open yet</h1>' +
+        '<p style="margin:0 0 18px;line-height:1.5">This interactive opens after we do the class activity that goes with it. Check back then!</p>' +
+        '<a href="../interactives.html" style="display:inline-block;font-weight:700;padding:8px 18px;border-radius:8px;background:var(--ink,#15232b);color:var(--panel,#fff);text-decoration:none">Back to Interactives</a></div>';
+      document.body.appendChild(o);
+      document.documentElement.style.overflow = "hidden";
+      Array.prototype.forEach.call(document.body.children, function (el) { if (el !== o) el.setAttribute("aria-hidden", "true"); });
+    })
+    .catch(function () {});
+})();
+</script>
+</body>
+</html>

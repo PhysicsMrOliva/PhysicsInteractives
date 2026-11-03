@@ -8,6 +8,8 @@
     "two-part-motion": true,
     "broom-ball": true,
     "relationship-explorer": true,
-    "guess-practice": true
+    "guess-practice": true,
+    "newtons-blocks-lab": true,
+    "newtons-blocks-explorer": true
   }
 }

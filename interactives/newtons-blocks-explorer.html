@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Newton’s Law Blocks: explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+
+:root {
+  box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  --bg: #eaf1ee; --grid: #d3e0da; --panel: #ffffff; --ink: #15232b; --muted: #56666e; --line: #c4d3cc; --tint: #f3f7f5; --sky: #f7faf8;
+  --acc: #1f6fb4; --ok: #1a7f37; --okbg: #dff3e4; --bad: #b42318; --badbg: #fde7e4; --focus: #1f6fb4; --btn: #15232b; --btn-ink: #ffffff;
+  --wood: #e9cf9f; --wood2: #c9a46a; --band: #c0392b; --base: #b07a45; --table: #6b5a4a; --blockA: #1f6fb4; --blockB: #7a3fe0; --hit: #e07b00; --force: #1a7f37; --skin: #f1c69b; --skinline: #8a5a3a;
+  font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42; --tint: #1b282e; --sky: #121c21;
+  --acc: #5aa9ff; --ok: #6fd37a; --okbg: #17331f; --bad: #ff8a80; --badbg: #3d1c1a; --focus: #5aa9ff; --btn: #e5eef0; --btn-ink: #0f171b;
+  --wood: #c9a46a; --wood2: #8f6b3a; --band: #ff6b5e; --base: #9a6a3c; --table: #a08a76; --blockA: #5aa9ff; --blockB: #b28cff; --hit: #ffa53d; --force: #6fd37a; --skin: #e0b088; --skinline: #f1d3b8; } }
+:root[data-theme="dark"] {
+  --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42; --tint: #1b282e; --sky: #121c21;
+  --acc: #5aa9ff; --ok: #6fd37a; --okbg: #17331f; --bad: #ff8a80; --badbg: #3d1c1a; --focus: #5aa9ff; --btn: #e5eef0; --btn-ink: #0f171b;
+  --wood: #c9a46a; --wood2: #8f6b3a; --band: #ff6b5e; --base: #9a6a3c; --table: #a08a76; --blockA: #5aa9ff; --blockB: #b28cff; --hit: #ffa53d; --force: #6fd37a; --skin: #e0b088; --skinline: #f1d3b8; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+*, *::before, *::after { box-sizing: inherit; }
+body { margin: 0; color: var(--ink); background-color: var(--bg); line-height: 1.5;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 24px 24px; }
+header { max-width: 1180px; margin: 0 auto; padding: 28px 20px 8px; }
+h1 { font-size: clamp(1.6rem, 3.4vw, 2.4rem); margin: 0 0 4px; letter-spacing: -0.01em; }
+header .back { display: inline-block; margin-bottom: 10px; color: var(--ink); font-weight: 700; }
+header p { margin: 0; color: var(--muted); max-width: 86ch; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+
+main { max-width: 1180px; margin: 0 auto; padding: 12px 20px 48px; display: grid; gap: 14px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 0; border: 1.5px solid var(--line); border-radius: 10px; overflow: hidden; width: fit-content; background: var(--panel); }
+.tabs button { font: inherit; font-weight: 700; border: 0; background: transparent; color: var(--muted); padding: 10px 18px; cursor: pointer; }
+.tabs button + button { border-left: 1.5px solid var(--line); }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--panel); }
+.card { padding: 16px 18px; }
+h2 { margin: 0 0 6px; font-size: 1.3rem; }
+h3 { margin: 0 0 6px; font-size: 1.05rem; }
+.lead { color: var(--muted); margin: 0 0 12px; }
+.cfg { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 700px) { .cfg { grid-template-columns: 1fr; } }
+.blockcfg { border: 2px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+.blockcfg.A { border-color: var(--blockA); } .blockcfg.B { border-color: var(--blockB); }
+.blockcfg h3.A { color: var(--blockA); } .blockcfg h3.B { color: var(--blockB); }
+.stepper { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+.stepper .lab { width: 140px; font-weight: 700; }
+.stepper button { font: inherit; font-weight: 700; width: 38px; height: 38px; border-radius: 8px; border: 2px solid var(--ink); background: transparent; color: var(--ink); cursor: pointer; font-size: 1.2rem; line-height: 1; }
+.stepper button:disabled { opacity: 0.3; cursor: default; }
+.stepper output { min-width: 28px; text-align: center; font-size: 1.25rem; font-weight: 700; }
+canvas.sim { width: 100%; height: 300px; display: block; background: var(--sky); border-radius: 8px; border: 1px solid var(--line); }
+canvas.sim.tug { height: 240px; }
+canvas.sim.mini { height: 210px; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+button.btn { font: inherit; font-weight: 700; border: 2px solid var(--btn); background: var(--btn); color: var(--btn-ink); border-radius: 8px; padding: 7px 16px; cursor: pointer; }
+button.btn.ghost { background: transparent; color: var(--ink); }
+button.btn:disabled { opacity: 0.4; cursor: default; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+select { font: inherit; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+.choices { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+.choices label { display: inline-flex; gap: 8px; align-items: center; border: 1.5px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+.choices label.right { border-color: var(--ok); background: var(--okbg); }
+.choices label.wrong { border-color: var(--bad); background: var(--badbg); }
+.choices input { width: 18px; height: 18px; }
+.hint { color: var(--muted); font-size: 0.93rem; }
+.fb { font-weight: 700; margin: 6px 0 0; min-height: 1.3em; }
+.fb.ok { color: var(--ok); } .fb.bad { color: var(--bad); }
+table.res { border-collapse: collapse; margin-top: 10px; min-width: min(560px, 100%); }
+table.res th, table.res td { padding: 6px 12px; border-bottom: 1px solid var(--line); text-align: center; font-variant-numeric: tabular-nums; }
+table.res th:first-child, table.res td:first-child { text-align: left; }
+table.res td.A { color: var(--blockA); font-weight: 700; } table.res td.B { color: var(--blockB); font-weight: 700; }
+.barsviz { display: grid; grid-template-columns: 80px 1fr; gap: 6px 10px; align-items: center; margin-top: 12px; max-width: 620px; }
+.barsviz .b { height: 18px; border-radius: 4px; }
+.barsviz .b.A { background: var(--blockA); } .barsviz .b.B { background: var(--blockB); }
+.explain { background: var(--tint); border-left: 4px solid var(--acc); padding: 10px 14px; border-radius: 0 8px 8px 0; margin-top: 12px; line-height: 1.6; }
+.explain:empty { display: none; }
+.qhead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline; }
+.score { font-weight: 700; color: var(--acc); }
+.cfgline { font-size: 1.05rem; margin: 4px 0 10px; }
+.cfgline b.A { color: var(--blockA); } .cfgline b.B { color: var(--blockB); }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../interactives.html">Back to Interactives</a>
+  <h1>Newton’s Law Blocks: explorer</h1>
+  <p>Follow-up to the Newton’s Law Blocks lab. Every rubber band pulls with the same force and every block has the same mass, so you can reason with ratios: <b>a = F / m</b>. Two bands → 2× the force. Two blocks → 2× the mass.</p>
+</header>
+<main>
+  <div class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" id="t-race" aria-selected="true" aria-controls="p-race">Race Lab</button>
+    <button role="tab" id="t-quiz" aria-selected="false" aria-controls="p-quiz">Check Your Understanding</button>
+    <button role="tab" id="t-tug" aria-selected="false" aria-controls="p-tug">Tug of War</button>
+  </div>
+
+  <!-- ===== Race lab ===== -->
+  <section class="panel card" id="p-race" role="tabpanel" aria-labelledby="t-race">
+    <h2>Race Lab</h2>
+    <p class="lead">Set up each block, predict, then race them to the baseboard. Both are pulled back the same distance and released together.</p>
+    <div class="cfg">
+      <div class="blockcfg A"><h3 class="A">Block A</h3><div id="cfgA"></div></div>
+      <div class="blockcfg B"><h3 class="B">Block B</h3><div id="cfgB"></div></div>
+    </div>
+    <p style="margin:14px 0 2px"><b>Your prediction:</b> which block hits first? <span class="hint">(optional)</span></p>
+    <div class="choices" id="rPred"></div>
+    <canvas class="sim" id="rcv" role="img" aria-label="Race simulation"></canvas>
+    <div class="bar"><button class="btn" id="rRun">Race!</button>
+      <label class="hint">Speed <select id="rSpd"><option value="0.0625">1/16</option><option value="0.125" selected>1/8 (slow motion)</option><option value="0.25">1/4</option><option value="1">real time</option></select></label></div>
+    <p class="fb" id="rFb" role="status" aria-live="polite"></p>
+    <div id="rOut"></div>
+  </section>
+
+  <!-- ===== Quiz ===== -->
+  <section class="panel card hidden" id="p-quiz" role="tabpanel" aria-labelledby="t-quiz">
+    <div class="qhead"><h2>Check Your Understanding</h2><span class="score" id="qScore"></span></div>
+    <p class="lead">For each setup, predict which block hits first and how Block B’s acceleration compares with Block A’s. Then race them to check.</p>
+    <div id="quiz"></div>
+  </section>
+
+  <!-- ===== Tug of war ===== -->
+  <section class="panel card hidden" id="p-tug" role="tabpanel" aria-labelledby="t-tug">
+    <h2>Tug of War</h2>
+    <p class="lead">The rubber bands are joined by a paper clip, the blocks are pulled apart and released. Where do they meet, and which block feels the bigger force?</p>
+    <div class="cfg">
+      <div class="blockcfg A"><h3 class="A">Block A</h3><div id="tcfgA"></div></div>
+      <div class="blockcfg B"><h3 class="B">Block B</h3><div id="tcfgB"></div></div>
+    </div>
+    <div class="bar"><label class="hint">Pull back <select id="tPull"><option value="eq">both the same distance</option><option value="A">Block A farther</option><option value="B">Block B farther</option></select></label>
+      <label class="hint"><input type="checkbox" id="tForces" checked> Show the forces</label></div>
+    <p style="margin:12px 0 2px"><b>Your prediction:</b> where will they meet? <span class="hint">(optional)</span></p>
+    <div class="choices" id="tPred"></div>
+    <canvas class="sim tug" id="tcv" role="img" aria-label="Tug of war simulation"></canvas>
+    <div class="bar"><button class="btn" id="tRun">Release!</button>
+      <label class="hint">Speed <select id="tSpd"><option value="0.0625">1/16</option><option value="0.125" selected>1/8 (slow motion)</option><option value="0.25">1/4</option><option value="1">real time</option></select></label></div>
+    <p class="fb" id="tFb" role="status" aria-live="polite"></p>
+    <div class="explain" id="tOut"></div>
+  </section>
+</main>
+
+<script>
+/* ===== Newton's Law Blocks: shared simulation (side view) =====
+   Units: metres, seconds, kilograms. Each rubber band pulls like a spring (k per band) until it goes slack.
+   One "block" has mass M. Two bands = 2× force, two blocks = 2× mass, so a ∝ (bands)/(blocks). */
+const NLB = (() => {
+  const K = 20, M = 0.5, L0 = 0.25, PULL = 0.80, BX = 1.25, BBW = 0.07, BL = 0.20, BH = 0.07, G = 9.81;
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#888";
+
+  // ---------- race: lanes race toward the baseboard ----------
+  function Race(lanes) {
+    this.type = "race"; this.t = 0; this.xr = [-0.3, 1.42];
+    this.lanes = lanes.map(l => ({ ...l, xf: BX - L0 - PULL, x0: BX - L0 - PULL, v: 0, hit: false, tHit: null, vHit: 0 }));
+  }
+  // e = 0: resting with the bands just straight; e = 1: pulled back 80 cm, ready to release
+  Race.prototype.setPull = function (e) { this.lanes.forEach(l => { l.xf = (BX - L0) + (l.x0 - (BX - L0)) * e; }); };
+  Race.prototype.hands = function () { return this.lanes.map((l, i) => ({ lane: i, x: l.xf - BL, dir: 1, rest: BX - L0, front: l.xf })); };
+  Race.prototype.step = function (dt) {
+    this.t += dt;
+    this.lanes.forEach(l => {
+      if (l.hit) return;
+      const s = BX - l.xf - L0, F = s > 0 ? l.bands * K * s : 0;
+      l.v += F / (l.blocks * M) * dt; l.xf += l.v * dt;
+      if (l.xf >= BX) { l.xf = BX; l.vHit = l.v; l.v = 0; l.hit = true; l.tHit = this.t; }
+    });
+  };
+  Race.prototype.done = function () { return this.lanes.every(l => l.hit); };
+  Race.prototype.result = function () {
+    const [a, b] = this.lanes; if (!b) return null;
+    const d = a.tHit - b.tHit; return Math.abs(d) < 0.002 ? "tie" : d < 0 ? "A" : "B";
+  };
+
+  // ---------- ride along / backstop: one lane with a loose block on top ----------
+  function Ride(backstop) {
+    this.type = "ride"; this.t = 0; this.xr = [-0.3, 2.15]; this.backstop = backstop;
+    this.A = { xf: BX - L0 - PULL, v: 0, hit: false };
+    this.top = { xf: BX - L0 - PULL, y: BH, v: 0, vy: 0, state: backstop ? "riding" : "sliding" };
+    this.mu = 0.25; this.muTable = 0.9; this.A.x0 = this.A.xf; this.top.x0 = this.top.xf;
+  }
+  Ride.prototype.setPull = function (e) { this.A.xf = (BX - L0) + (this.A.x0 - (BX - L0)) * e; this.top.xf = this.A.xf; };
+  Ride.prototype.hands = function () { return [{ lane: 0, x: this.A.xf - BL, dir: 1, rest: BX - L0, front: this.A.xf }]; };
+  Ride.prototype.step = function (dt) {
+    this.t += dt; const A = this.A, T = this.top;
+    if (!A.hit) {
+      const s = BX - A.xf - L0, F = s > 0 ? K * s : 0, m = M + (T.state === "riding" ? M : 0);
+      A.v += F / m * dt; A.xf += A.v * dt;
+      if (A.xf >= BX) { A.xf = BX; A.hit = true; if (T.state === "riding") T.state = "sliding"; A.v = 0; }
+    }
+    if (T.state === "riding") { T.xf = A.xf; T.v = A.v; return; }
+    if (T.state === "sliding") {               // friction from block A (or the baseboard top) acts toward A's velocity
+      const support = (T.xf - BL / 2 >= A.xf - BL && T.xf - BL / 2 <= A.xf) || (T.xf - BL / 2 >= BX && T.xf - BL / 2 <= BX + BBW);
+      if (!support) { T.state = "falling"; return; }
+      const rel = A.v - T.v, onBase = T.xf - BL / 2 > A.xf;
+      const target = onBase || A.hit ? 0 : A.v;
+      const dv = this.mu * G * dt;
+      if (Math.abs(target - T.v) <= dv) T.v = target; else T.v += Math.sign(target - T.v) * dv;
+      void rel; T.xf += T.v * dt;
+      if (A.hit && T.v === 0 && T.xf - BL / 2 <= A.xf) T.state = "resting";
+    } else if (T.state === "falling") {
+      T.vy -= G * dt; T.y += T.vy * dt; T.xf += T.v * dt;
+      const floor = (T.xf - BL / 2 >= A.xf - BL && T.xf - BL / 2 <= A.xf) ? BH : 0;
+      if (T.y <= floor) { T.y = floor; T.vy = 0; T.state = floor ? "sliding" : "table"; }
+    } else if (T.state === "table") {
+      const dv = this.muTable * G * dt; T.v = Math.abs(T.v) <= dv ? 0 : T.v - Math.sign(T.v) * dv; T.xf += T.v * dt;
+      if (T.xf > this.xr[1] - 0.02) { T.xf = this.xr[1] - 0.02; T.v = 0; }
+      if (T.v === 0) T.state = "stopped";
+    }
+  };
+  Ride.prototype.done = function () { return this.A.hit && (this.top.state === "stopped" || this.top.state === "resting" || this.t > 3); };
+
+  // ---------- tug of war: blocks joined through a paper clip ----------
+  function Tug(A, B, pullA, pullB) {
+    this.type = "tug"; this.t = 0; this.xr = [-0.36, 1.96]; this.c0 = 0.8;
+    pullA = pullA == null ? PULL / 2 : pullA; pullB = pullB == null ? PULL / 2 : pullB;
+    this.A = { ...A, xf: this.c0 - L0 - pullA, v: 0 }; this.B = { ...B, xf: this.c0 + L0 + pullB, v: 0 };
+    this.met = false; this.xMeet = null; this.T = 0;
+    this.com = ((this.A.xf - BL / 2) * A.blocks + (this.B.xf + BL / 2) * B.blocks) / (A.blocks + B.blocks);
+    this.startA = this.A.xf; this.startB = this.B.xf;
+  }
+  Tug.prototype.setPull = function (e) { this.A.xf = (this.c0 - L0) + (this.startA - (this.c0 - L0)) * e; this.B.xf = (this.c0 + L0) + (this.startB - (this.c0 + L0)) * e; };
+  Tug.prototype.hands = function () { return [{ lane: 0, x: this.A.xf - BL, dir: 1, rest: this.c0 - L0, front: this.A.xf }, { lane: 0, x: this.B.xf + BL, dir: -1, rest: this.c0 + L0, front: this.B.xf }]; };
+  Tug.prototype.step = function (dt) {
+    if (this.met) return; this.t += dt;
+    const A = this.A, B = this.B, kA = A.bands * K, kB = B.bands * K, S = (B.xf - A.xf) - 2 * L0;
+    this.T = S > 0 ? S * kA * kB / (kA + kB) : 0;
+    A.v += this.T / (A.blocks * M) * dt; B.v -= this.T / (B.blocks * M) * dt;
+    A.xf += A.v * dt; B.xf += B.v * dt;
+    if (A.xf >= B.xf) {                          // they collide and stop together
+      const mid = (A.xf * A.blocks + B.xf * B.blocks) / (A.blocks + B.blocks);
+      A.xf = B.xf = mid; A.v = B.v = 0; this.met = true; this.xMeet = mid; this.tMeet = this.t;
+    }
+  };
+  Tug.prototype.done = function () { return this.met; };
+  Tug.prototype.stretch = function () { return (this.B.xf - this.A.xf) - 2 * L0; };
+  Tug.prototype.clip = function () {                 // the paper clip sits where the two sides' pulls balance
+    const A = this.A, B = this.B, kA = A.bands * K, kB = B.bands * K, S = this.stretch();
+    return S > 0 ? A.xf + L0 + S * kB / (kA + kB) : (A.xf + B.xf) / 2;
+  };
+
+  // ---------- drawing ----------
+  function drawScene(cv, sim, opt) {
+    opt = opt || {};
+    const d = window.devicePixelRatio || 1, r = cv.getBoundingClientRect();
+    const W = Math.max(1, r.width), H = Math.max(1, r.height);
+    if (cv.width !== Math.round(W * d) || cv.height !== Math.round(H * d)) { cv.width = Math.round(W * d); cv.height = Math.round(H * d); }
+    const ctx = cv.getContext("2d"); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, W, H);
+    const C = { ink: css("--ink"), muted: css("--muted"), line: css("--line"), wood: css("--wood"), wood2: css("--wood2"), band: css("--band"),
+      base: css("--base"), table: css("--table"), A: css("--blockA"), B: css("--blockB"), hit: css("--hit"), force: css("--force") };
+    const [x0, x1] = sim.xr, padL = 16, padR = 16, k = (W - padL - padR) / (x1 - x0), X = x => padL + (x - x0) * k;
+    ctx.font = "13px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    const lanes = sim.type === "race" ? sim.lanes.length : 1, laneH = H / lanes;
+    const bh = Math.min(BH * k, laneH * 0.16), blockW = BL * k;
+
+    function woodBlock(x, y, w, h, tint, label) {
+      ctx.fillStyle = C.wood; ctx.strokeStyle = C.ink; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.roundRect(x, y, w, h, 3); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = C.wood2; ctx.lineWidth = 1;
+      for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(x + 4, y + h * i / 4); ctx.bezierCurveTo(x + w * 0.3, y + h * i / 4 - 2, x + w * 0.6, y + h * i / 4 + 2, x + w - 4, y + h * i / 4); ctx.stroke(); }
+      if (tint) { ctx.fillStyle = tint; ctx.globalAlpha = 0.18; ctx.fillRect(x, y, w, h); ctx.globalAlpha = 1; }
+      if (label) { ctx.fillStyle = C.ink; ctx.font = "bold 13px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillText(label, x + w / 2, y + h / 2 + 5); ctx.font = "13px 'Atkinson Hyperlegible', system-ui, sans-serif"; }
+    }
+    function stack(xf, ground, blocks, tint, label, dir) {     // dir 1: front on the right
+      const xl = dir > 0 ? X(xf) - blockW : X(xf);
+      for (let i = 0; i < blocks; i++) woodBlock(xl, ground - bh * (i + 1), blockW, bh, tint, i === 0 ? label : "");
+      if (blocks > 1) { ctx.strokeStyle = C.band; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(xl + blockW * 0.5, ground - bh * blocks); ctx.lineTo(xl + blockW * 0.5, ground - 2); ctx.stroke(); }
+      return xl;
+    }
+    function bands(xa, xb, y, n, taut) {                      // n parallel rubber bands from xa to xb (px)
+      ctx.strokeStyle = C.band; ctx.lineWidth = 2.4; ctx.lineCap = "round";
+      for (let i = 0; i < n; i++) {
+        const dy = (i - (n - 1) / 2) * 4;
+        ctx.beginPath(); ctx.moveTo(xa, y + dy);
+        if (taut) ctx.lineTo(xb, y + dy);
+        else { const sag = Math.max(6, (Math.abs(xb - xa) * 0.25)); ctx.quadraticCurveTo((xa + xb) / 2, y + dy + sag, xb, y + dy); }
+        ctx.stroke();
+      }
+    }
+    function baseboard(ground) {
+      ctx.fillStyle = C.base; ctx.strokeStyle = C.ink; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.roundRect(X(BX), ground - bh, BBW * k, bh, 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(X(BX) + BBW * k * 0.5, ground - bh * 0.5, 2.5, 0, 7); ctx.fill();
+    }
+    function table(ground, xa, xb) { ctx.strokeStyle = C.table; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(xa, ground); ctx.lineTo(xb, ground); ctx.stroke(); }
+
+    if (sim.type === "race") {
+      sim.lanes.forEach((l, i) => {
+        const g = laneH * (i + 1) - 18;
+        table(g, 0, W); baseboard(g);
+        const anchor = X(BX), front = X(l.xf), taut = BX - l.xf - L0 > 0;
+        bands(front, anchor, g - bh * 0.5, l.bands, taut);
+        stack(l.xf, g, l.blocks, l.name === "A" ? C.A : C.B, "", 1);
+        ctx.fillStyle = l.name === "A" ? C.A : C.B; ctx.font = "bold 15px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.textAlign = "left";
+        ctx.fillText(`Block ${l.name}`, 10, laneH * i + 20);
+        ctx.font = "13px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.fillStyle = C.muted;
+        ctx.fillText(`${l.blocks} block${l.blocks > 1 ? "s" : ""} · ${l.bands} rubber band${l.bands > 1 ? "s" : ""}`, 82, laneH * i + 20);
+        if (l.hit) {
+          ctx.strokeStyle = C.hit; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(X(BX), g - bh * 0.5, 16, 0, 7); ctx.stroke();
+          ctx.fillStyle = C.hit; ctx.textAlign = "right"; ctx.font = "bold 13px 'Atkinson Hyperlegible', system-ui, sans-serif";
+          ctx.fillText(`hit at ${l.tHit.toFixed(3)} s`, X(BX) - 22, laneH * i + 20);
+        }
+        if (opt.showStart) { ctx.setLineDash([4, 4]); ctx.strokeStyle = C.muted; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(BX - L0 - PULL), g - bh * 2.5); ctx.lineTo(X(BX - L0 - PULL), g + 4); ctx.stroke(); ctx.setLineDash([]); }
+      });
+      if (sim.lanes.length > 1) { ctx.strokeStyle = C.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, laneH); ctx.lineTo(W, laneH); ctx.stroke(); }
+    }
+    if (sim.type === "ride") {
+      const g = H - 26, A = sim.A, T = sim.top;
+      table(g, 0, W); baseboard(g);
+      bands(X(A.xf), X(BX), g - bh * 0.5, 1, BX - A.xf - L0 > 0);
+      const xl = stack(A.xf, g, 1, C.A, "A", 1);
+      // backstop at the back of block A
+      ctx.fillStyle = C.ink;
+      ctx.fillStyle = "#3b4a52";
+      if (sim.backstop) ctx.fillRect(xl - 5, g - bh * 1.85, 5, bh * 0.96); else ctx.fillRect(xl - 5, g - bh * 0.98, 5, bh * 0.96);
+      // the loose block on top
+      const tx = X(T.xf) - blockW, ty = g - T.y * (bh / BH) - bh;
+      woodBlock(tx, ty, blockW, bh, C.B, "C");
+      ctx.fillStyle = C.muted; ctx.textAlign = "left"; ctx.fillText(sim.backstop ? "Backstop UP" : "Backstop DOWN", 10, 20);
+    }
+    if (sim.type === "tug") {
+      const g = H - 30, A = sim.A, B = sim.B;
+      table(g, 0, W);
+      ctx.setLineDash([3, 4]); ctx.strokeStyle = C.muted; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(sim.c0), g + 2); ctx.lineTo(X(sim.c0), g + 14); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = C.muted; ctx.textAlign = "center"; ctx.fillText("center tape", X(sim.c0), g + 26);
+      const c = sim.clip(), taut = sim.stretch() > 0;
+      bands(X(A.xf), X(c), g - bh * 0.5, A.bands, taut); bands(X(c), X(B.xf), g - bh * 0.5, B.bands, taut);
+      ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(X(c) - 4, g - bh * 0.5 - 4, 8, 8);
+      stack(A.xf, g, A.blocks, C.A, "A", 1); stack(B.xf, g, B.blocks, C.B, "B", -1);
+      if (opt.showForces && sim.T > 0) {
+        const f = Math.min(80, 6 + sim.T * 1.4);
+        arrow(ctx, X(A.xf) - blockW / 2, g - bh * (A.blocks + 0.6), X(A.xf) - blockW / 2 + f, g - bh * (A.blocks + 0.6), C.force);
+        arrow(ctx, X(B.xf) + blockW / 2, g - bh * (B.blocks + 0.6), X(B.xf) + blockW / 2 - f, g - bh * (B.blocks + 0.6), C.force);
+      }
+      if (sim.met) {
+        ctx.strokeStyle = C.hit; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X(sim.xMeet), 30); ctx.lineTo(X(sim.xMeet), g); ctx.stroke();
+        ctx.fillStyle = C.hit; ctx.textAlign = "center"; ctx.font = "bold 13px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.fillText("they meet here", X(sim.xMeet), 22);
+        if (opt.showStarts) {
+          ctx.setLineDash([4, 4]); ctx.strokeStyle = C.muted; ctx.lineWidth = 1;
+          [sim.startA, sim.startB].forEach(x => { ctx.beginPath(); ctx.moveTo(X(x), g - bh * 3); ctx.lineTo(X(x), g); ctx.stroke(); });
+          ctx.setLineDash([]);
+          ctx.font = "12px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.fillStyle = C.muted;
+          ctx.fillText(`A moved ${((sim.xMeet - sim.startA) * 100).toFixed(0)} cm`, (X(sim.startA) + X(sim.xMeet)) / 2, g - bh * 3.3);
+          ctx.fillText(`B moved ${((sim.startB - sim.xMeet) * 100).toFixed(0)} cm`, (X(sim.startB) + X(sim.xMeet)) / 2, g - bh * 3.3);
+        }
+      }
+    }
+    if (opt.hand && sim.hands) {
+      const hd = opt.hand, s = Math.max(0.55, Math.min(1.2, bh / 22));
+      sim.hands().forEach(hh => {
+        const g = sim.type === "race" ? laneH * (hh.lane + 1) - 18 : sim.type === "ride" ? H - 26 : H - 30;
+        if (!hd.open && hd.dim) {                     // how far the block has been pulled back
+          const xa = X(hh.rest), xb = X(hh.front), yy = g - bh * (sim.type === "race" ? 1.6 : 2.6) - (sim.type === "tug" ? 6 : 0);
+          const cm = Math.round(Math.abs(hh.rest - hh.front) * 100);
+          if (cm > 1) {
+            ctx.strokeStyle = C.muted; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(xa, yy); ctx.lineTo(xb, yy);
+            ctx.moveTo(xa, yy - 5); ctx.lineTo(xa, yy + 5); ctx.moveTo(xb, yy - 5); ctx.lineTo(xb, yy + 5); ctx.stroke();
+            ctx.fillStyle = C.ink; ctx.textAlign = "center"; ctx.font = "bold 13px 'Atkinson Hyperlegible', system-ui, sans-serif";
+            ctx.fillText(`${cm} cm`, (xa + xb) / 2, yy - 6);
+          }
+        }
+        drawHand(ctx, X(hh.x) - hh.dir * hd.retreat, g - bh * 0.5, s, hh.dir, hd.open, hd.alpha);
+        if (hd.say) { ctx.fillStyle = C.hit; ctx.textAlign = "center"; ctx.font = "bold 14px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.fillText(hd.say, X(hh.x) - hh.dir * 58 * s, g - bh * 0.5 - 16 * s); }
+      });
+    }
+    ctx.fillStyle = C.muted; ctx.textAlign = "right"; ctx.font = "12px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    ctx.fillText(opt.hand && opt.hand.pulling ? "pulling back…" : `t = ${sim.t.toFixed(3)} s`, W - 10, 16);
+  }
+  // a simple hand: forearm, palm and fingers gripping the back face of a block (dir 1: hand on the left)
+  function drawHand(ctx, x, y, s, dir, open, alpha) {
+    const rr = (x0, y0, w, h, r) => { ctx.beginPath(); ctx.roundRect(x0 * s, y0 * s, w * s, h * s, r * s); ctx.fill(); ctx.stroke(); };
+    ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1); ctx.globalAlpha = alpha;
+    ctx.fillStyle = css("--skin"); ctx.strokeStyle = css("--skinline"); ctx.lineWidth = 1.3;
+    rr(-78, -8, 52, 16, 6);                         // forearm
+    rr(-34, -14, 28, 28, 9);                        // palm
+    if (!open) { for (let i = 0; i < 4; i++) rr(-10, -13 + i * 6.6, 16, 5.8, 2.9); rr(-26, -21, 20, 8, 4); }        // fingers wrapped onto the block, thumb on top
+    else { for (let i = 0; i < 4; i++) rr(-12 - i * 1.5, -17 + i * 9, 13, 6, 3); rr(-30, -26, 9, 16, 4.5); }       // open hand letting go
+    ctx.restore();
+  }
+  function arrow(ctx, x1, y1, x2, y2, c) {
+    const a = Math.atan2(y2 - y1, x2 - x1), h = 9; ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2 - Math.cos(a) * 6, y2 - Math.sin(a) * 6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x2 - h * Math.cos(a - 0.45), y2 - h * Math.sin(a - 0.45)); ctx.lineTo(x2 - h * Math.cos(a + 0.45), y2 - h * Math.sin(a + 0.45)); ctx.closePath(); ctx.fill();
+  }
+
+  // ---------- a player: runs a sim in slow motion on a canvas ----------
+  function Player(cv, make, opt) {
+    this.cv = cv; this.make = make; this.opt = opt || {}; this.rate = 0.125; this.running = false; this.onDone = null; this.raf = 0;
+    this.sim = make(); this.ready();
+  }
+  // resting position, hand on the block(s), ready to pull back
+  Player.prototype.ready = function () { if (this.sim.setPull) { this.sim.setPull(0); this.opt.hand = { open: false, retreat: 0, alpha: 1, dim: true }; } this.draw(); };
+  Player.prototype.show = function (sim) { cancelAnimationFrame(this.raf); this.running = false; this.sim = sim; this.opt.hand = null; this.draw(); };
+  Player.prototype.draw = function () { drawScene(this.cv, this.sim, this.opt); };
+  Player.prototype.reset = function (make) { if (make) this.make = make; cancelAnimationFrame(this.raf); this.running = false; this.sim = this.make(); this.ready(); };
+  Player.prototype.run = function () {
+    this.reset(); this.running = true;
+    const PULL_MS = 1200, HOLD_MS = 450, LET_GO_MS = 600, ease = f => f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+    const t0 = performance.now(), canPull = !!this.sim.setPull; let last = 0, released = 0;
+    const tick = now => {
+      const el = now - t0;
+      if (canPull && el < PULL_MS) {                                          // 1. the hand pulls the block(s) back 80 cm
+        this.sim.setPull(ease(el / PULL_MS)); this.opt.hand = { open: false, retreat: 0, alpha: 1, dim: true, pulling: true }; this.draw();
+        this.raf = requestAnimationFrame(tick); return;
+      }
+      if (canPull && el < PULL_MS + HOLD_MS) {                                // 2. hold it there for a moment
+        this.sim.setPull(1); this.opt.hand = { open: false, retreat: 0, alpha: 1, dim: true, pulling: true, say: "Release!" }; this.draw();
+        this.raf = requestAnimationFrame(tick); return;
+      }
+      if (!released) { released = now; last = now; }                          // 3. let go and run the physics
+      const g = Math.min(1, (now - released) / LET_GO_MS);
+      this.opt.hand = canPull && g < 1 ? { open: true, retreat: 46 * g, alpha: 1 - g, dim: false } : null;
+      const dt = Math.min(0.05, (now - last) / 1000) * this.rate; last = now;
+      const n = Math.max(1, Math.ceil(dt / 0.0004)); for (let i = 0; i < n; i++) this.sim.step(dt / n);
+      this.draw();
+      if (this.sim.done() && !this.opt.hand) { this.running = false; if (this.onDone) this.onDone(this.sim); return; }
+      this.raf = requestAnimationFrame(tick);
+    };
+    this.raf = requestAnimationFrame(tick);
+  };
+  // run a sim instantly (no animation) to get its outcome
+  function quick(sim) { let i = 0; while (!sim.done() && i++ < 200000) sim.step(0.0004); return sim; }
+
+  return { Race, Ride, Tug, Player, quick, drawScene, consts: { K, M, L0, PULL } };
+})();
+
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const gcd = (a, b) => b ? gcd(b, a % b) : a;
+  const frac = (n, d) => { const g = gcd(n, d); n /= g; d /= g; return d === 1 ? String(n) : `${n}/${d}`; };
+  const fracHTML = (n, d) => { const g = gcd(n, d); n /= g; d /= g; return d === 1 ? String(n) : `<sup>${n}</sup>⁄<sub>${d}</sub>`; };
+  const ABT = [["A", "Block A"], ["B", "Block B"], ["tie", "It’s a tie!"]];
+  const choices = (box, name, opts, val, mark, disabled) => { $(box).innerHTML = opts.map(([v, t]) =>
+    `<label class="${mark && val === v ? (mark === v ? "right" : "wrong") : ""}"><input type="radio" name="${name}" value="${v}" ${val === v ? "checked" : ""} ${disabled ? "disabled" : ""}> ${t}</label>`).join(""); };
+
+  // ---------- tabs ----------
+  document.querySelector(".tabs").addEventListener("click", e => {
+    const b = e.target.closest("[role=tab]"); if (!b) return;
+    document.querySelectorAll("[role=tab]").forEach(t => { const on = t === b; t.setAttribute("aria-selected", String(on)); $(t.getAttribute("aria-controls")).classList.toggle("hidden", !on); });
+    if (b.id === "t-quiz" && !Q.items) newQuiz();
+    redrawAll();
+  });
+
+  // ---------- steppers ----------
+  function stepper(box, cfg, key, label, onChange) {
+    const el = document.createElement("div"); el.className = "stepper";
+    el.innerHTML = `<span class="lab">${label}</span><button aria-label="fewer ${label}">−</button><output aria-live="polite"></output><button aria-label="more ${label}">+</button>`;
+    const [minus, out, plus] = [el.children[1], el.children[2], el.children[3]];
+    const show = () => { out.textContent = cfg[key]; minus.disabled = cfg[key] <= 1; plus.disabled = cfg[key] >= 4; };
+    minus.addEventListener("click", () => { cfg[key]--; show(); onChange(); });
+    plus.addEventListener("click", () => { cfg[key]++; show(); onChange(); });
+    show(); $(box).appendChild(el);
+  }
+
+  // ================= Race lab =================
+  const RA = { blocks: 1, bands: 1 }, RB = { blocks: 3, bands: 3 };
+  let rPred = "";
+  const rMake = () => new NLB.Race([{ name: "A", ...RA }, { name: "B", ...RB }]);
+  const rPlayer = new NLB.Player($("rcv"), rMake, {});
+  const rChanged = () => { rPlayer.reset(rMake); $("rOut").innerHTML = ""; $("rFb").textContent = ""; $("rFb").className = "fb"; choices("rPred", "rp", ABT, rPred); };
+  stepper("cfgA", RA, "blocks", "Blocks (mass)", rChanged); stepper("cfgA", RA, "bands", "Rubber bands (force)", rChanged);
+  stepper("cfgB", RB, "blocks", "Blocks (mass)", rChanged); stepper("cfgB", RB, "bands", "Rubber bands (force)", rChanged);
+  choices("rPred", "rp", ABT, rPred);
+  $("rPred").addEventListener("change", e => { rPred = e.target.value; });
+  $("rSpd").addEventListener("change", e => rPlayer.rate = +e.target.value);
+  $("rRun").addEventListener("click", () => {
+    $("rOut").innerHTML = ""; $("rFb").textContent = "Racing…"; $("rFb").className = "fb";
+    rPlayer.onDone = sim => {
+      const r = sim.result();
+      choices("rPred", "rp", ABT, rPred, rPred ? r : null);
+      $("rFb").className = "fb " + (rPred ? (rPred === r ? "ok" : "bad") : "");
+      $("rFb").textContent = (r === "tie" ? "It’s a tie!" : `Block ${r} hit first.`) + (rPred ? (rPred === r ? " Your prediction was right." : " Your prediction didn’t match: read why below.") : "");
+      $("rOut").innerHTML = raceExplain(RA, RB, sim);
+    };
+    rPlayer.run();
+  });
+  function raceExplain(A, B, sim) {
+    const aA = A.bands / A.blocks, aB = B.bands / B.blocks, max = Math.max(aA, aB);
+    const rn = B.bands * A.blocks, rd = B.blocks * A.bands;
+    const [la, lb] = sim.lanes;
+    return `<table class="res"><thead><tr><th></th><th>Force (bands)</th><th>Mass (blocks)</th><th>a = F / m</th><th>Hit the baseboard at</th></tr></thead><tbody>
+      <tr><td class="A">Block A</td><td>${A.bands}</td><td>${A.blocks}</td><td>${fracHTML(A.bands, A.blocks)}</td><td>${la.tHit.toFixed(3)} s</td></tr>
+      <tr><td class="B">Block B</td><td>${B.bands}</td><td>${B.blocks}</td><td>${fracHTML(B.bands, B.blocks)}</td><td>${lb.tHit.toFixed(3)} s</td></tr></tbody></table>
+      <div class="barsviz" aria-label="Starting accelerations"><span class="hint">A’s accel.</span><div class="b A" style="width:${(aA / max * 100).toFixed(0)}%"></div><span class="hint">B’s accel.</span><div class="b B" style="width:${(aB / max * 100).toFixed(0)}%"></div></div>
+      <div class="explain">Block B has <b>${frac(B.bands, A.bands)}×</b> the force of Block A and <b>${frac(B.blocks, A.blocks)}×</b> the mass, so its acceleration is
+      ${frac(B.bands, A.bands)} ÷ ${frac(B.blocks, A.blocks)} = <b>${fracHTML(rn, rd)}×</b> Block A’s, ${rn === rd ? "the <b>same</b>, so it’s a tie." : `so <b>Block ${rn > rd ? "B" : "A"}</b> wins.`}
+      ${rn === rd ? "" : `<br><span class="hint">Larger acceleration means it speeds up faster and reaches the baseboard sooner.</span>`}</div>`;
+  }
+
+  // ================= Quiz =================
+  const RATIOS = [[1, 4], [1, 3], [1, 2], [2, 3], [1, 1], [3, 2], [2, 1], [3, 1], [4, 1]];
+  const POOL = [
+    [{ blocks: 1, bands: 1 }, { blocks: 3, bands: 3 }], [{ blocks: 1, bands: 1 }, { blocks: 3, bands: 1 }], [{ blocks: 1, bands: 1 }, { blocks: 1, bands: 3 }],
+    [{ blocks: 2, bands: 2 }, { blocks: 3, bands: 3 }], [{ blocks: 1, bands: 2 }, { blocks: 2, bands: 1 }], [{ blocks: 2, bands: 1 }, { blocks: 1, bands: 2 }],
+    [{ blocks: 1, bands: 1 }, { blocks: 2, bands: 3 }], [{ blocks: 1, bands: 1 }, { blocks: 3, bands: 2 }], [{ blocks: 2, bands: 2 }, { blocks: 1, bands: 1 }],
+    [{ blocks: 1, bands: 1 }, { blocks: 4, bands: 2 }], [{ blocks: 3, bands: 1 }, { blocks: 1, bands: 1 }], [{ blocks: 1, bands: 2 }, { blocks: 2, bands: 4 }]
+  ];
+  const Q = { items: null, i: 0, score: 0 };
+  function newQuiz() {
+    const pool = POOL.slice().sort(() => Math.random() - 0.5);
+    Q.items = pool.slice(0, 6).map(([a, b]) => ({ A: a, B: b, win: "", ratio: "", checked: false })); Q.i = 0; Q.score = 0; renderQ();
+  }
+  let qPlayer = null;
+  function renderQ() {
+    $("qScore").textContent = `Score: ${Q.score} / ${Q.items.length}`;
+    if (Q.i >= Q.items.length) {
+      $("quiz").innerHTML = `<h3>You scored ${Q.score} out of ${Q.items.length}.</h3><p>${Q.score === Q.items.length ? "Perfect! You’re reasoning with ratios like a physicist." : "Look back at the setups you missed: compare the force ratio and the mass ratio."}</p>
+        <div class="bar"><button class="btn" id="qAgain">New set of questions</button></div>`;
+      $("qAgain").addEventListener("click", newQuiz); return;
+    }
+    const q = Q.items[Q.i], rn = q.B.bands * q.A.blocks, rd = q.B.blocks * q.A.bands, g = gcd(rn, rd), ans = `${rn / g}/${rd / g}`;
+    const truth = rn === rd ? "tie" : rn > rd ? "B" : "A";
+    $("quiz").innerHTML = `<h3>Question ${Q.i + 1} of ${Q.items.length}</h3>
+      <p class="cfgline"><b class="A">Block A:</b> ${q.A.blocks} block${q.A.blocks > 1 ? "s" : ""}, ${q.A.bands} rubber band${q.A.bands > 1 ? "s" : ""} &nbsp;·&nbsp; <b class="B">Block B:</b> ${q.B.blocks} block${q.B.blocks > 1 ? "s" : ""}, ${q.B.bands} rubber band${q.B.bands > 1 ? "s" : ""}</p>
+      <canvas class="sim mini" id="qcv" role="img" aria-label="The two setups"></canvas>
+      <p style="margin:12px 0 2px"><b>1. Which block hits the baseboard first?</b></p><div class="choices" id="qWin"></div>
+      <p style="margin:6px 0 2px"><b>2. Block B’s acceleration is how many times Block A’s?</b></p><div class="choices" id="qRat"></div>
+      <div class="bar"><button class="btn" id="qCheck" ${q.checked ? "disabled" : ""}>Check and race</button><button class="btn ghost ${q.checked ? "" : "hidden"}" id="qNext">${Q.i < Q.items.length - 1 ? "Next question" : "See my score"}</button></div>
+      <p class="fb" id="qFb" role="status" aria-live="polite"></p><div id="qOut"></div>`;
+    const ratioOpts = RATIOS.map(([n, d]) => [`${n}/${d}`, d === 1 ? `${n}×` : `${n}/${d} ×`]);
+    const paint = () => { choices("qWin", "qw", ABT, q.win, q.checked ? truth : null, q.checked); choices("qRat", "qr", ratioOpts, q.ratio, q.checked ? ans : null, q.checked); };
+    paint();
+    $("qWin").addEventListener("change", e => q.win = e.target.value);
+    $("qRat").addEventListener("change", e => q.ratio = e.target.value);
+    qPlayer = new NLB.Player($("qcv"), () => new NLB.Race([{ name: "A", ...q.A }, { name: "B", ...q.B }]), {});
+    $("qCheck").addEventListener("click", () => {
+      if (!q.win || !q.ratio) { $("qFb").className = "fb bad"; $("qFb").textContent = "Answer both questions first."; return; }
+      q.checked = true; const both = q.win === truth && q.ratio === ans; if (both) Q.score++;
+      paint(); $("qCheck").disabled = true;
+      $("qFb").className = "fb " + (both ? "ok" : "bad");
+      $("qFb").textContent = both ? "Both correct! Watch the race." : `Not quite: ${q.win !== truth ? "check which block wins" : ""}${q.win !== truth && q.ratio !== ans ? " and " : ""}${q.ratio !== ans ? "check the acceleration ratio" : ""}. Watch the race and read why.`;
+      $("qScore").textContent = `Score: ${Q.score} / ${Q.items.length}`;
+      qPlayer.onDone = sim => { $("qOut").innerHTML = raceExplain(q.A, q.B, sim); $("qNext").classList.remove("hidden"); };
+      qPlayer.run();
+    });
+    $("qNext").addEventListener("click", () => { Q.i++; renderQ(); });
+  }
+
+  // ================= Tug of war =================
+  const TA = { blocks: 1, bands: 1 }, TB = { blocks: 2, bands: 1 };
+  let tPred = "";
+  const TPRED = [["A", "Closer to Block A’s start"], ["mid", "Halfway"], ["B", "Closer to Block B’s start"]];
+  const pulls = () => ({ eq: [0.4, 0.4], A: [0.55, 0.25], B: [0.25, 0.55] }[$("tPull").value]);
+  const tMake = () => { const [pa, pb] = pulls(); return new NLB.Tug({ name: "A", ...TA }, { name: "B", ...TB }, pa, pb); };
+  const tPlayer = new NLB.Player($("tcv"), tMake, { showForces: true, showStarts: true });
+  const tChanged = () => { tPlayer.reset(tMake); $("tOut").innerHTML = ""; $("tFb").textContent = ""; $("tFb").className = "fb"; choices("tPred", "tp", TPRED, tPred); };
+  stepper("tcfgA", TA, "blocks", "Blocks (mass)", tChanged); stepper("tcfgA", TA, "bands", "Rubber bands", tChanged);
+  stepper("tcfgB", TB, "blocks", "Blocks (mass)", tChanged); stepper("tcfgB", TB, "bands", "Rubber bands", tChanged);
+  choices("tPred", "tp", TPRED, tPred);
+  $("tPred").addEventListener("change", e => tPred = e.target.value);
+  $("tPull").addEventListener("change", tChanged);
+  $("tForces").addEventListener("change", e => { tPlayer.opt.showForces = e.target.checked; tPlayer.draw(); });
+  $("tSpd").addEventListener("change", e => tPlayer.rate = +e.target.value);
+  $("tRun").addEventListener("click", () => {
+    $("tOut").innerHTML = ""; $("tFb").className = "fb"; $("tFb").textContent = "Released…";
+    tPlayer.onDone = sim => {
+      const dA = sim.xMeet - sim.startA, dB = sim.startB - sim.xMeet, r = Math.abs(dA - dB) < 0.005 ? "mid" : dA > dB ? "B" : "A";
+      choices("tPred", "tp", TPRED, tPred, tPred ? r : null);
+      $("tFb").className = "fb " + (tPred ? (tPred === r ? "ok" : "bad") : "");
+      $("tFb").textContent = `Block A moved ${(dA * 100).toFixed(0)} cm and Block B moved ${(dB * 100).toFixed(0)} cm.` + (tPred ? (tPred === r ? " Your prediction was right." : " Your prediction didn’t match.") : "");
+      const mr = frac(TB.blocks, TA.blocks);
+      $("tOut").innerHTML = `<b>Forces:</b> the rubber bands pull on <b>both</b> blocks with the <b>same size force</b> (Newton’s 3rd Law)${TA.bands === TB.bands ? "." : `, even though Block ${TA.bands > TB.bands ? "A" : "B"} has more bands: they’re all joined through one paper clip, so they share one tension.`}<br>
+        <b>Motion:</b> with equal forces, a = F / m depends only on mass. Block B has ${mr}× Block A’s mass, so Block A’s acceleration is ${mr}× Block B’s, and Block A moves ${mr}× as far (${(dA * 100).toFixed(0)} cm vs ${(dB * 100).toFixed(0)} cm).
+        ${$("tPull").value !== "eq" ? "<br><b>Pulling one block farther</b> doesn’t change this: they still move distances in the ratio of their masses, so the meeting point shifts toward the block that was pulled farther." : ""}`;
+    };
+    tPlayer.run();
+  });
+
+  function redrawAll() { rPlayer.draw(); tPlayer.draw(); if (qPlayer && document.body.contains(qPlayer.cv)) qPlayer.draw(); }
+  window.addEventListener("resize", redrawAll);
+  if (document.fonts) document.fonts.ready.then(redrawAll);
+})();
+</script>
+<!-- lock check: hides this interactive until the teacher opens it (settings in ../availability.json) -->
+<script>
+(function () {
+  var id = location.pathname.split("/").pop().replace(".html", "");
+  fetch("../availability.json?t=" + Date.now(), { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (cfg) {
+      if (!cfg || !cfg.labs || cfg.labs[id] !== false) return;
+      var teacher = false; try { teacher = localStorage.getItem("teacherPreview") === "1"; } catch (e) {}
+      var font = "font-family:'Atkinson Hyperlegible','Segoe UI',system-ui,sans-serif;";
+      if (teacher) {
+        var b = document.createElement("div");
+        b.setAttribute("role", "status");
+        b.style.cssText = font + "position:sticky;top:0;z-index:50;background:#7a3fe0;color:#fff;font-weight:700;text-align:center;padding:8px 12px;";
+        b.textContent = "Teacher preview: this interactive is locked for students.";
+        document.body.prepend(b);
+        return;
+      }
+      var o = document.createElement("div");
+      o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-labelledby", "lockTitle");
+      o.style.cssText = font + "position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:var(--bg,#eaf1ee);";
+      o.innerHTML = '<div style="max-width:520px;background:var(--panel,#fff);color:var(--ink,#15232b);border:1px solid var(--line,#c4d3cc);border-radius:12px;padding:28px;text-align:center">' +
+        '<h1 id="lockTitle" style="margin:0 0 8px;font-size:1.6rem">Not open yet</h1>' +
+        '<p style="margin:0 0 18px;line-height:1.5">This interactive opens after we do the class activity that goes with it. Check back then!</p>' +
+        '<a href="../interactives.html" style="display:inline-block;font-weight:700;padding:8px 18px;border-radius:8px;background:var(--ink,#15232b);color:var(--panel,#fff);text-decoration:none">Back to Interactives</a></div>';
+      document.body.appendChild(o);
+      document.documentElement.style.overflow = "hidden";
+      Array.prototype.forEach.call(document.body.children, function (el) { if (el !== o) el.setAttribute("aria-hidden", "true"); });
+    })
+    .catch(function () {});
+})();
+</script>
+</body>
+</html>
