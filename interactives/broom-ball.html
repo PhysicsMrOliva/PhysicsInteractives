@@ -114,6 +114,7 @@ video { width: 100%; border-radius: 8px; background: #000; display: block; }
 .inwarn { color: #b42318; font-weight: 700; font-size: 0.92rem; margin: 0 0 12px; }
 .inwarn:empty { display: none; }
 @media (prefers-color-scheme: dark) { .inwarn { color: #ff8a80; } }
+.hint { color: var(--muted); font-size: 0.9rem; }
 </style>
 </head>
 <body>
@@ -149,7 +150,7 @@ video { width: 100%; border-radius: 8px; background: #000; display: block; }
         <input type="range" id="F1R" min="0" max="40" step="0.1"></div>
       <div class="row"><div class="top"><label for="d1">Push time</label>
         <span><input type="number" id="d1" step="any"> <span class="unit">s</span></span></div>
-        <input type="range" id="d1R" min="0.1" max="10" step="0.1"></div>
+        <input type="range" id="d1R" min="0.1" max="10" step="0.05"></div>
       <p class="calc" id="c1"></p>
     </fieldset>
 
@@ -160,14 +161,23 @@ video { width: 100%; border-radius: 8px; background: #000; display: block; }
       <p class="calc" id="c2"></p>
     </fieldset>
 
-    <fieldset class="stage push"><legend>4–5 · Push the other way (to the left)</legend>
+    <fieldset class="stage push"><legend>4 · Push left while it moves right (slowing down)</legend>
       <div class="row f"><div class="top"><label for="F2">Broom force F</label>
         <span><input type="number" id="F2" step="any"> <span class="unit">N ←</span></span></div>
         <input type="range" id="F2R" min="0" max="40" step="0.1"></div>
-      <div class="row"><div class="top"><label for="d2">Push time</label>
-        <span><input type="number" id="d2" step="any"> <span class="unit">s</span></span></div>
-        <input type="range" id="d2R" min="0.1" max="15" step="0.1"></div>
+      <p class="hint" style="margin:0 0 6px">This push lasts until the ball stops. Enter the force you found from your analysis.</p>
       <p class="calc" id="c3"></p>
+    </fieldset>
+
+    <fieldset class="stage push"><legend>5 · Push left while it moves left (speeding up)</legend>
+      <p class="hint" style="margin:0 0 6px">A separate push: enter the force you found. It doesn’t have to match the push before it.</p>
+      <div class="row f"><div class="top"><label for="F3">Broom force F</label>
+        <span><input type="number" id="F3" step="any"> <span class="unit">N ←</span></span></div>
+        <input type="range" id="F3R" min="0" max="40" step="0.1"></div>
+      <div class="row"><div class="top"><label for="d5">Push time</label>
+        <span><input type="number" id="d5" step="any"> <span class="unit">s</span></span></div>
+        <input type="range" id="d5R" min="0" max="10" step="0.05"></div>
+      <p class="calc" id="c4"></p>
     </fieldset>
 
     <fieldset class="stage"><legend>6 · No contact again</legend>
@@ -221,21 +231,21 @@ video { width: 100%; border-radius: 8px; background: #000; display: block; }
         Your browser can’t play this video.
       </video>
       <label class="check" style="margin-top:10px"><input type="checkbox" id="sync" checked> Move the simulation with the video</label>
-      <p class="note">The video analysis recorded positions in feet. They are converted to meters here (1 ft = 0.3048 m), so the ball travels about 17.7 m and reaches about 2.9 m/s.</p>
+      <p class="note">Positions from the video analysis are in meters. The ball travels about 17.7 m before turning around and reaches about 2.8 m/s. The ball’s mass is m = 6.0 kg.</p>
     </div>
   </section>
 </main>
 
 <script>
 (() => {
-  const DATA = [[0.0, 0.0], [0.667, 0.0], [1.033, 0.0], [1.368, 0.0], [1.702, 0.0], [2.035, 0.0], [2.368, 0.0], [2.702, 0.071], [3.035, 0.429], [3.368, 1.214], [3.703, 2.5], [4.037, 4.071], [4.37, 6.071], [4.703, 8.357], [5.037, 11.0], [5.37, 14.0], [5.703, 17.143], [6.038, 20.357], [6.372, 23.428], [6.705, 26.571], [7.038, 29.571], [7.372, 32.643], [7.705, 35.785], [8.038, 38.857], [8.373, 41.785], [8.707, 44.5], [9.04, 47.0], [9.373, 49.214], [9.707, 51.357], [10.04, 53.143], [10.373, 54.785], [10.708, 56.142], [11.042, 57.214], [11.375, 57.857], [11.708, 58.142], [12.042, 57.928], [12.375, 57.571], [12.708, 57.071], [13.043, 56.571], [13.377, 55.857], [13.71, 55.0], [14.043, 53.714], [14.377, 52.357], [14.71, 51.0], [15.043, 49.214], [15.378, 47.0], [15.712, 44.5], [16.045, 41.785], [16.378, 38.857], [16.712, 36.071], [17.045, 33.143], [17.378, 30.286], [17.713, 27.428], [18.047, 24.571], [18.38, 21.714], [18.713, 18.714], [19.047, 15.857], [19.38, 13.0], [19.713, 10.0], [20.048, 7.071], [20.382, 4.0]];
-  const FT = 0.3048; DATA.forEach(p => { p[1] = p[1] * FT; });   // video data were recorded in feet: convert to meters
+  const DATA = [[0, 0], [0.667, 0], [1.033, 0], [1.368, 0], [1.702, 0], [2.035, 0], [2.368, 0], [2.702, 0.0216], [3.035, 0.1308], [3.368, 0.37], [3.703, 0.762], [4.037, 1.2408], [4.37, 1.8504], [4.703, 2.5472], [5.037, 3.3528], [5.37, 4.2672], [5.703, 5.2252], [6.038, 6.2048], [6.372, 7.1409], [6.705, 8.0988], [7.038, 9.0132], [7.372, 9.9496], [7.705, 10.9073], [8.038, 11.8436], [8.373, 12.7361], [8.707, 13.5636], [9.04, 14.3256], [9.373, 15.0004], [9.707, 15.6536], [10.04, 16.198], [10.373, 16.6985], [10.708, 17.1121], [11.042, 17.4388], [11.375, 17.6348], [11.708, 17.7217], [12.042, 17.6565], [12.375, 17.5476], [12.708, 17.3952], [13.043, 17.2428], [13.377, 17.0252], [13.71, 16.764], [14.043, 16.372], [14.377, 15.9584], [14.71, 15.5448], [15.043, 15.0004], [15.378, 14.3256], [15.712, 13.5636], [16.045, 12.7361], [16.378, 11.8436], [16.712, 10.9944], [17.045, 10.102], [17.378, 9.2312], [17.713, 8.3601], [18.047, 7.4892], [18.38, 6.6184], [18.713, 5.704], [19.047, 4.8332], [19.38, 3.9624], [19.713, 3.048], [20.048, 2.1552], [20.382, 1.2192]];   // video data, position in meters
   const $ = id => document.getElementById(id);
   const EX = {
-    video:  { m: 6.0, tr: 2.5, F1: 6.2, d1: 2.8, D: 7.6, F2: 4.0, d2: 8.2, d3: 4.2 },
-    gentle: { m: 6.0, tr: 1.0, F1: 6, d1: 2.0, D: 4, F2: 6, d2: 4.0, d3: 2.0 },
-    stop:   { m: 6.0, tr: 1.0, F1: 12, d1: 2.0, D: 6, F2: 8, d2: 3.0, d3: 2.0 },
-    hard:   { m: 6.0, tr: 1.0, F1: 30, d1: 1.0, D: 10, F2: 6, d2: 12.0, d3: 2.0 }
+    // fitted to the lab video (m = 6.0 kg): the two leftward pushes were NOT the same size
+    video:  { m: 6.0, tr: 2.5, F1: 6.4, d1: 2.65, D: 8.7, F2: 4.5, F3: 3.6, d5: 4.5, d3: 3.9 },
+    gentle: { m: 6.0, tr: 1.0, F1: 6, d1: 2.0, D: 4, F2: 6, F3: 6, d5: 2.0, d3: 2.0 },
+    stop:   { m: 6.0, tr: 1.0, F1: 12, d1: 2.0, D: 6, F2: 8, F3: 0, d5: 0, d3: 2.0 },
+    hard:   { m: 6.0, tr: 1.0, F1: 30, d1: 1.0, D: 10, F2: 6, F3: 6, d5: 7.0, d3: 2.0 }
   };
   let lastSeg = 0;
   const S = Object.assign({ segs: [], T: 1, t: 0, playing: false, speed: 1, answers: true, overlay: true, ghost: false }, EX.video);
@@ -259,14 +269,15 @@ video { width: 100%; border-radius: 8px; background: #000; display: block; }
     add(S.tr, 0, 0, false, "rest");
     const a1 = S.F1 / S.m; add(S.d1, a1, S.F1, true, "push1");
     const coastT = v > 1e-9 ? S.D / v : 0; add(coastT, 0, 0, false, "coast1");
-    const a2 = -S.F2 / S.m;
-    const tStop = (a2 < 0 && v > 0) ? v / -a2 : Infinity;
-    if (tStop < S.d2 - 1e-9) { add(tStop, a2, -S.F2, true, "slow"); v = 0; add(S.d2 - tStop, a2, -S.F2, true, "reverse"); }
-    else add(S.d2, a2, -S.F2, true, "slow");
+    // push left while the ball moves right: it slows down until it stops (the direction change)
+    const a2 = -S.F2 / S.m, tStop = (a2 < 0 && v > 0) ? v / -a2 : 0;
+    if (tStop > 0) { add(tStop, a2, -S.F2, true, "slow"); v = 0; }
+    // push left while the ball moves left: a separate push with its own force
+    const a3 = -S.F3 / S.m; if (S.F3 > 0) add(S.d5, a3, -S.F3, true, "reverse");
     add(S.d3, 0, 0, false, "coast2");
     if (!segs.length) segs.push({ t0: 0, dt: 1, x0: 0, v0: 0, a: 0, F: 0, contact: false, kind: "rest" });
     segs.forEach((s, i) => s.n = i + 1);
-    S.segs = segs; S.T = t || 1; S.tStop = tStop; S.v1 = a1 * S.d1;
+    S.segs = segs; S.T = t || 1; S.tStop = tStop; S.v1 = a1 * S.d1; S.v5 = a3 * S.d5;
   }
   function segAt(t) { for (const s of S.segs) if (t <= s.t0 + s.dt + 1e-9) return s; return S.segs[S.segs.length - 1]; }
   function at(t) {
@@ -275,24 +286,24 @@ video { width: 100%; border-radius: 8px; background: #000; display: block; }
   }
 
   // ---------- controls ----------
-  const keys = ["m", "tr", "F1", "d1", "D", "F2", "d2", "d3"];
+  const keys = ["m", "tr", "F1", "d1", "D", "F2", "F3", "d5", "d3"];
   function sync() {
     for (const k of keys) {
       $(k).value = S[k];
       if ($(k + "R")) $(k + "R").value = S[k];
     }
-    const a1 = S.F1 / S.m, a2 = S.F2 / S.m;
+    const a1 = S.F1 / S.m, a2 = S.F2 / S.m, a3 = S.F3 / S.m;
     $("c1").innerHTML = `a = F/m = ${sig(S.F1)} N / ${sig(S.m)} kg = <b>${sig(a1)} m/s²</b><br>top speed = ${sig(S.v1)} m/s`;
     $("c2").innerHTML = S.v1 > 0 ? `takes ${sig(S.D / S.v1)} s at a constant ${sig(S.v1)} m/s` : "The ball isn’t moving, so it can’t coast.";
-    $("c3").innerHTML = `a = −F/m = <b>−${sig(a2)} m/s²</b><br>` + (isFinite(S.tStop) && S.tStop < S.d2
-      ? `stops after ${sig(S.tStop)} s (direction change), then moves left for ${sig(S.d2 - S.tStop)} s`
-      : isFinite(S.tStop) && Math.abs(S.tStop - S.d2) < 0.05 ? "stops just as the push ends"
-      : `slows down but doesn’t stop (it would need ${isFinite(S.tStop) ? sig(S.tStop) + " s" : "a push"})`);
+    $("c3").innerHTML = S.v1 <= 0 ? "The ball isn’t moving right, so there’s nothing to slow down."
+      : S.F2 > 0 ? `a = −F/m = −${sig(S.F2)} N / ${sig(S.m)} kg = <b>−${sig(a2)} m/s²</b><br>slows from ${sig(S.v1)} m/s to a stop in ${sig(S.tStop)} s (direction change)`
+      : "With no push the ball keeps coasting right, so it never stops.";
+    $("c4").innerHTML = S.F3 > 0 ? `a = −F/m = −${sig(S.F3)} N / ${sig(S.m)} kg = <b>−${sig(a3)} m/s²</b><br>speeds up to ${sig(-a3 * S.d5)} m/s (moving left)` : "No push: the ball stays where it stopped.";
   }
   function changed() { $("inwarn").textContent = ""; build(); S.t = 0; S.playing = false; sync(); cards(); draw(); }
   function check(k, v) {
     if (k === "m" && !(v > 0)) return "The mass must be greater than 0 (a = F/m).";
-    if ((k === "F1" || k === "F2") && v < 0) return "Enter the size of the force. Its direction is set by the section (→ or ←).";
+    if ((k === "F1" || k === "F2" || k === "F3") && v < 0) return "Enter the size of the force. Its direction is set by the section (→ or ←).";
     if (v < 0) return "Times and distances can’t be negative.";
     return "";
   }
@@ -397,7 +408,7 @@ video { width: 100%; border-radius: 8px; background: #000; display: block; }
   function stats() {
     let lo = 0, hi = 0, vmax = 0;
     for (let i = 0; i <= 400; i++) { const s = at(S.T * i / 400); lo = Math.min(lo, s.x); hi = Math.max(hi, s.x); vmax = Math.max(vmax, Math.abs(s.v)); }
-    return { lo, hi, vmax: Math.max(vmax, 0.2), Fmax: Math.max(S.F1, S.F2, 1) };
+    return { lo, hi, vmax: Math.max(vmax, 0.2), Fmax: Math.max(S.F1, S.F2, S.F3, 1) };
   }
 
   // ---------- motion panel ----------
