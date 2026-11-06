@@ -1,18 +1,15 @@
 {
   "labs": {
-    "force-diagrams": true,
-    "force-diagrams-review": false,
-    "guess-practice": true,
-    "relationship-explorer": true,
     "constant-acceleration": true,
-    "velocity-displacement": true,
-    "two-part-motion": true,
     "projectile-motion": true,
     "projectile-portions": true,
     "catch-the-target": true,
+    "velocity-displacement": true,
+    "two-part-motion": true,
     "broom-ball": true,
+    "relationship-explorer": true,
+    "guess-practice": true,
     "newtons-blocks-lab": true,
-<<<<<<< HEAD
     "newtons-blocks-explorer": true,
     "force-diagrams": true,
     "force-diagrams/notes1": true,
@@ -26,8 +23,5 @@
     "force-diagrams/cp5": false,
     "force-diagrams-review": true,
     "projectile-walkthrough": true
-=======
-    "newtons-blocks-explorer": true
->>>>>>> 73ebb3912a012d32c94d852e331c35d165f60459
   }
 }
