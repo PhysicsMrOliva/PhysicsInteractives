@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Projectile problems, step by step</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  --bg: #eaf1ee; --grid: #d3e0da; --panel: #ffffff; --ink: #15232b; --muted: #56666e; --line: #c4d3cc; --tint: #f3f7f5;
+  --acc: #1f6fb4; --pos: #23913a; --vel: #d22b2b; --known: #1a7f37; --knownbg: #dff3e4; --unk: #9a6700; --unkbg: #fff4d1;
+  --dec: #b45309; --decbg: #fff1e0; --zero: #c0392b; --pick: #1f6fb4; --pickbg: #e3efff; --focus: #1f6fb4; --btn: #15232b; --btn-ink: #fff;
+  --ground: #7a6a58; --cliff: #c8b79f; --ball: #e07b00;
+  font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42; --tint: #1b282e;
+  --acc: #5aa9ff; --pos: #4cc76a; --vel: #ff6b6b; --known: #6fd37a; --knownbg: #17331f; --unk: #f2c14e; --unkbg: #3a3014;
+  --dec: #ffa94d; --decbg: #3a2614; --zero: #ff8a80; --pick: #5aa9ff; --pickbg: #15304f; --focus: #5aa9ff; --btn: #e5eef0; --btn-ink: #0f171b;
+  --ground: #a08a76; --cliff: #5a4a3a; --ball: #ffa53d; } }
+:root[data-theme="dark"] {
+  --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42; --tint: #1b282e;
+  --acc: #5aa9ff; --pos: #4cc76a; --vel: #ff6b6b; --known: #6fd37a; --knownbg: #17331f; --unk: #f2c14e; --unkbg: #3a3014;
+  --dec: #ffa94d; --decbg: #3a2614; --zero: #ff8a80; --pick: #5aa9ff; --pickbg: #15304f; --focus: #5aa9ff; --btn: #e5eef0; --btn-ink: #0f171b;
+  --ground: #a08a76; --cliff: #5a4a3a; --ball: #ffa53d; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+*, *::before, *::after { box-sizing: inherit; }
+body { margin: 0; color: var(--ink); background-color: var(--bg); line-height: 1.5;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 24px 24px; }
+header { max-width: 1280px; margin: 0 auto; padding: 28px 20px 8px; }
+h1 { font-size: clamp(1.6rem, 3.4vw, 2.4rem); margin: 0 0 4px; letter-spacing: -0.01em; }
+header .back { display: inline-block; margin-bottom: 10px; color: var(--ink); font-weight: 700; }
+header p { margin: 0; color: var(--muted); max-width: 90ch; }
+main { max-width: 1280px; margin: 0 auto; padding: 12px 20px 48px; display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 960px) { main { grid-template-columns: 1fr; } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+h2 { margin: 0 0 6px; font-size: 1.3rem; } h3 { margin: 0 0 6px; font-size: 1.05rem; }
+.hint { color: var(--muted); font-size: 0.93rem; }
+select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); width: 100%; }
+button.btn { font: inherit; font-weight: 700; border: 2px solid var(--btn); background: var(--btn); color: var(--btn-ink); border-radius: 8px; padding: 8px 18px; cursor: pointer; }
+button.btn.ghost { background: transparent; color: var(--ink); }
+button.btn:disabled { opacity: 0.35; cursor: default; }
+button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.left { position: sticky; top: 12px; display: grid; gap: 14px; }
+@media (max-width: 960px) { .left { position: static; } }
+canvas { width: 100%; height: 230px; display: block; background: var(--tint); border: 1px solid var(--line); border-radius: 8px; }
+.ptext { margin: 10px 0 0; }
+.known { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 0.95rem; margin: 6px 0 0; }
+.known .k { font-weight: 700; } .known .new { color: var(--known); font-weight: 700; }
+/* math */
+.m { font-family: "Cambria Math", "STIX Two Math", "Times New Roman", serif; font-size: 1.22rem; }
+.m sub { font-size: 0.68em; } .m sup { font-size: 0.68em; }
+.fr { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; margin: 0 2px; }
+.fr > span { padding: 0 3px; line-height: 1.25; }
+.fr > span:first-child { border-bottom: 1.5px solid currentColor; }
+.sq { white-space: nowrap; } .sq > .rad { border-top: 1.5px solid currentColor; padding: 0 2px; margin-left: 1px; display: inline-block; }
+.zero { color: var(--zero); text-decoration: line-through; text-decoration-thickness: 2px; }
+.res { color: var(--known); font-weight: 700; }
+/* steps */
+.stephead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; align-items: baseline; margin-bottom: 4px; }
+.stephead .n { color: var(--muted); font-weight: 700; font-size: 0.92rem; }
+.pathtag { font-size: 0.85rem; font-weight: 700; color: var(--acc); }
+.nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+.lines { display: grid; gap: 6px; margin: 8px 0; }
+.line { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 260px); gap: 12px; align-items: center; padding: 6px 10px; border-radius: 8px; }
+@media (max-width: 640px) { .line { grid-template-columns: 1fr; } }
+.line.old { opacity: 0.55; }
+.line.cur { background: var(--pickbg); }
+.line .op { color: var(--muted); font-size: 0.92rem; }
+.decision { background: var(--decbg); border-left: 5px solid var(--dec); border-radius: 0 8px 8px 0; padding: 10px 14px; margin: 10px 0; }
+.decision .lab { font-weight: 700; color: var(--dec); text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.82rem; }
+.info { background: var(--tint); border-left: 5px solid var(--acc); border-radius: 0 8px 8px 0; padding: 10px 14px; margin: 10px 0; }
+table.mx { border-collapse: collapse; margin: 8px 0; font-size: 0.95rem; width: 100%; }
+table.mx th, table.mx td { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: center; }
+table.mx td:first-child, table.mx th:first-child { text-align: left; }
+table.mx tr.one td { background: var(--knownbg); }
+table.mx tr.pick td { background: var(--pickbg); }
+table.mx tr.pick td:first-child { box-shadow: inset 4px 0 0 var(--pick); font-weight: 700; }
+.c-k { color: var(--known); font-weight: 700; } .c-u { color: var(--unk); font-weight: 700; background: var(--unkbg); border-radius: 4px; padding: 0 5px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+.chip { border-radius: 99px; padding: 2px 10px; font-size: 0.92rem; border: 1.5px solid var(--line); }
+.chip.k { border-color: var(--known); background: var(--knownbg); } .chip.u { border-color: var(--unk); background: var(--unkbg); }
+.gu { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+@media (max-width: 640px) { .gu { grid-template-columns: 1fr; } }
+.gu > div { border: 1.5px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+.gu .row { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dashed var(--line); padding: 3px 0; }
+.paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 10px; }
+.pathcard { border: 2px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; align-content: start; }
+.pathcard.on { border-color: var(--acc); box-shadow: 0 0 0 2px var(--acc) inset; }
+.pathcard ol { margin: 0; padding-left: 1.3em; } .pathcard li { margin: 3px 0; }
+.pathcard h3 { color: var(--acc); }
+.steplist { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; max-height: 420px; overflow: auto; }
+.steplist button { font: inherit; text-align: left; border: 0; background: none; color: var(--muted); width: 100%; padding: 3px 8px; border-radius: 6px; cursor: pointer; font-size: 0.92rem; }
+.steplist button[aria-current="step"] { background: var(--tint); color: var(--ink); font-weight: 700; }
+.steplist .d::before { content: "◆ "; color: var(--dec); }
+.steplist .grp { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 8px 8px 2px; }
+table.sum { border-collapse: collapse; margin-top: 8px; }
+table.sum td { padding: 4px 12px; border-bottom: 1px solid var(--line); }
+details summary { cursor: pointer; font-weight: 700; }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../interactives.html">Back to Interactives</a>
+  <h1>Projectile problems, step by step</h1>
+  <p>Pick a problem type and get a problem with random numbers. Then follow every step of a solution: choosing equations from the kinematic matrix, simplifying, solving with algebra one step at a time, and substituting values. Steps marked <b style="color:var(--dec)">◆ Decision</b> are the places where <i>you</i> have to make a choice.</p>
+</header>
+<main>
+  <div class="left">
+    <section class="panel">
+      <label for="ptype" class="hint">Problem type</label>
+      <select id="ptype"></select>
+      <div class="bar" style="margin-top:10px"><button class="btn ghost" id="newnums">New numbers</button><button class="btn ghost" id="play">▶ Play</button></div>
+      <canvas id="cv" role="img" aria-label="Picture of the projectile's path"></canvas>
+      <p class="ptext" id="ptext"></p>
+    </section>
+    <section class="panel">
+      <h3>What we know so far</h3>
+      <div class="known" id="known"></div>
+    </section>
+    <section class="panel">
+      <h3>Steps</h3>
+      <ul class="steplist" id="steplist"></ul>
+    </section>
+  </div>
+  <section class="panel" id="stage" aria-live="polite"></section>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const AY = -9.81;
+  // ---------- math formatting ----------
+  const s = (b, sub) => `${b}<sub>${sub}</sub>`;
+  const S = { v0x: s("v", "0x"), v0y: s("v", "0y"), vfy: s("v", "fy"), vfx: s("v", "fx"), ay: s("a", "y"), ax: s("a", "x"), dy: "Δy", dx: "Δx", dt: "Δt",
+    v0: "|v<sub>0</sub>|", th: "θ", vf: "|v<sub>f</sub>|", thf: s("θ", "f"), y0: s("y", "0"), yf: s("y", "f"), dtu: s("Δt", "up"), dyu: s("Δy", "up"), dtd: s("Δt", "down"),
+    dyd: s("Δy", "down"), ytop: s("y", "top"), H: "H", vty: s("v", "top,y") };
+  const unitOf = k => ["th", "thf"].includes(k) ? "°" : k.startsWith("v") ? "m/s" : k.startsWith("a") ? "m/s²" : ["dt", "dtu", "dtd"].includes(k) ? "s" : "m";
+  const fr = (a, b) => `<span class="fr"><span>${a}</span><span>${b}</span></span>`;
+  const sq = x => `<span class="sq">√<span class="rad">${x}</span></span>`;
+  const Z = x => `<span class="zero">${x}</span>`;
+  const sig = v => { if (!isFinite(v)) return "?"; if (Math.abs(v) < 1e-9) return "0"; const t = Number(v.toPrecision(3)); let str = Math.abs(t) >= 100 ? String(Math.round(t)) : t.toPrecision(3); return (t < 0 ? "−" : "") + str.replace("-", ""); };
+  const s3 = v => Number(Number(v).toPrecision(3));
+  let K = {};                                           // values known so far (rounded to 3 significant figures, like students carry them)
+  const Q = k => `(${sig(K[k])}${unitOf(k) === "°" ? "°" : " " + unitOf(k)})`;
+  const V = k => `${sig(K[k])}${unitOf(k) === "°" ? "°" : " " + unitOf(k)}`;
+  const deg = r => r * 180 / Math.PI, rad = d => d * Math.PI / 180;
+  const rnd = (a, b, step = 1) => a + step * Math.floor(Math.random() * ((b - a) / step + 1));
+
+  // ---------- reusable solution blocks ----------
+  // block kinds: info, dec (decision), mx (choose an equation), simp, solve (one line per step), sub (substitute), roots (quadratic roots)
+  const ROWS = { E1: ["va", "v0", "vf"], E2: ["d", "va", "t"], E3: ["vf", "a", "t", "v0"], E4: ["d", "a", "t", "v0"], E5: ["vf", "v0", "a", "d"] };
+  const comps = () => [
+    { k: "info", title: "Split the launch velocity into components", html: `The launch velocity points at an angle, so use trigonometry to find its x and y parts:<div class="m" style="margin-top:6px">${S.v0x} = ${S.v0} cos θ &nbsp;&nbsp;&nbsp; ${S.v0y} = ${S.v0} sin θ</div>` },
+    { k: "sub", title: "Substitute: horizontal component", out: "v0x", f: () => `${S.v0} cos θ`, n: () => `${Q("v0")} cos ${Q("th")}`, v: () => K.v0 * Math.cos(rad(K.th)) },
+    { k: "sub", title: "Substitute: vertical component", out: "v0y", f: () => `${S.v0} sin θ`, n: () => `${Q("v0")} sin ${Q("th")}`, v: () => K.v0 * Math.sin(rad(K.th)) }];
+  const heights = (out, yf, y0, why) => ({ k: "sub", title: "Find the vertical displacement", eq: "Δy = y<sub>f</sub> − y<sub>0</sub>", out, f: () => `${yf[0]} − ${y0[0]}`, n: () => `${yf[1]()} − ${y0[1]()}`, v: () => yf[2]() - y0[2](), why });
+  const rangeX = () => [
+    { k: "mx", dir: "x", seg: "whole flight", known: { v0: "v0x", a: "ax", t: "dt" }, want: "d", pick: "E4", why: `In the x-direction a<sub>x</sub> = 0 and Δt is now known, so ${S.dx} is the only unknown in this equation.` },
+    { k: "simp", title: "Simplify: x-direction", full: `${S.dx} = ½${S.ax}${S.dt}<sup>2</sup> + ${S.v0x}${S.dt}`, zeros: [`${S.ax} = 0: nothing pushes the projectile sideways (neglect air resistance)`], struck: `${S.dx} = ${Z(`½${S.ax}${S.dt}<sup>2</sup>`)} + ${S.v0x}${S.dt}`, result: `${S.dx} = ${S.v0x}${S.dt}`, note: `It’s already solved for ${S.dx}.` },
+    { k: "sub", title: "Substitute: range", out: "dx", f: () => `${S.v0x}${S.dt}`, n: () => `${Q("v0x")}${Q("dt")}`, v: () => K.v0x * K.dt }];
+  const upTime = () => [
+    { k: "mx", dir: "y", seg: "up to the top", known: { v0: "v0y", vf: "vty", a: "ay" }, want: "t", pick: "E3", why: `At the very top the vertical velocity is zero (${S.vty} = 0). This equation then has only one unknown, ${S.dtu}.`, alt: "The equation without Δt can’t give a time." },
+    { k: "simp", title: "Simplify: up to the top", full: `${S.vfy} = ${S.ay}${S.dtu} + ${S.v0y}`, zeros: [`${S.vfy} = ${S.vty} = 0: at the top the ball stops moving up for an instant`], struck: `${Z(S.vfy)} 0 = ${S.ay}${S.dtu} + ${S.v0y}`, result: `0 = ${S.ay}${S.dtu} + ${S.v0y}` },
+    { k: "solve", target: S.dtu, lines: [[`−${S.v0y} = ${S.ay}${S.dtu}`, `Subtract ${S.v0y} from both sides`], [`${S.dtu} = ${fr(`−${S.v0y}`, S.ay)}`, `Divide both sides by ${S.ay}`]] },
+    { k: "sub", title: "Substitute: time to the top", out: "dtu", f: () => fr(`−${S.v0y}`, S.ay), n: () => fr(`−${Q("v0y")}`, Q("ay")), v: () => -K.v0y / K.ay }];
+  const upHeight = (andH) => [
+    { k: "mx", dir: "y", seg: "up to the top", known: { v0: "v0y", vf: "vty", a: "ay" }, want: "d", pick: "E5", why: `With ${S.vty} = 0, the equation without time has only one unknown: ${S.dyu}. (The equation with ½aΔt² would work too, once ${S.dtu} is known.)` },
+    { k: "simp", title: "Simplify: up to the top", full: `${S.vfy}<sup>2</sup> − ${S.v0y}<sup>2</sup> = 2${S.ay}${S.dyu}`, zeros: [`${S.vfy} = ${S.vty} = 0 at the top`], struck: `${Z(`${S.vfy}<sup>2</sup>`)} − ${S.v0y}<sup>2</sup> = 2${S.ay}${S.dyu}`, result: `−${S.v0y}<sup>2</sup> = 2${S.ay}${S.dyu}` },
+    { k: "solve", target: S.dyu, lines: [[`${S.dyu} = ${fr(`−${S.v0y}<sup>2</sup>`, `2${S.ay}`)}`, `Divide both sides by 2${S.ay}`]] },
+    { k: "sub", title: "Substitute: rise to the top", out: "dyu", f: () => fr(`−${S.v0y}<sup>2</sup>`, `2${S.ay}`), n: () => fr(`−${Q("v0y")}<sup>2</sup>`, `2${Q("ay")}`), v: () => -K.v0y * K.v0y / (2 * K.ay) },
+    ...(andH ? [{ k: "sub", title: "Maximum height", eq: `H = ${S.y0} + ${S.dyu}`, out: "H", f: () => `${S.y0} + ${S.dyu}`, n: () => `${Q("y0")} + ${Q("dyu")}`, v: () => K.y0 + K.dyu, why: "The maximum height is measured from the ground: the launch height plus the rise." }] : [])];
+  // quadratic formula for 0 = ½a_yΔt² + v_0yΔt − Δy  (choose: "pos" = the positive root, "late" = the later of two positive roots)
+  const quad = (choose) => [
+    { k: "solve", target: S.dt, title: "Solve with the quadratic formula", lines: [
+      [`0 = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt} − ${S.dy}`, `Subtract ${S.dy} from both sides, so one side is 0 (standard form)`],
+      [`A = ½${S.ay} &nbsp;&nbsp; B = ${S.v0y} &nbsp;&nbsp; C = −${S.dy}`, "Match it to AΔt² + BΔt + C = 0"],
+      [`${S.dt} = ${fr(`−B ± ${sq("B<sup>2</sup> − 4AC")}`, "2A")}`, "Write the quadratic formula"],
+      [`${S.dt} = ${fr(`−${S.v0y} ± ${sq(`${S.v0y}<sup>2</sup> − 4(½${S.ay})(−${S.dy})`)}`, `2(½${S.ay})`)}`, "Substitute A, B and C"],
+      [`${S.dt} = ${fr(`−${S.v0y} ± ${sq(`${S.v0y}<sup>2</sup> + 2${S.ay}${S.dy}`)}`, S.ay)}`, `Simplify: −4(½${S.ay})(−${S.dy}) = +2${S.ay}${S.dy} and 2(½${S.ay}) = ${S.ay}`]] },
+    { k: "roots", choose }];
+
+  // ---------- the problem types ----------
+  const TYPES = [
+    { id: "t1", name: "1) Launched horizontally from a height", gen() {
+        const h = rnd(10, 60), v0 = rnd(5, 30); return { h, v0, y0: h, yf: 0, v0x: v0, v0y: 0, th: 0 }; },
+      text: g => `A ball is launched <b>horizontally</b> at <b>${g.v0} m/s</b> from the top of a <b>${g.h} m</b> tall cliff. Find the flight time, how far from the base of the cliff it lands (Δx), and its velocity just before it lands.`,
+      given: g => ({ x: [["v0x", `${g.v0} m/s`], ["ax", "0"], ["dt", "?"], ["dx", "?"]], y: [["y0", `${g.h} m`], ["yf", "0 m"], ["v0y", "0 (launched horizontally)"], ["ay", "−9.81 m/s²"], ["dt", "?"], ["vfy", "?"]] }),
+      results: ["dt", "dx", "vf", "thf"],
+      paths: [
+        { name: "Time first", sum: "Use the fall height to find the time, then the range, then the final velocity.",
+          outline: [`Find ${S.dy} from the heights`, `y: choose ${S.dy} = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}`, `Simplify (${S.v0y} = 0) and solve for ${S.dt}`, `x: ${S.dx} = ${S.v0x}${S.dt}`, `y: ${S.vfy} = ${S.ay}${S.dt}`, `Combine components into the final velocity`],
+          blocks: () => [heights("dy", [S.yf, () => Q("yf"), () => K.yf], [S.y0, () => Q("y0"), () => K.y0]),
+            { k: "mx", dir: "y", seg: "whole flight", known: { v0: "v0y", a: "ay", d: "dy" }, want: "t", pick: "E4", why: `Pick the equation where Δt is the only unknown.`, alt: `The equation without time would give ${S.vfy} instead: that’s the other path.` },
+            { k: "simp", title: "Simplify: y-direction", full: `${S.dy} = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}`, zeros: [`${S.v0y} = 0: launched horizontally, so there’s no initial vertical velocity`], struck: `${S.dy} = ½${S.ay}${S.dt}<sup>2</sup> + ${Z(`${S.v0y}${S.dt}`)}`, result: `${S.dy} = ½${S.ay}${S.dt}<sup>2</sup>` },
+            { k: "solve", target: S.dt, lines: [[`2${S.dy} = ${S.ay}${S.dt}<sup>2</sup>`, "Multiply both sides by 2"], [`${fr(`2${S.dy}`, S.ay)} = ${S.dt}<sup>2</sup>`, `Divide both sides by ${S.ay}`], [`${S.dt} = ${sq(fr(`2${S.dy}`, S.ay))}`, "Take the square root of both sides (time is positive)"]] },
+            { k: "sub", title: "Substitute: flight time", out: "dt", f: () => sq(fr(`2${S.dy}`, S.ay)), n: () => sq(fr(`2${Q("dy")}`, Q("ay"))), v: () => Math.sqrt(2 * K.dy / K.ay) },
+            ...rangeX(), ...finalVfromTime(), ...combineFinal()] },
+        { name: "Final velocity first", sum: "Use the fall height to find the final vertical velocity, then the time, then the range.",
+          outline: [`Find ${S.dy} from the heights`, `y: choose ${S.vfy}<sup>2</sup> − ${S.v0y}<sup>2</sup> = 2${S.ay}${S.dy}`, `Simplify, solve, and choose the negative root`, `y: ${S.dt} = ${fr(S.vfy, S.ay)}`, `x: ${S.dx} = ${S.v0x}${S.dt}`, `Combine components into the final velocity`],
+          blocks: () => [heights("dy", [S.yf, () => Q("yf"), () => K.yf], [S.y0, () => Q("y0"), () => K.y0]),
+            { k: "mx", dir: "y", seg: "whole flight", known: { v0: "v0y", a: "ay", d: "dy" }, want: "vf", pick: "E5", why: `This equation has no Δt, so ${S.vfy} is its only unknown.`, alt: `Choosing the equation with ½aΔt² gives Δt first: that’s the other path.` },
+            { k: "simp", title: "Simplify: y-direction", full: `${S.vfy}<sup>2</sup> − ${S.v0y}<sup>2</sup> = 2${S.ay}${S.dy}`, zeros: [`${S.v0y} = 0: launched horizontally`], struck: `${S.vfy}<sup>2</sup> − ${Z(`${S.v0y}<sup>2</sup>`)} = 2${S.ay}${S.dy}`, result: `${S.vfy}<sup>2</sup> = 2${S.ay}${S.dy}` },
+            { k: "solve", target: S.vfy, lines: [[`${S.vfy} = ± ${sq(`2${S.ay}${S.dy}`)}`, "Take the square root of both sides: there are two answers"]] },
+            { k: "dec", title: "Choose the sign", html: `The ball is moving <b>down</b> when it lands, so ${S.vfy} is negative:<div class="m" style="margin-top:6px">${S.vfy} = −${sq(`2${S.ay}${S.dy}`)}</div>` },
+            { k: "sub", title: "Substitute: final vertical velocity", out: "vfy", f: () => `−${sq(`2${S.ay}${S.dy}`)}`, n: () => `−${sq(`2${Q("ay")}${Q("dy")}`)}`, v: () => -Math.sqrt(2 * K.ay * K.dy) },
+            { k: "mx", dir: "y", seg: "whole flight", known: { v0: "v0y", a: "ay", d: "dy", vf: "vfy" }, want: "t", pick: "E3", why: `Now ${S.vfy} is known, so this equation has only Δt unknown, and it isn’t a quadratic.` },
+            { k: "simp", title: "Simplify: y-direction", full: `${S.vfy} = ${S.ay}${S.dt} + ${S.v0y}`, zeros: [`${S.v0y} = 0: launched horizontally`], struck: `${S.vfy} = ${S.ay}${S.dt} + ${Z(S.v0y)}`, result: `${S.vfy} = ${S.ay}${S.dt}` },
+            { k: "solve", target: S.dt, lines: [[`${S.dt} = ${fr(S.vfy, S.ay)}`, `Divide both sides by ${S.ay}`]] },
+            { k: "sub", title: "Substitute: flight time", out: "dt", f: () => fr(S.vfy, S.ay), n: () => fr(Q("vfy"), Q("ay")), v: () => K.vfy / K.ay },
+            ...rangeX(), ...combineFinal()] }] },
+
+    { id: "t2", name: "2) Launched from the ground at an angle", gen() { const v0 = rnd(10, 35), th = rnd(20, 70, 5); return { v0, th, y0: 0, yf: 0 }; },
+      text: g => `A ball is launched from the ground at <b>${g.v0} m/s</b> at <b>${g.th}°</b> above the horizontal and lands back on the ground. Find the flight time, the range (Δx) and the maximum height (H).`,
+      given: g => ({ x: [["v0x", "from |v₀| and θ"], ["ax", "0"], ["dt", "?"], ["dx", "?"]], y: [["v0y", "from |v₀| and θ"], ["ay", "−9.81 m/s²"], ["dy", "0 (lands at launch height)"], ["dt", "?"], ["H", "?"]] }),
+      results: ["dt", "dx", "H"],
+      paths: [
+        { name: "Up to the top, then double", sum: "Find the time to the top (where the vertical velocity is zero) and double it.",
+          outline: ["Find the velocity components", `Up: ${S.vfy} = ${S.ay}${S.dtu} + ${S.v0y} with ${S.vty} = 0 → ${S.dtu}`, `Symmetry: ${S.dt} = 2${S.dtu}`, `Up: ${S.vfy}<sup>2</sup> − ${S.v0y}<sup>2</sup> = 2${S.ay}${S.dyu} → H`, `x: ${S.dx} = ${S.v0x}${S.dt}`],
+          blocks: () => [...comps(), ...upTime(), symmetry(), ...upHeight(true), ...rangeX()] },
+        { name: "Whole flight, factor", sum: "Use Δy = 0 for the whole flight and factor the equation.",
+          outline: ["Find the velocity components", `Whole flight: ${S.dy} = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt} with ${S.dy} = 0`, `Factor out ${S.dt} and solve`, `Up: ${S.vfy}<sup>2</sup> − ${S.v0y}<sup>2</sup> = 2${S.ay}${S.dyu} → H`, `x: ${S.dx} = ${S.v0x}${S.dt}`],
+          blocks: () => [...comps(), groundWhole(),
+            { k: "simp", title: "Simplify: whole flight", full: `${S.dy} = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}`, zeros: [`${S.dy} = 0: it lands at the same height it was launched from`], struck: `${Z(S.dy)} 0 = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}`, result: `0 = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}` },
+            { k: "solve", target: S.dt, lines: [[`0 = ${S.dt}(½${S.ay}${S.dt} + ${S.v0y})`, `Factor out ${S.dt}`], [`${S.dt} = 0 &nbsp; or &nbsp; ½${S.ay}${S.dt} + ${S.v0y} = 0`, `A product is zero when either factor is zero. ${S.dt} = 0 is the launch, so use the other one`],
+              [`½${S.ay}${S.dt} = −${S.v0y}`, `Subtract ${S.v0y} from both sides`], [`${S.dt} = ${fr(`−2${S.v0y}`, S.ay)}`, `Multiply both sides by 2 and divide by ${S.ay}`]] },
+            { k: "sub", title: "Substitute: flight time", out: "dt", f: () => fr(`−2${S.v0y}`, S.ay), n: () => fr(`−2${Q("v0y")}`, Q("ay")), v: () => -2 * K.v0y / K.ay },
+            ...upHeight(true), ...rangeX()] },
+        { name: "Whole flight, quadratic formula", sum: "Use Δy = 0 for the whole flight and the quadratic formula.",
+          outline: ["Find the velocity components", `Whole flight: ${S.dy} = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}`, "Write it in standard form and apply the quadratic formula", `Choose the root that isn’t the launch (${S.dt} ≠ 0)`, `Up: ${S.vfy}<sup>2</sup> − ${S.v0y}<sup>2</sup> = 2${S.ay}${S.dyu} → H`, `x: ${S.dx} = ${S.v0x}${S.dt}`],
+          blocks: () => [...comps(), groundWhole(), { k: "simp", title: "Simplify: whole flight", full: `${S.dy} = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}`, zeros: [`${S.dy} = 0: it lands at the same height it was launched from`], struck: `${Z(S.dy)} 0 = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}`, result: `0 = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}`, note: "It’s already in standard form, with C = 0." },
+            ...quad("nonzero"), ...upHeight(true), ...rangeX()] }] },
+
+    { id: "t3", name: "3) Launched from a height at an angle", gen() { const h = rnd(5, 40), v0 = rnd(10, 30), th = rnd(15, 60, 5); return { h, v0, th, y0: h, yf: 0 }; },
+      text: g => `A ball is launched at <b>${g.v0} m/s</b> at <b>${g.th}°</b> above the horizontal from the top of a <b>${g.h} m</b> tall cliff and lands on the ground below. Find the flight time, the range (Δx) and the maximum height above the ground (H).`,
+      given: g => ({ x: [["v0x", "from |v₀| and θ"], ["ax", "0"], ["dt", "?"], ["dx", "?"]], y: [["y0", `${g.h} m`], ["yf", "0 m"], ["v0y", "from |v₀| and θ"], ["ay", "−9.81 m/s²"], ["dt", "?"], ["H", "?"]] }),
+      results: ["dt", "dx", "H"], paths: () => heightPaths(false) },
+
+    { id: "t4", name: "4) Landing at a height (on a cliff)", gen() {
+        for (;;) { const v0 = rnd(15, 35), th = rnd(40, 70, 5), vy = v0 * Math.sin(rad(th)), Hm = vy * vy / (2 * 9.81), h = Math.round(Hm * rnd(25, 75, 5) / 100); if (h >= 2) return { v0, th, h, y0: 0, yf: h }; } },
+      text: g => `A ball is launched from the ground at <b>${g.v0} m/s</b> at <b>${g.th}°</b> above the horizontal. On its way down it lands on top of a <b>${g.h} m</b> tall cliff. Find the flight time and the horizontal distance (Δx).`,
+      given: g => ({ x: [["v0x", "from |v₀| and θ"], ["ax", "0"], ["dt", "?"], ["dx", "?"]], y: [["y0", "0 m"], ["yf", `${g.h} m`], ["v0y", "from |v₀| and θ"], ["ay", "−9.81 m/s²"], ["dt", "?"]] }),
+      results: ["dt", "dx"], paths: () => heightPaths(true) },
+
+    { id: "t5", name: "5) Find launch velocity from range and max height (ground to ground)", gen() {
+        const v0 = rnd(12, 30), th = rnd(25, 70, 5), vx = v0 * Math.cos(rad(th)), vy = v0 * Math.sin(rad(th));
+        return { R: s3(2 * vx * vy / 9.81), Hh: s3(vy * vy / (2 * 9.81)), y0: 0, yf: 0 }; },
+      text: g => `A ball launched from the ground lands back on the ground <b>${sig(g.R)} m</b> away. Its maximum height is <b>${sig(g.Hh)} m</b>. Find its launch velocity (speed and angle).`,
+      given: g => ({ x: [["dx", `${sig(g.R)} m`], ["ax", "0"], ["dt", "?"], ["v0x", "?"]], y: [["dyu", `${sig(g.Hh)} m (rise to the top)`], ["vty", "0 (at the top)"], ["ay", "−9.81 m/s²"], ["v0y", "?"]] }),
+      results: ["v0", "th"],
+      paths: [
+        { name: "Up first: speed from height", sum: "Use the rise to the top to find the vertical launch velocity first.",
+          outline: [`Up: ${S.vfy}<sup>2</sup> − ${S.v0y}<sup>2</sup> = 2${S.ay}${S.dyu} with ${S.vty} = 0 → ${S.v0y}`, `Up: ${S.vfy} = ${S.ay}${S.dtu} + ${S.v0y} → ${S.dtu}`, `Symmetry: ${S.dt} = 2${S.dtu}`, `x: ${S.v0x} = ${fr(S.dx, S.dt)}`, `Combine: ${S.v0} and θ`],
+          blocks: () => [...v0yFromHeight(), ...upTime(), symmetry(), ...vxFromRange(), ...combineLaunch()] },
+        { name: "Down first: fall from the top", sum: "The fall from the top starts from rest, so find the time first.",
+          outline: [`Down: ${S.dyd} = ½${S.ay}${S.dtd}<sup>2</sup> (starts at rest at the top) → ${S.dtd}`, `Symmetry: ${S.dtu} = ${S.dtd}, ${S.dt} = 2${S.dtd}`, `Up: ${S.vfy} = ${S.ay}${S.dtu} + ${S.v0y} → ${S.v0y}`, `x: ${S.v0x} = ${fr(S.dx, S.dt)}`, `Combine: ${S.v0} and θ`],
+          blocks: () => [{ k: "sub", title: "Find the vertical displacement on the way down", eq: `${S.dyd} = ${S.yf} − ${S.ytop}`, out: "dyd", f: () => `${S.yf} − H`, n: () => `${Q("yf")} − ${Q("H")}`, v: () => K.yf - K.H },
+            ...fallTime(), { k: "dec", title: "Use symmetry", html: `Launched and landing at the same height, the trip up takes as long as the trip down: ${S.dtu} = ${S.dtd}, and the whole flight is <span class="m">${S.dt} = 2${S.dtd}</span>.` },
+            { k: "sub", title: "Substitute: time up", out: "dtu", f: () => S.dtd, n: () => Q("dtd"), v: () => K.dtd },
+            { k: "sub", title: "Substitute: total flight time", out: "dt", f: () => `2${S.dtd}`, n: () => `2${Q("dtd")}`, v: () => 2 * K.dtd },
+            { k: "mx", dir: "y", seg: "up to the top", known: { vf: "vty", a: "ay", t: "dtu" }, want: "v0", pick: "E3", why: `${S.vty} = 0 and ${S.dtu} is known, so ${S.v0y} is the only unknown.` },
+            { k: "simp", title: "Simplify: up to the top", full: `${S.vfy} = ${S.ay}${S.dtu} + ${S.v0y}`, zeros: [`${S.vfy} = ${S.vty} = 0 at the top`], struck: `${Z(S.vfy)} 0 = ${S.ay}${S.dtu} + ${S.v0y}`, result: `0 = ${S.ay}${S.dtu} + ${S.v0y}` },
+            { k: "solve", target: S.v0y, lines: [[`${S.v0y} = −${S.ay}${S.dtu}`, `Subtract ${S.ay}${S.dtu} from both sides`]] },
+            { k: "sub", title: "Substitute: vertical launch velocity", out: "v0y", f: () => `−${S.ay}${S.dtu}`, n: () => `−${Q("ay")}${Q("dtu")}`, v: () => -K.ay * K.dtu },
+            ...vxFromRange(), ...combineLaunch()] }] },
+
+    { id: "t6", name: "6) Find launch velocity from range and max height (ground to cliff)", gen() {
+        for (;;) { const v0 = rnd(15, 32), th = rnd(40, 70, 5), vx = v0 * Math.cos(rad(th)), vy = v0 * Math.sin(rad(th)), Hm = vy * vy / (2 * 9.81), h = Math.round(Hm * rnd(25, 70, 5) / 100);
+          if (h < 2) continue; const t = (vy + Math.sqrt(vy * vy - 2 * 9.81 * h)) / 9.81; return { R: s3(vx * t), Hh: s3(Hm), h, y0: 0, yf: h }; } },
+      text: g => `A ball is launched from the ground and, on its way down, lands on top of a <b>${g.h} m</b> tall cliff, <b>${sig(g.R)} m</b> away horizontally. Its maximum height is <b>${sig(g.Hh)} m</b>. Find its launch velocity (speed and angle).`,
+      given: g => ({ x: [["dx", `${sig(g.R)} m`], ["ax", "0"], ["dt", "?"], ["v0x", "?"]], y: [["dyu", `${sig(g.Hh)} m (rise to the top)`], ["yf", `${g.h} m (cliff top)`], ["vty", "0 (at the top)"], ["ay", "−9.81 m/s²"], ["v0y", "?"]] }),
+      results: ["v0", "th"],
+      paths: [
+        { name: "Up, then down (two segments)", sum: "Find the time up and the time down separately, then add them.",
+          outline: [`Up: ${S.vfy}<sup>2</sup> − ${S.v0y}<sup>2</sup> = 2${S.ay}${S.dyu} → ${S.v0y}`, `Up: ${S.vfy} = ${S.ay}${S.dtu} + ${S.v0y} → ${S.dtu}`, `Down: ${S.dyd} = H to cliff top; ${S.dyd} = ½${S.ay}${S.dtd}<sup>2</sup> → ${S.dtd}`, `${S.dt} = ${S.dtu} + ${S.dtd}`, `x: ${S.v0x} = ${fr(S.dx, S.dt)}`, `Combine: ${S.v0} and θ`],
+          blocks: () => [...v0yFromHeight(), ...upTime(),
+            { k: "sub", title: "Find the vertical displacement on the way down", eq: `${S.dyd} = ${S.yf} − ${S.ytop}`, out: "dyd", f: () => `${S.yf} − H`, n: () => `${Q("yf")} − ${Q("H")}`, v: () => K.yf - K.H, why: "On the way down the ball falls from the top (height H) to the top of the cliff." },
+            ...fallTime(), { k: "sub", title: "Total flight time", eq: `${S.dt} = ${S.dtu} + ${S.dtd}`, out: "dt", f: () => `${S.dtu} + ${S.dtd}`, n: () => `${Q("dtu")} + ${Q("dtd")}`, v: () => K.dtu + K.dtd, why: "It doesn’t land at its launch height, so the two halves are not equal." },
+            ...vxFromRange(), ...combineLaunch()] },
+        { name: "Quadratic formula (whole flight)", sum: "Find the vertical launch velocity, then the flight time from the whole flight with the quadratic formula.",
+          outline: [`Up: ${S.vfy}<sup>2</sup> − ${S.v0y}<sup>2</sup> = 2${S.ay}${S.dyu} → ${S.v0y}`, `Whole flight: ${S.dy} = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}`, "Quadratic formula: choose the later root (it lands on the way down)", `x: ${S.v0x} = ${fr(S.dx, S.dt)}`, `Combine: ${S.v0} and θ`],
+          blocks: () => [...v0yFromHeight(), heights("dy", [S.yf, () => Q("yf"), () => K.yf], [S.y0, () => Q("y0"), () => K.y0]),
+            { k: "mx", dir: "y", seg: "whole flight", known: { v0: "v0y", a: "ay", d: "dy" }, want: "t", pick: "E4", why: `${S.dt} is the only unknown, but it appears twice (Δt² and Δt), so this is a quadratic.` },
+            { k: "simp", title: "Simplify: whole flight", full: `${S.dy} = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}`, zeros: [], result: `${S.dy} = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}`, note: `No terms are zero here: ${S.v0y} ≠ 0 and ${S.dy} ≠ 0.` },
+            ...quad("late"), ...vxFromRange(), ...combineLaunch()] }] },
+
+    { id: "t7", name: "7) Find launch velocity from flight time and range (ground to ground)", gen() {
+        const v0 = rnd(12, 30), th = rnd(25, 70, 5), vx = v0 * Math.cos(rad(th)), vy = v0 * Math.sin(rad(th)), T = 2 * vy / 9.81; return { T: s3(T), R: s3(vx * T), y0: 0, yf: 0 }; },
+      text: g => `A ball launched from the ground is in the air for <b>${sig(g.T)} s</b> and lands back on the ground <b>${sig(g.R)} m</b> away. Find its launch velocity (speed and angle).`,
+      given: g => ({ x: [["dx", `${sig(g.R)} m`], ["dt", `${sig(g.T)} s`], ["ax", "0"], ["v0x", "?"]], y: [["dt", `${sig(g.T)} s`], ["dy", "0 (lands at launch height)"], ["ay", "−9.81 m/s²"], ["v0y", "?"]] }),
+      results: ["v0", "th"],
+      paths: [
+        { name: "Whole flight", sum: "Use Δy = 0 for the whole flight and solve for the vertical launch velocity.",
+          outline: [`x: ${S.v0x} = ${fr(S.dx, S.dt)}`, `Whole flight: ${S.dy} = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt} with ${S.dy} = 0 → ${S.v0y}`, `Combine: ${S.v0} and θ`],
+          blocks: () => [...vxFromRange(),
+            { k: "mx", dir: "y", seg: "whole flight", known: { a: "ay", d: "dy", t: "dt" }, want: "v0", pick: "E4", why: `${S.dy} = 0 and ${S.dt} are known, so ${S.v0y} is the only unknown.` },
+            { k: "simp", title: "Simplify: whole flight", full: `${S.dy} = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}`, zeros: [`${S.dy} = 0: it lands at its launch height`], struck: `${Z(S.dy)} 0 = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}`, result: `0 = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}` },
+            { k: "solve", target: S.v0y, lines: [[`−${S.v0y}${S.dt} = ½${S.ay}${S.dt}<sup>2</sup>`, `Subtract ${S.v0y}${S.dt} from both sides`], [`${S.v0y} = −½${S.ay}${S.dt}`, `Divide both sides by −${S.dt}`]] },
+            { k: "sub", title: "Substitute: vertical launch velocity", out: "v0y", f: () => `−½${S.ay}${S.dt}`, n: () => `−½${Q("ay")}${Q("dt")}`, v: () => -0.5 * K.ay * K.dt },
+            ...combineLaunch()] },
+        { name: "Symmetry: top at half the time", sum: "The top is reached at half the flight time, where the vertical velocity is zero.",
+          outline: [`x: ${S.v0x} = ${fr(S.dx, S.dt)}`, `Symmetry: ${S.dtu} = ½${S.dt}`, `Up: ${S.vfy} = ${S.ay}${S.dtu} + ${S.v0y} with ${S.vty} = 0 → ${S.v0y}`, `Combine: ${S.v0} and θ`],
+          blocks: () => [...vxFromRange(), { k: "dec", title: "Use symmetry", html: `Launched and landing at the same height, it reaches the top at half the flight time: <span class="m">${S.dtu} = ½${S.dt}</span>.` },
+            { k: "sub", title: "Substitute: time to the top", out: "dtu", f: () => `½${S.dt}`, n: () => `½${Q("dt")}`, v: () => K.dt / 2 },
+            { k: "mx", dir: "y", seg: "up to the top", known: { vf: "vty", a: "ay", t: "dtu" }, want: "v0", pick: "E3", why: `${S.vty} = 0 and ${S.dtu} is known, so ${S.v0y} is the only unknown.` },
+            { k: "simp", title: "Simplify: up to the top", full: `${S.vfy} = ${S.ay}${S.dtu} + ${S.v0y}`, zeros: [`${S.vfy} = ${S.vty} = 0 at the top`], struck: `${Z(S.vfy)} 0 = ${S.ay}${S.dtu} + ${S.v0y}`, result: `0 = ${S.ay}${S.dtu} + ${S.v0y}` },
+            { k: "solve", target: S.v0y, lines: [[`${S.v0y} = −${S.ay}${S.dtu}`, `Subtract ${S.ay}${S.dtu} from both sides`]] },
+            { k: "sub", title: "Substitute: vertical launch velocity", out: "v0y", f: () => `−${S.ay}${S.dtu}`, n: () => `−${Q("ay")}${Q("dtu")}`, v: () => -K.ay * K.dtu },
+            ...combineLaunch()] }] },
+
+    { id: "t8", name: "8) Find launch velocity from flight time and range (ground to cliff)", gen() {
+        for (;;) { const v0 = rnd(15, 32), th = rnd(40, 70, 5), vx = v0 * Math.cos(rad(th)), vy = v0 * Math.sin(rad(th)), Hm = vy * vy / (2 * 9.81), h = Math.round(Hm * rnd(25, 70, 5) / 100);
+          if (h < 2) continue; const t = (vy + Math.sqrt(vy * vy - 2 * 9.81 * h)) / 9.81; return { T: s3(t), R: s3(vx * t), h, y0: 0, yf: h }; } },
+      text: g => `A ball launched from the ground is in the air for <b>${sig(g.T)} s</b> and lands on top of a <b>${g.h} m</b> tall cliff, <b>${sig(g.R)} m</b> away horizontally. Find its launch velocity (speed and angle).`,
+      given: g => ({ x: [["dx", `${sig(g.R)} m`], ["dt", `${sig(g.T)} s`], ["ax", "0"], ["v0x", "?"]], y: [["y0", "0 m"], ["yf", `${g.h} m`], ["dt", `${sig(g.T)} s`], ["ay", "−9.81 m/s²"], ["v0y", "?"]] }),
+      results: ["v0", "th"],
+      paths: [
+        { name: "Whole flight", sum: "There is one natural path: the whole flight, with Δy equal to the cliff height.",
+          outline: [`x: ${S.v0x} = ${fr(S.dx, S.dt)}`, `Find ${S.dy} from the heights`, `Whole flight: ${S.dy} = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt} → ${S.v0y}`, `Combine: ${S.v0} and θ`],
+          blocks: () => [...vxFromRange(), heights("dy", [S.yf, () => Q("yf"), () => K.yf], [S.y0, () => Q("y0"), () => K.y0]),
+            { k: "mx", dir: "y", seg: "whole flight", known: { a: "ay", d: "dy", t: "dt" }, want: "v0", pick: "E4", why: `${S.dy} and ${S.dt} are known, so ${S.v0y} is the only unknown.` },
+            { k: "simp", title: "Simplify: whole flight", full: `${S.dy} = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}`, zeros: [], result: `${S.dy} = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}`, note: `No terms are zero: it lands on the cliff, so ${S.dy} ≠ 0.` },
+            { k: "solve", target: S.v0y, lines: [[`${S.dy} − ½${S.ay}${S.dt}<sup>2</sup> = ${S.v0y}${S.dt}`, `Subtract ½${S.ay}${S.dt}<sup>2</sup> from both sides`], [`${S.v0y} = ${fr(`${S.dy} − ½${S.ay}${S.dt}<sup>2</sup>`, S.dt)}`, `Divide both sides by ${S.dt}`]] },
+            { k: "sub", title: "Substitute: vertical launch velocity", out: "v0y", f: () => fr(`${S.dy} − ½${S.ay}${S.dt}<sup>2</sup>`, S.dt), n: () => fr(`${Q("dy")} − ½${Q("ay")}${Q("dt")}<sup>2</sup>`, Q("dt")), v: () => (K.dy - 0.5 * K.ay * K.dt * K.dt) / K.dt },
+            ...combineLaunch()] }] }
+  ];
+
+  // ---------- more shared blocks ----------
+  function symmetry() { return { k: "dec", title: "Use symmetry", html: `It lands at the same height it was launched from, so the trip down takes as long as the trip up:<div class="m" style="margin-top:6px">${S.dt} = 2${S.dtu}</div>`, then: { out: "dt", f: () => `2${S.dtu}`, n: () => `2${Q("dtu")}`, v: () => 2 * K.dtu } }; }
+  function groundWhole() { return { k: "mx", dir: "y", seg: "whole flight", known: { v0: "v0y", a: "ay", d: "dy" }, want: "t", pick: "E4", why: `For the whole flight ${S.dy} = 0 (it lands where it started, vertically). Δt is the only unknown, but it appears twice.` }; }
+  function finalVfromTime() { return [
+    { k: "mx", dir: "y", seg: "whole flight", known: { v0: "v0y", a: "ay", d: "dy", t: "dt" }, want: "vf", pick: "E3", why: `Δt is known now, so ${S.vfy} is the only unknown. (The equation without time would also work.)` },
+    { k: "simp", title: "Simplify: y-direction", full: `${S.vfy} = ${S.ay}${S.dt} + ${S.v0y}`, zeros: [`${S.v0y} = 0: launched horizontally`], struck: `${S.vfy} = ${S.ay}${S.dt} + ${Z(S.v0y)}`, result: `${S.vfy} = ${S.ay}${S.dt}`, note: `It’s already solved for ${S.vfy}.` },
+    { k: "sub", title: "Substitute: final vertical velocity", out: "vfy", f: () => `${S.ay}${S.dt}`, n: () => `${Q("ay")}${Q("dt")}`, v: () => K.ay * K.dt }]; }
+  function combineFinal() { return [
+    { k: "info", title: "Horizontal velocity doesn’t change", html: `a<sub>x</sub> = 0, so <span class="m">${S.vfx} = ${S.v0x}</span>.` },
+    { k: "sub", title: "Final horizontal velocity", out: "vfx", f: () => S.v0x, n: () => Q("v0x"), v: () => K.v0x },
+    { k: "sub", title: "Combine: final speed", eq: `${S.vf} = ${sq(`${S.vfx}<sup>2</sup> + ${S.vfy}<sup>2</sup>`)}`, out: "vf", f: () => sq(`${S.vfx}<sup>2</sup> + ${S.vfy}<sup>2</sup>`), n: () => sq(`${Q("vfx")}<sup>2</sup> + ${Q("vfy")}<sup>2</sup>`), v: () => Math.hypot(K.vfx, K.vfy), why: "The components are the sides of a right triangle (Pythagorean theorem)." },
+    { k: "sub", title: "Combine: final angle", eq: `${S.thf} = tan<sup>−1</sup>(${fr(S.vfy, S.vfx)})`, out: "thf", f: () => `tan<sup>−1</sup>(${fr(S.vfy, S.vfx)})`, n: () => `tan<sup>−1</sup>(${fr(Q("vfy"), Q("vfx"))})`, v: () => deg(Math.atan(K.vfy / K.vfx)), why: "Negative means below the horizontal." }]; }
+  function v0yFromHeight() { return [
+    { k: "mx", dir: "y", seg: "up to the top", known: { vf: "vty", a: "ay", d: "dyu" }, want: "v0", pick: "E5", why: `At the top ${S.vty} = 0 and the rise ${S.dyu} = H is given. With no time known, use the equation without Δt.` },
+    { k: "simp", title: "Simplify: up to the top", full: `${S.vfy}<sup>2</sup> − ${S.v0y}<sup>2</sup> = 2${S.ay}${S.dyu}`, zeros: [`${S.vfy} = ${S.vty} = 0 at the top`], struck: `${Z(`${S.vfy}<sup>2</sup>`)} − ${S.v0y}<sup>2</sup> = 2${S.ay}${S.dyu}`, result: `−${S.v0y}<sup>2</sup> = 2${S.ay}${S.dyu}` },
+    { k: "solve", target: S.v0y, lines: [[`${S.v0y}<sup>2</sup> = −2${S.ay}${S.dyu}`, "Multiply both sides by −1"], [`${S.v0y} = ± ${sq(`−2${S.ay}${S.dyu}`)}`, "Take the square root: two answers"]] },
+    { k: "dec", title: "Choose the sign", html: `The ball is launched <b>upward</b>, so ${S.v0y} is positive. (Because ${S.ay} is negative, −2${S.ay}${S.dyu} is positive, so the square root works.)<div class="m" style="margin-top:6px">${S.v0y} = ${sq(`−2${S.ay}${S.dyu}`)}</div>` },
+    { k: "sub", title: "Substitute: vertical launch velocity", out: "v0y", f: () => sq(`−2${S.ay}${S.dyu}`), n: () => sq(`−2${Q("ay")}${Q("dyu")}`), v: () => Math.sqrt(-2 * K.ay * K.dyu) }]; }
+  function fallTime() { return [
+    { k: "mx", dir: "y", seg: "top to landing", known: { v0: "vty", a: "ay", d: "dyd" }, want: "t", pick: "E4", why: `The fall starts at the top, where the vertical velocity is 0. Δt<sub>down</sub> is the only unknown.` },
+    { k: "simp", title: "Simplify: the fall", full: `${S.dyd} = ½${S.ay}${S.dtd}<sup>2</sup> + ${S.v0y}${S.dtd}`, zeros: [`${S.v0y} = 0 here: this part of the flight starts at the top`], struck: `${S.dyd} = ½${S.ay}${S.dtd}<sup>2</sup> + ${Z(`${S.v0y}${S.dtd}`)}`, result: `${S.dyd} = ½${S.ay}${S.dtd}<sup>2</sup>` },
+    { k: "solve", target: S.dtd, lines: [[`2${S.dyd} = ${S.ay}${S.dtd}<sup>2</sup>`, "Multiply both sides by 2"], [`${fr(`2${S.dyd}`, S.ay)} = ${S.dtd}<sup>2</sup>`, `Divide both sides by ${S.ay}`], [`${S.dtd} = ${sq(fr(`2${S.dyd}`, S.ay))}`, "Take the square root (time is positive)"]] },
+    { k: "sub", title: "Substitute: time down", out: "dtd", f: () => sq(fr(`2${S.dyd}`, S.ay)), n: () => sq(fr(`2${Q("dyd")}`, Q("ay"))), v: () => Math.sqrt(2 * K.dyd / K.ay) }]; }
+  function vxFromRange() { return [
+    { k: "mx", dir: "x", seg: "whole flight", known: { a: "ax", d: "dx", t: "dt" }, want: "v0", pick: "E4", why: `In x, a<sub>x</sub> = 0. With ${S.dx} and ${S.dt} known, ${S.v0x} is the only unknown.` },
+    { k: "simp", title: "Simplify: x-direction", full: `${S.dx} = ½${S.ax}${S.dt}<sup>2</sup> + ${S.v0x}${S.dt}`, zeros: [`${S.ax} = 0: nothing pushes it sideways`], struck: `${S.dx} = ${Z(`½${S.ax}${S.dt}<sup>2</sup>`)} + ${S.v0x}${S.dt}`, result: `${S.dx} = ${S.v0x}${S.dt}` },
+    { k: "solve", target: S.v0x, lines: [[`${S.v0x} = ${fr(S.dx, S.dt)}`, `Divide both sides by ${S.dt}`]] },
+    { k: "sub", title: "Substitute: horizontal launch velocity", out: "v0x", f: () => fr(S.dx, S.dt), n: () => fr(Q("dx"), Q("dt")), v: () => K.dx / K.dt }]; }
+  function combineLaunch() { return [
+    { k: "sub", title: "Combine: launch speed", eq: `${S.v0} = ${sq(`${S.v0x}<sup>2</sup> + ${S.v0y}<sup>2</sup>`)}`, out: "v0", f: () => sq(`${S.v0x}<sup>2</sup> + ${S.v0y}<sup>2</sup>`), n: () => sq(`${Q("v0x")}<sup>2</sup> + ${Q("v0y")}<sup>2</sup>`), v: () => Math.hypot(K.v0x, K.v0y), why: "The components are the sides of a right triangle (Pythagorean theorem)." },
+    { k: "sub", title: "Combine: launch angle", eq: `θ = tan<sup>−1</sup>(${fr(S.v0y, S.v0x)})`, out: "th", f: () => `tan<sup>−1</sup>(${fr(S.v0y, S.v0x)})`, n: () => `tan<sup>−1</sup>(${fr(Q("v0y"), Q("v0x"))})`, v: () => deg(Math.atan(K.v0y / K.v0x)), why: "Measured above the horizontal." }]; }
+  // the three ways to solve a launch from a height (type 3) or a landing on a cliff (type 4)
+  function heightPaths(cliff) {
+    const dyB = heights("dy", [S.yf, () => Q("yf"), () => K.yf], [S.y0, () => Q("y0"), () => K.y0], cliff ? "It lands higher than it started, so Δy is positive." : "It lands lower than it started, so Δy is negative.");
+    const Hpart = cliff ? [] : upHeight(true);
+    const whole = { k: "mx", dir: "y", seg: "whole flight", known: { v0: "v0y", a: "ay", d: "dy" }, want: "t", pick: "E4", why: `Δt is the only unknown, but it appears twice (Δt² and Δt): a quadratic.`, alt: `Picking the equation without time gives ${S.vfy} first instead: another path.` };
+    return [
+      { name: "Quadratic formula (whole flight)", sum: "Use the whole flight in one equation and solve the quadratic.",
+        outline: ["Find the velocity components", `Find ${S.dy} from the heights`, `Whole flight: ${S.dy} = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}`, "Standard form and the quadratic formula", cliff ? "Choose the later root (it lands on the way down)" : "Choose the positive root", `x: ${S.dx} = ${S.v0x}${S.dt}`, ...(cliff ? [] : [`Up: ${S.vfy}<sup>2</sup> − ${S.v0y}<sup>2</sup> = 2${S.ay}${S.dyu} → H`])],
+        blocks: () => [...comps(), dyB, whole,
+          { k: "simp", title: "Simplify: whole flight", full: `${S.dy} = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}`, zeros: [], result: `${S.dy} = ½${S.ay}${S.dt}<sup>2</sup> + ${S.v0y}${S.dt}`, note: `No terms are zero here: ${S.v0y} ≠ 0 and ${S.dy} ≠ 0.` },
+          ...quad(cliff ? "late" : "pos"), ...rangeX(), ...Hpart] },
+      { name: "Final vertical velocity first", sum: "Find the vertical velocity at landing, then the time. No quadratic needed.",
+        outline: ["Find the velocity components", `Find ${S.dy} from the heights`, `Whole flight: ${S.vfy}<sup>2</sup> − ${S.v0y}<sup>2</sup> = 2${S.ay}${S.dy} → ${S.vfy}`, "Choose the negative root (moving down at landing)", `Whole flight: ${S.vfy} = ${S.ay}${S.dt} + ${S.v0y} → ${S.dt}`, `x: ${S.dx} = ${S.v0x}${S.dt}`, ...(cliff ? [] : [`Up: rise to the top → H`])],
+        blocks: () => [...comps(), dyB,
+          { k: "mx", dir: "y", seg: "whole flight", known: { v0: "v0y", a: "ay", d: "dy" }, want: "vf", pick: "E5", why: `This equation has no Δt, so ${S.vfy} is its only unknown, and it isn’t a quadratic.`, alt: `Picking the equation with ½aΔt² gives Δt directly, but needs the quadratic formula.` },
+          { k: "simp", title: "Simplify: whole flight", full: `${S.vfy}<sup>2</sup> − ${S.v0y}<sup>2</sup> = 2${S.ay}${S.dy}`, zeros: [], result: `${S.vfy}<sup>2</sup> − ${S.v0y}<sup>2</sup> = 2${S.ay}${S.dy}`, note: "No terms are zero here." },
+          { k: "solve", target: S.vfy, lines: [[`${S.vfy}<sup>2</sup> = ${S.v0y}<sup>2</sup> + 2${S.ay}${S.dy}`, `Add ${S.v0y}<sup>2</sup> to both sides`], [`${S.vfy} = ± ${sq(`${S.v0y}<sup>2</sup> + 2${S.ay}${S.dy}`)}`, "Take the square root: two answers"]] },
+          { k: "dec", title: "Choose the sign", html: `${cliff ? "It lands on the cliff on its way <b>down</b>" : "It is moving <b>down</b> when it lands"}, so ${S.vfy} is negative:<div class="m" style="margin-top:6px">${S.vfy} = −${sq(`${S.v0y}<sup>2</sup> + 2${S.ay}${S.dy}`)}</div>` },
+          { k: "sub", title: "Substitute: final vertical velocity", out: "vfy", f: () => `−${sq(`${S.v0y}<sup>2</sup> + 2${S.ay}${S.dy}`)}`, n: () => `−${sq(`${Q("v0y")}<sup>2</sup> + 2${Q("ay")}${Q("dy")}`)}`, v: () => -Math.sqrt(K.v0y * K.v0y + 2 * K.ay * K.dy) },
+          { k: "mx", dir: "y", seg: "whole flight", known: { v0: "v0y", a: "ay", d: "dy", vf: "vfy" }, want: "t", pick: "E3", why: `With ${S.vfy} known, this equation has only Δt unknown, and Δt appears just once.` },
+          { k: "simp", title: "Simplify: whole flight", full: `${S.vfy} = ${S.ay}${S.dt} + ${S.v0y}`, zeros: [], result: `${S.vfy} = ${S.ay}${S.dt} + ${S.v0y}`, note: "No terms are zero here." },
+          { k: "solve", target: S.dt, lines: [[`${S.vfy} − ${S.v0y} = ${S.ay}${S.dt}`, `Subtract ${S.v0y} from both sides`], [`${S.dt} = ${fr(`${S.vfy} − ${S.v0y}`, S.ay)}`, `Divide both sides by ${S.ay}`]] },
+          { k: "sub", title: "Substitute: flight time", out: "dt", f: () => fr(`${S.vfy} − ${S.v0y}`, S.ay), n: () => fr(`${Q("vfy")} − ${Q("v0y")}`, Q("ay")), v: () => (K.vfy - K.v0y) / K.ay },
+          ...rangeX(), ...Hpart] },
+      { name: "Up, then down (two segments)", sum: "Split the flight at the top: the way up, then a fall from rest at the top.",
+        outline: ["Find the velocity components", `Up: ${S.vfy} = ${S.ay}${S.dtu} + ${S.v0y} → ${S.dtu}`, `Up: ${S.vfy}<sup>2</sup> − ${S.v0y}<sup>2</sup> = 2${S.ay}${S.dyu} → height of the top`, `Down: ${S.dyd} = ½${S.ay}${S.dtd}<sup>2</sup> → ${S.dtd}`, `${S.dt} = ${S.dtu} + ${S.dtd}`, `x: ${S.dx} = ${S.v0x}${S.dt}`],
+        blocks: () => [...comps(), ...upTime(), ...upHeight(false),
+          { k: "sub", title: "Height of the top", eq: `${S.ytop} = ${S.y0} + ${S.dyu}`, out: "ytop", f: () => `${S.y0} + ${S.dyu}`, n: () => `${Q("y0")} + ${Q("dyu")}`, v: () => K.y0 + K.dyu, why: cliff ? "" : "This is also the maximum height, H." },
+          { k: "sub", title: "Find the vertical displacement on the way down", eq: `${S.dyd} = ${S.yf} − ${S.ytop}`, out: "dyd", f: () => `${S.yf} − ${S.ytop}`, n: () => `${Q("yf")} − ${Q("ytop")}`, v: () => K.yf - K.ytop },
+          ...fallTime(),
+          { k: "sub", title: "Total flight time", eq: `${S.dt} = ${S.dtu} + ${S.dtd}`, out: "dt", f: () => `${S.dtu} + ${S.dtd}`, n: () => `${Q("dtu")} + ${Q("dtd")}`, v: () => K.dtu + K.dtd },
+          ...rangeX(), ...(cliff ? [] : [{ k: "sub", title: "Maximum height", out: "H", f: () => S.ytop, n: () => Q("ytop"), v: () => K.ytop }])] }];
+  }
+
+  // ---------- state ----------
+  let T = TYPES[0], G = null, paths = [], pathIx = -1, steps = [], cur = 0, Kstart = {};
+  function initialK() {
+    const k = { ay: AY, ax: 0, vty: 0 };
+    ["v0", "th", "h", "y0", "yf", "v0x", "v0y"].forEach(x => { if (G[x] != null) k[x] = G[x]; });
+    if (G.R != null) k.dx = G.R; if (G.T != null) k.dt = G.T; if (G.Hh != null) { k.H = G.Hh; k.dyu = G.Hh; }
+    if ((T.id === "t2" || T.id === "t7") && k.dy == null) k.dy = 0;
+    return k;
+  }
+  function newProblem() {
+    G = T.gen(); paths = typeof T.paths === "function" ? T.paths() : T.paths; pathIx = -1; Kstart = initialK();
+    buildSteps(); cur = 0; render(); sim.reset();
+  }
+  // steps: problem → outlines → (chosen path's blocks, flattened) → summary
+  function buildSteps() {
+    steps = [{ kind: "problem", title: "The problem: given and unknown" }, { kind: "outlines", title: paths.length > 1 ? "Choose a path" : "Outline of the solution", dec: paths.length > 1 }];
+    if (pathIx >= 0) {
+      paths[pathIx].blocks().forEach((b, bi) => {
+        if (b.k === "solve") b.lines.forEach((l, li) => steps.push({ kind: "block", b, li, title: `Solve for ${b.target} (${li + 1}/${b.lines.length})` }));
+        else if (b.k === "roots") { steps.push({ kind: "block", b, part: 0, title: "Substitute A, B and C" }); steps.push({ kind: "block", b, part: 1, title: "Choose the right root", dec: true }); }
+        else steps.push({ kind: "block", b, title: b.k === "mx" ? `Choose an equation: ${b.dir}, ${b.seg}` : b.title, dec: b.k === "mx" || b.k === "dec" });
+        if (b.k === "dec" && b.then) steps.push({ kind: "block", b: { k: "sub", title: "Substitute: total flight time", ...b.then }, title: "Substitute: total flight time" });
+      });
+      steps.push({ kind: "summary", title: "Answers and check" });
+    }
+  }
+  // replay the substitutions up to step i so "what we know" and every number is right when going Back
+  function knownAt(i) {
+    K = { ...Kstart }; const added = [];
+    for (let j = 0; j < i; j++) { const st = steps[j]; if (st.kind !== "block") continue; const b = st.b;
+      if (b.k === "sub") { K[b.out] = s3(b.v()); added.push(b.out); }
+      if (b.k === "roots" && st.part === 1) { K.dt = s3(rootsOf(b).pick); added.push("dt"); } }
+    return added;
+  }
+  function rootsOf(b) {
+    const A = 0.5 * K.ay, B = K.v0y, C = -K.dy, disc = B * B - 4 * A * C, r1 = (-B + Math.sqrt(disc)) / (2 * A), r2 = (-B - Math.sqrt(disc)) / (2 * A);
+    const rs = [r1, r2].sort((a, c) => a - c); let pick;
+    if (b.choose === "pos") pick = rs.find(r => r > 1e-9); else if (b.choose === "nonzero") pick = rs.find(r => Math.abs(r) > 1e-6); else pick = rs[1];
+    return { A, B, C, disc, r1, r2, rs, pick };
+  }
+
+  // ---------- rendering ----------
+  const LAB = { v0x: S.v0x, v0y: S.v0y, vfy: S.vfy, vfx: S.vfx, ay: S.ay, ax: S.ax, dy: S.dy, dx: S.dx, dt: S.dt, v0: S.v0, th: "θ", vf: S.vf, thf: S.thf, y0: S.y0, yf: S.yf, dtu: S.dtu, dyu: S.dyu, dtd: S.dtd, dyd: S.dyd, ytop: S.ytop, H: "H", vty: S.vty, h: "h" };
+  function render() {
+    const added = knownAt(cur);
+    $("ptext").innerHTML = T.text(G);
+    const order = ["v0", "th", "h", "y0", "yf", "dx", "dt", "H", "v0x", "v0y", "dy", "dyu", "dtu", "ytop", "dyd", "dtd", "vfy", "vfx", "vf", "thf", "ay", "ax"];
+    $("known").innerHTML = order.filter(k => K[k] != null && !(k === "h") && !(k === "vty")).map(k => `<span class="k m">${LAB[k]}</span><span class="${added.includes(k) ? "new" : ""}">${V(k)}${added.includes(k) ? " ✓" : ""}</span>`).join("");
+    let lastGrp = "";
+    $("steplist").innerHTML = steps.map((st, i) => {
+      const grp = i < 2 ? "" : i === steps.length - 1 && st.kind === "summary" ? "" : (pathIx >= 0 ? paths[pathIx].name : "");
+      let h = ""; if (i === 2 && grp) h += `<li class="grp">${grp}</li>`;
+      return h + `<li><button data-i="${i}" ${i === cur ? 'aria-current="step"' : ""} class="${st.dec ? "d" : ""}">${i + 1}. ${st.title.replace(/<[^>]+>/g, "")}</button></li>`;
+    }).join("");
+    const st = steps[cur];
+    let h = `<div class="stephead"><span class="n">Step ${cur + 1} of ${steps.length}${pathIx < 0 && cur < 2 ? " (then the steps of the path you choose)" : ""}</span>${pathIx >= 0 && cur >= 2 ? `<span class="pathtag">Path: ${paths[pathIx].name}</span>` : ""}</div>`;
+    if (st.kind === "problem") h += problemHTML();
+    if (st.kind === "outlines") h += outlinesHTML();
+    if (st.kind === "block") h += blockHTML(st);
+    if (st.kind === "summary") h += summaryHTML();
+    const canNext = cur < steps.length - 1 && !(st.kind === "outlines" && pathIx < 0);
+    h += `<div class="nav"><button class="btn ghost" id="back" ${cur === 0 ? "disabled" : ""}>◀ Back</button>
+      <button class="btn" id="next" ${canNext ? "" : "disabled"}>${st.kind === "outlines" && pathIx < 0 ? "Choose a path first" : "Next step ▶"}</button></div>`;
+    $("stage").innerHTML = h;
+    $("back").addEventListener("click", () => go(cur - 1)); $("next").addEventListener("click", () => go(cur + 1));
+    $("stage").querySelectorAll("[data-path]").forEach(b => b.addEventListener("click", () => { pathIx = +b.dataset.path; buildSteps(); go(2); }));
+    $("stage").querySelectorAll("[data-other]").forEach(b => b.addEventListener("click", () => { pathIx = +b.dataset.other; buildSteps(); go(2); }));
+    if ($("again")) $("again").addEventListener("click", newProblem);
+    if ($("animate")) $("animate").addEventListener("click", () => sim.play());
+    sim.draw();
+  }
+  function go(i) { cur = Math.max(0, Math.min(steps.length - 1, i)); render(); const top = $("stage").getBoundingClientRect().top; if (top < 0) window.scrollTo({ top: scrollY + top - 12, behavior: "smooth" }); }
+  $("steplist").addEventListener("click", e => { const b = e.target.closest("button[data-i]"); if (b) go(+b.dataset.i); });
+  document.addEventListener("keydown", e => { if (e.target.closest("select, input, textarea")) return; if (e.key === "ArrowRight") go(cur + 1 <= steps.length - 1 && !(steps[cur].kind === "outlines" && pathIx < 0) ? cur + 1 : cur); if (e.key === "ArrowLeft") go(cur - 1); });
+
+  function problemHTML() {
+    const g = T.given(G), col = (title, rows) => `<div><h3>${title}</h3>${rows.map(([k, v]) => `<div class="row"><span class="m">${LAB[k]}</span><span class="${v === "?" ? "c-u" : ""}">${v === "?" ? "? (unknown)" : v}</span></div>`).join("")}</div>`;
+    return `<h2>Given &amp; Unknown</h2><p>${T.text(G)}</p><p class="hint">Split the motion into two directions. Horizontally nothing speeds the ball up or slows it down (a<sub>x</sub> = 0); vertically it accelerates at a<sub>y</sub> = −9.81 m/s². The two directions share the same time, Δt.</p>
+      <div class="gu">${col("x-direction (horizontal)", g.x)}${col("y-direction (vertical)", g.y)}</div>`;
+  }
+  function outlinesHTML() {
+    return `<h2>${paths.length > 1 ? "There’s more than one way to solve this" : "Outline of the solution"}</h2>
+      ${paths.length > 1 ? `<div class="decision"><div class="lab">◆ Decision</div>Each path below reaches the same answers. Read the outlines, then choose one to see every step. You can come back and try another.</div>` : ""}
+      <div class="paths">${paths.map((p, i) => `<div class="pathcard ${i === pathIx ? "on" : ""}"><h3>${paths.length > 1 ? `Path ${String.fromCharCode(65 + i)}: ` : ""}${p.name}</h3><p class="hint" style="margin:0">${p.sum}</p>
+        <ol class="m" style="font-size:1rem">${p.outline.map(o => `<li>${o}</li>`).join("")}</ol>
+        <button class="btn ${i === pathIx ? "" : "ghost"}" data-path="${i}">${i === pathIx ? "Showing this path ✓" : "Show this path step by step"}</button></div>`).join("")}</div>`;
+  }
+  const MXCOL = { y: { va: s("v", "avg,y"), v0: S.v0y, vf: S.vfy, d: "Δy", a: S.ay, t: "Δt" }, x: { va: s("v", "avg,x"), v0: S.v0x, vf: S.vfx, d: "Δx", a: S.ax, t: "Δt" } };
+  const EQS = d => { const c = MXCOL[d]; return { E1: `${c.va} = ${fr(`${c.v0} + ${c.vf}`, "2")}`, E2: `${c.d} = ${c.va}${c.t}`, E3: `${c.vf} = ${c.a}${c.t} + ${c.v0}`, E4: `${c.d} = ½${c.a}${c.t}<sup>2</sup> + ${c.v0}${c.t}`, E5: `${c.vf}<sup>2</sup> − ${c.v0}<sup>2</sup> = 2${c.a}${c.d}` }; };
+  function blockHTML(st) {
+    const b = st.b;
+    if (b.k === "info") return `<h2>${b.title}</h2><div class="info">${b.html}</div>`;
+    if (b.k === "dec") return `<h2>${b.title}</h2><div class="decision"><div class="lab">◆ Decision</div>${b.html}</div>`;
+    if (b.k === "mx") {
+      const known = Object.keys(b.known), cols = ["va", "v0", "vf", "d", "a", "t"], c = MXCOL[b.dir], eqs = EQS(b.dir);
+      const rows = Object.entries(ROWS).map(([id, vars]) => { const unk = vars.filter(v => !known.includes(v)); const one = unk.length === 1;
+        return `<tr class="${id === b.pick ? "pick" : one ? "one" : ""}"><td class="m" style="font-size:1.05rem">${eqs[id]}</td>${cols.map(v => `<td>${!vars.includes(v) ? "" : known.includes(v) ? '<span class="c-k">✓</span>' : `<span class="c-u">?</span>`}</td>`).join("")}<td>${one ? "1 unknown: " + c[unk[0]] : unk.length + " unknowns"}</td></tr>`; }).join("");
+      const segName = b.seg === "whole flight" ? "the whole flight" : b.seg;
+      return `<h2>Choose an equation: ${b.dir}-direction, ${segName}</h2>
+        <p>We want <span class="chip u m">${c[b.want]}</span>. What we know for ${segName}: ${known.map(v => `<span class="chip k m">${c[v]} = ${sig(K[b.known[v]])}${unitOf(b.known[v]) === "°" ? "°" : " " + unitOf(b.known[v])}</span>`).join(" ")}</p>
+        <table class="mx"><thead><tr><th>Kinematic matrix</th>${cols.map(v => `<th class="m" style="font-size:1rem">${c[v]}</th>`).join("")}<th></th></tr></thead><tbody>${rows}</tbody></table>
+        <p class="hint" style="margin:0">Green rows have only one unknown, so they can be solved. The blue row is the one this path uses.</p>
+        <div class="decision"><div class="lab">◆ Decision</div>${b.why}${b.alt ? `<br><span class="hint">${b.alt}</span>` : ""}<div class="m" style="margin-top:6px">${eqs[b.pick]}</div></div>`;
+    }
+    if (b.k === "simp") return `<h2>${b.title}</h2><p>Start with the equation, then cross out any terms that are zero.</p>
+      <div class="lines"><div class="line"><span class="m">${b.full}</span><span class="op">The equation we chose</span></div>
+        ${b.zeros.length ? `<div class="line"><span class="m">${b.struck}</span><span class="op">${b.zeros.join("<br>")}</span></div>` : ""}
+        <div class="line cur"><span class="m">${b.result}</span><span class="op">${b.zeros.length ? "Simplified" : (b.note || "Nothing to cross out")}</span></div></div>${b.zeros.length && b.note ? `<p class="hint">${b.note}</p>` : ""}`;
+    if (b.k === "solve") return `<h2>${b.title || `Solve for ${b.target}`}</h2><p>Work symbolically first: one algebra step at a time.</p>
+      <div class="lines">${b.lines.slice(0, st.li + 1).map((l, i) => `<div class="line ${i === st.li ? "cur" : "old"}"><span class="m">${l[0]}</span><span class="op">${l[1]}</span></div>`).join("")}</div>
+      ${st.li === b.lines.length - 1 ? `<p class="hint">Solved for <span class="m">${b.target}</span>. Next: substitute the values.</p>` : ""}`;
+    if (b.k === "sub") {
+      const val = s3(b.v());
+      return `<h2>${b.title}</h2>${b.why ? `<p class="hint">${b.why}</p>` : ""}<div class="lines">
+        <div class="line old"><span class="m">${LAB[b.out]} = ${b.f()}</span><span class="op">${b.eq ? "The equation" : "Solved equation"}</span></div>
+        <div class="line old"><span class="m">${LAB[b.out]} = ${b.n()}</span><span class="op">Substitute the values, with units</span></div>
+        <div class="line cur"><span class="m">${LAB[b.out]} = <span class="res">${sig(val)}${unitOf(b.out) === "°" ? "°" : " " + unitOf(b.out)}</span></span><span class="op">Calculate (3 significant figures)</span></div></div>`;
+    }
+    if (b.k === "roots") {
+      const r = rootsOf(b), A = sig(r.A), B = sig(r.B), C = sig(r.C);
+      const sub = `${S.dt} = ${fr(`−${Q("v0y")} ± ${sq(`${Q("v0y")}<sup>2</sup> + 2${Q("ay")}${Q("dy")}`)}`, Q("ay"))}`;
+      if (st.part === 0) return `<h2>Substitute A, B and C</h2><p class="hint">Here A = ${A} m/s², B = ${B} m/s and C = ${C} m.</p><div class="lines"><div class="line old"><span class="m">${S.dt} = ${fr(`−${S.v0y} ± ${sq(`${S.v0y}<sup>2</sup> + 2${S.ay}${S.dy}`)}`, S.ay)}</span><span class="op">Solved equation</span></div>
+        <div class="line cur"><span class="m">${sub}</span><span class="op">Substitute the values, with units</span></div></div>`;
+      const why = b.choose === "late" ? `Both roots are positive: the ball is at the cliff’s height twice. The smaller time is when it passes that height on the way <b>up</b>; it lands on the way <b>down</b>, so choose the larger root.`
+        : b.choose === "nonzero" ? `One root is ${S.dt} = 0: that’s the moment of launch, when the ball is also at Δy = 0. The flight time is the other root.`
+        : `A negative time would be before the launch, so choose the positive root.`;
+      return `<h2>Choose the right root</h2><div class="lines">
+        <div class="line old"><span class="m">${S.dt} = ${fr(`${sig(-r.B)} ± ${sq(sig(r.disc))}`, sig(2 * r.A))}</span><span class="op">Evaluate inside the square root first</span></div>
+        <div class="line old"><span class="m">${S.dt} = ${sig(r.rs[0])} s &nbsp; or &nbsp; ${S.dt} = ${sig(r.rs[1])} s</span><span class="op">Work out both roots (+ and −)</span></div></div>
+        <div class="decision"><div class="lab">◆ Decision</div>${why}<div class="m" style="margin-top:6px">${S.dt} = <span class="res">${sig(r.pick)} s</span></div></div>`;
+    }
+    return "";
+  }
+  const RESNAME = { dt: "Flight time", dx: "Horizontal distance (range)", H: "Maximum height", vf: "Final speed", thf: "Final angle", v0: "Launch speed", th: "Launch angle" };
+  function summaryHTML() {
+    const rows = T.results.map(k => `<tr><td>${RESNAME[k]}</td><td class="m">${LAB[k]}</td><td class="res">${V(k)}</td></tr>`).join("");
+    const others = paths.map((p, i) => i === pathIx ? "" : `<button class="btn ghost" data-other="${i}">See Path ${String.fromCharCode(65 + i)}: ${p.name}</button>`).join("");
+    return `<h2>Answers</h2><table class="sum">${rows}</table>
+      <p class="hint">Values were rounded to 3 significant figures at each step, the way you’d carry them on paper, so another path may differ in the last digit.</p>
+      <div class="bar" style="margin-top:8px"><button class="btn" id="animate">▶ Watch the flight</button>${others}<button class="btn ghost" id="again">New problem</button></div>`;
+  }
+
+  // ---------- picture and animation ----------
+  const sim = (() => {
+    let raf = 0, tNow = null;
+    const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    function motion() {   // exact motion for drawing
+      let vx, vy, y0 = G.y0 || 0, yf = G.yf || 0;
+      if (G.v0 != null) { vx = G.v0x != null ? G.v0x : G.v0 * Math.cos(rad(G.th)); vy = G.v0y != null ? G.v0y : G.v0 * Math.sin(rad(G.th)); }
+      else if (G.T != null) { vx = G.R / G.T; vy = (yf - y0 + 4.905 * G.T * G.T) / G.T; }
+      else { vy = Math.sqrt(2 * 9.81 * G.Hh); const tt = (vy + Math.sqrt(Math.max(0, vy * vy - 2 * 9.81 * (yf - y0)))) / 9.81; vx = G.R / tt; }
+      const T = (vy + Math.sqrt(Math.max(0, vy * vy + 2 * 9.81 * (y0 - yf)))) / 9.81;
+      return { vx, vy, y0, yf, T, R: vx * T, Hmax: y0 + Math.max(0, vy * vy / 19.62) };
+    }
+    function draw() {
+      const cv = $("cv"), d = devicePixelRatio || 1, r = cv.getBoundingClientRect(), W = r.width, H = r.height;
+      if (!W) return; cv.width = W * d; cv.height = H * d; const c = cv.getContext("2d"); c.setTransform(d, 0, 0, d, 0, 0); c.clearRect(0, 0, W, H);
+      const m = motion(), xmin = Math.min(-0.12 * m.R, -6), xmax = m.R * 1.12 + 2, ymax = Math.max(m.Hmax, m.y0, m.yf) * 1.22 + 2;
+      const k = Math.min((W - 30) / (xmax - xmin), (H - 40) / ymax), X = x => 15 + (x - xmin) * k, Y = y => H - 22 - y * k;
+      c.fillStyle = css("--cliff"); c.strokeStyle = css("--ground"); c.lineWidth = 2;
+      if (m.y0 > 0) { c.fillRect(X(xmin), Y(m.y0), X(0) - X(xmin), Y(0) - Y(m.y0)); }
+      let edge = null;
+      if (m.yf > 0) { const tUp = (m.vy - Math.sqrt(Math.max(0, m.vy * m.vy - 2 * 9.81 * m.yf))) / 9.81; edge = (m.vx * tUp + m.R) / 2; c.fillRect(X(edge), Y(m.yf), X(xmax) - X(edge), Y(0) - Y(m.yf)); }
+      c.beginPath(); c.moveTo(0, Y(0)); c.lineTo(W, Y(0)); c.stroke();
+      // path
+      c.setLineDash([5, 5]); c.strokeStyle = css("--muted"); c.lineWidth = 1.5; c.beginPath();
+      for (let i = 0; i <= 80; i++) { const t = m.T * i / 80, x = m.vx * t, y = m.y0 + m.vy * t - 4.905 * t * t; i ? c.lineTo(X(x), Y(y)) : c.moveTo(X(x), Y(y)); } c.stroke(); c.setLineDash([]);
+      // launch velocity arrow
+      const sp = Math.hypot(m.vx, m.vy), L = Math.min(60, 18 + sp * 1.6), ang = Math.atan2(m.vy, m.vx), ax = X(0) + L * Math.cos(ang), ay2 = Y(m.y0) - L * Math.sin(ang);
+      c.strokeStyle = css("--vel"); c.fillStyle = css("--vel"); c.lineWidth = 3; c.beginPath(); c.moveTo(X(0), Y(m.y0)); c.lineTo(ax, ay2); c.stroke();
+      c.beginPath(); c.moveTo(ax, ay2); c.lineTo(ax - 9 * Math.cos(ang - 0.4), ay2 + 9 * Math.sin(ang - 0.4)); c.lineTo(ax - 9 * Math.cos(ang + 0.4), ay2 + 9 * Math.sin(ang + 0.4)); c.fill();
+      // labels of the givens
+      c.fillStyle = css("--ink"); c.font = "bold 12px 'Atkinson Hyperlegible', system-ui"; c.textAlign = "left";
+      if (G.v0 != null) c.fillText(`${G.v0} m/s${G.th ? ", " + G.th + "°" : ""}`, ax + 6, ay2 - 2);
+      if (m.y0 > 0) { c.textAlign = "right"; c.fillText(`${G.h} m`, X(0) - 6, (Y(0) + Y(m.y0)) / 2 + 4); }
+      if (m.yf > 0) { c.textAlign = "left"; c.fillText(`${G.h} m`, X(edge) + 6, (Y(0) + Y(m.yf)) / 2 + 4); }
+      if (G.R != null) { c.textAlign = "center"; c.fillText(`Δx = ${sig(G.R)} m`, (X(0) + X(m.R)) / 2, H - 6); }
+      if (G.Hh != null) { const xt = m.vx * m.vy / 9.81; c.strokeStyle = css("--muted"); c.lineWidth = 1; c.beginPath(); c.moveTo(X(xt), Y(0)); c.lineTo(X(xt), Y(m.Hmax)); c.stroke(); c.textAlign = "left"; c.fillText(`H = ${sig(G.Hh)} m`, X(xt) + 5, Y(m.Hmax / 2)); }
+      if (G.T != null) { c.textAlign = "right"; c.fillText(`flight time ${sig(G.T)} s`, W - 8, 16); }
+      // the ball
+      const t = tNow == null ? 0 : tNow, bx = m.vx * t, by = m.y0 + m.vy * t - 4.905 * t * t;
+      c.fillStyle = css("--ball"); c.beginPath(); c.arc(X(bx), Y(by), 6, 0, 7); c.fill();
+    }
+    function play() { cancelAnimationFrame(raf); const m = motion(), t0 = performance.now(), dur = Math.max(1.5, m.T) * 1000;
+      const tick = now => { const f = Math.min(1, (now - t0) / dur); tNow = f * m.T; draw(); if (f < 1) raf = requestAnimationFrame(tick); }; raf = requestAnimationFrame(tick); }
+    return { draw, play, reset() { cancelAnimationFrame(raf); tNow = null; draw(); } };
+  })();
+
+  // ---------- start ----------
+  $("ptype").innerHTML = TYPES.map((t, i) => `<option value="${i}">${t.name}</option>`).join("");
+  $("ptype").addEventListener("change", e => { T = TYPES[+e.target.value]; newProblem(); });
+  $("newnums").addEventListener("click", newProblem);
+  $("play").addEventListener("click", () => sim.play());
+  addEventListener("resize", () => sim.draw());
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => render());
+  newProblem();
+})();
+</script>
+<!-- lock check: hides this interactive until the teacher opens it (settings in ../availability.json) -->
+<script>
+(function () {
+  var id = location.pathname.split("/").pop().replace(".html", "");
+  fetch("../availability.json?t=" + Date.now(), { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (cfg) {
+      if (!cfg || !cfg.labs || cfg.labs[id] !== false) return;
+      var teacher = false; try { teacher = localStorage.getItem("teacherPreview") === "1"; } catch (e) {}
+      var font = "font-family:'Atkinson Hyperlegible','Segoe UI',system-ui,sans-serif;";
+      if (teacher) {
+        var b = document.createElement("div");
+        b.setAttribute("role", "status");
+        b.style.cssText = font + "position:sticky;top:0;z-index:50;background:#7a3fe0;color:#fff;font-weight:700;text-align:center;padding:8px 12px;";
+        b.textContent = "Teacher preview: this interactive is locked for students.";
+        document.body.prepend(b);
+        return;
+      }
+      var o = document.createElement("div");
+      o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-labelledby", "lockTitle");
+      o.style.cssText = font + "position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:var(--bg,#eaf1ee);";
+      o.innerHTML = '<div style="max-width:520px;background:var(--panel,#fff);color:var(--ink,#15232b);border:1px solid var(--line,#c4d3cc);border-radius:12px;padding:28px;text-align:center">' +
+        '<h1 id="lockTitle" style="margin:0 0 8px;font-size:1.6rem">Not open yet</h1>' +
+        '<p style="margin:0 0 18px;line-height:1.5">This interactive opens after we do the class activity that goes with it. Check back then!</p>' +
+        '<a href="../interactives.html" style="display:inline-block;font-weight:700;padding:8px 18px;border-radius:8px;background:var(--ink,#15232b);color:var(--panel,#fff);text-decoration:none">Back to Interactives</a></div>';
+      document.body.appendChild(o);
+      document.documentElement.style.overflow = "hidden";
+      Array.prototype.forEach.call(document.body.children, function (el) { if (el !== o) el.setAttribute("aria-hidden", "true"); });
+    })
+    .catch(function () {});
+})();
+</script>
+</body>
+</html>

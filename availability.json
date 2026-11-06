@@ -21,6 +21,7 @@
     "force-diagrams/cp12": false,
     "force-diagrams/cp34": false,
     "force-diagrams/cp5": false,
-    "force-diagrams-review": true
+    "force-diagrams-review": true,
+    "projectile-walkthrough": true
   }
 }
