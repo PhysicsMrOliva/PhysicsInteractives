@@ -374,7 +374,7 @@ video { width: 100%; border-radius: 8px; background: #000; display: block; }
       const body = A ? `<dl>
           <dt>Broom</dt><dd>${c.broom}${s.contact ? `, F = ${sig(s.F)} N` : ", F = 0"}</dd>
           <dt>Motion</dt><dd>${dirTxt}<br>${c.type}: ${c.rule}</dd>
-          <dt>Numbers</dt><dd>vₓ: ${sig(s.v0)} → ${sig(s.v0 + s.a * s.dt)} m/s<br>aₓ = F/m = ${sig(s.a)} m/s²</dd></dl>${svgFor(s, c)}`
+          <dt>Numbers</dt><dd>vₓ: ${sig(s.v0)} → ${sig(s.v0 + s.a * s.dt)} m/s<br>aₓ = F/m = ${sig(s.a)} m/s²<br>${s.contact ? `F<sub>net</sub> = m·a = (${sig(S.m)} kg)(${sig(s.a)} m/s²) = <b>${sig(S.m * s.a)} N</b> ${s.a > 0 ? "(to the right, +)" : "(to the left, −)"}` : `F<sub>net</sub> = <b>0 N</b> (no push)`}</dd></dl>${svgFor(s, c)}`
         : `<p class="hidden">Hidden. Describe the broom, the motion and the vectors on your worksheet, then turn answers back on to check.</p>`;
       const extra = s.kind === "reverse" ? " · after the direction change" : "";
       return `<div class="card ${s.contact ? "on" : ""}" data-n="${s.n}"><h3>Segment ${s.n}</h3>
