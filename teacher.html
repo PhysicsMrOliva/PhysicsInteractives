@@ -41,6 +41,9 @@ details summary { cursor: pointer; font-weight: 700; margin: 8px 0; }
 ol.howto { line-height: 1.7; margin: 6px 0 0; padding-left: 1.3em; }
 code { background: var(--tint); padding: 1px 5px; border-radius: 4px; }
 @media (max-width: 560px) { .lrow { grid-template-columns: 64px minmax(0, 1fr); } .lrow img { width: 64px; height: 44px; } .lrow .toggle { grid-column: 1 / -1; } }
+.lrow.sub { grid-template-columns: 28px minmax(0, 1fr) auto; margin-left: 48px; padding-top: 6px; padding-bottom: 6px; }
+.lrow.sub h3 { font-size: 0.98rem; }
+.subdot { width: 28px; text-align: center; color: var(--muted); font-size: 1.2rem; }
 </style>
 </head>
 <body>
@@ -142,6 +145,9 @@ code { background: var(--tint); padding: 1px 5px; border-radius: 4px; }
       const id = a.getAttribute("href").replace("interactives/", "").replace(".html", "");
       const h = card.querySelector("h3"), img = card.querySelector("img");
       out.push({ id, title: h ? h.textContent.trim() : id, img: img ? img.getAttribute("src") : "" });
+      // a lab can list parts (e.g. worksheets) that open separately
+      let parts = []; try { parts = JSON.parse(card.getAttribute("data-sections") || "[]"); } catch (e) {}
+      parts.forEach(pt => out.push({ id: pt.id, title: pt.title, img: "", sub: true }));
     });
     return out;
   }
@@ -176,6 +182,9 @@ code { background: var(--tint); padding: 1px 5px; border-radius: 4px; }
   function render() {
     $("rows").innerHTML = labs.map(l => {
       const on = state[l.id] !== false;
+      if (l.sub) return `<div class="lrow sub ${on ? "on" : "off"}"><span class="subdot" aria-hidden="true">↳</span>
+        <div><h3>${l.title}</h3><div class="state">${on ? "Open for students" : "Locked"}</div></div>
+        <label class="toggle"><input type="checkbox" data-id="${l.id}" ${on ? "checked" : ""}> Open for students</label></div>`;
       return `<div class="lrow ${on ? "on" : "off"}"><img src="${l.img}" alt="">
         <div><h3>${l.title}</h3><div class="state">${on ? "Open for students" : "Locked"}</div></div>
         <label class="toggle"><input type="checkbox" data-id="${l.id}" ${on ? "checked" : ""}> Open for students</label></div>`;

@@ -10,6 +10,17 @@
     "relationship-explorer": true,
     "guess-practice": true,
     "newtons-blocks-lab": true,
-    "newtons-blocks-explorer": true
+    "newtons-blocks-explorer": true,
+    "force-diagrams": true,
+    "force-diagrams/notes1": true,
+    "force-diagrams/notes2": false,
+    "force-diagrams/inquiry": false,
+    "force-diagrams/netforce": false,
+    "force-diagrams/drawing2": false,
+    "force-diagrams/prep": false,
+    "force-diagrams/cp12": false,
+    "force-diagrams/cp34": false,
+    "force-diagrams/cp5": false,
+    "force-diagrams-review": true
   }
 }
