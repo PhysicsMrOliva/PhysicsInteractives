@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root {
   box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -101,7 +102,7 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
 <header>
   <a class="back" href="../interactives.html">Back to Interactives</a>
   <h1>Apparent weight in an elevator</h1>
-  <p>Why do you feel heavier or lighter in an elevator? A bathroom scale measures the <b>normal force</b> pushing up on you, your <b>apparent weight</b>. Use <b>g = 9.8 N/kg</b>, ΣF = F<sub>net</sub>, and Newton’s 2nd Law, F<sub>net</sub> = ma. Take <b>up as positive</b>.</p>
+  <p>Why do you feel heavier or lighter in an elevator? A bathroom scale measures the <b>normal force</b> pushing up on you, your <b>apparent weight</b>. Use <b>g = 9.81 N/kg</b>, ΣF = F<sub>net</sub>, and Newton’s 2nd Law, F<sub>net</sub> = ma. Take <b>up as positive</b>.</p>
 </header>
 <div class="wrap">
   <nav class="panel side" aria-label="Sections"><ol id="nav"></ol></nav>
@@ -113,22 +114,23 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-  const G = 9.8, M = 70, FG = 686;
+  const G = 9.81, M = 70, FG = M * G;   // 686.7 N
+  const fmtN = v => Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1);
   const fmt = (v, d = 1) => (v < 0 ? "−" : "") + Math.abs(v).toFixed(d);
   const parse = s => Number(String(s).trim().replace("−", "-").replace(",", ".").replace(/\s*(m\/s²|m\/s2|n)$/i, ""));
 
-  // ---------- the nine worksheet moments (70 kg teacher, Fg = 686 N) ----------
+  // ---------- the nine moments (70 kg teacher, Fg = (70 kg)(9.81 N/kg) = 686.7 N) ----------
   // v: direction of motion (1 up, -1 down, 0 at rest), a: acceleration (m/s², up +), N: scale reading
   const P = [
-    { id: "p1", title: "At rest, before moving", group: "Going up", v: 0, a: 0, N: 686, known: "N", text: "The elevator has not started moving yet. There is a normal force of <b>686 N</b> on the teacher, as measured by the scale. Find the acceleration.", vt: "zero" },
-    { id: "p2", title: "Starting to go up", group: "Going up", v: 1, a: 2.2, N: 840, known: "N", text: "The elevator has just started to <b>accelerate upward</b>, and the scale pushes up with a normal force of <b>840 N</b>. Find the acceleration.", vt: "upFaster" },
-    { id: "p3", title: "Constant velocity up", group: "Going up", v: 1, a: 0, N: 686, known: "a", text: "The elevator is moving at a <b>constant velocity</b> as it rises. Find the normal force shown on the scale.", vt: "upConst" },
-    { id: "p4", title: "Slowing down going up", group: "Going up", v: 1, a: -2.2, N: 532, known: "a", text: "The elevator is still moving up but has just started to <b>slow down at a rate of 2.2 m/s²</b> as it approaches the top floor. Find the normal force shown on the scale.", vt: "upSlower" },
-    { id: "p5", title: "Stopped at the top", group: "Going up", v: 0, a: 0, N: 686, known: "N", text: "The elevator has just stopped at the top floor. The scale shows a normal force of <b>686 N</b>. Find the acceleration.", vt: "zero" },
-    { id: "p6", title: "Free fall (the cable snaps!)", group: "Free fall", v: -1, a: -9.8, N: 0, known: "free", text: "Oh snap! The elevator’s cable has broken, and the elevator, teacher and scale are all in <b>free fall</b>. Find the acceleration and the normal force the scale shows.", vt: "downFaster" },
-    { id: "p7", title: "Starting to go down", group: "Going down", v: -1, a: -2.2, N: 532, known: "N", text: "The elevator has just started to <b>accelerate downward</b>, and the scale pushes up on the teacher with a normal force of <b>532 N</b>. Find the acceleration.", vt: "downFaster" },
-    { id: "p8", title: "Constant velocity down", group: "Going down", v: -1, a: 0, N: 686, known: "a", text: "The elevator is moving at a <b>constant velocity</b> as it descends. Find the normal force shown on the scale.", vt: "downConst" },
-    { id: "p9", title: "Slowing down going down", group: "Going down", v: -1, a: 2.2, N: 840, known: "N", text: "The elevator is moving down but slowing as it approaches the 1st floor. The scale reads a normal force of <b>840 N</b>. Find the acceleration.", vt: "downSlower" }
+    { id: "p1", title: "At rest at the bottom", group: "Going up", v: 0, a: 0, N: FG, known: "N", text: "The elevator is at rest at the bottom and hasn’t started moving yet. The scale shows a normal force of <b>686.7 N</b> on the teacher. Find the acceleration.", vt: "zero" },
+    { id: "p2", title: "Starting to go up", group: "Going up", v: 1, a: 2.2, N: FG + M * 2.2, known: "N", text: "The elevator has just started to <b>accelerate upward</b>, and the scale pushes up with a normal force of <b>840.7 N</b>. Find the acceleration.", vt: "upFaster" },
+    { id: "p3", title: "Constant velocity up", group: "Going up", v: 1, a: 0, N: FG, known: "a", text: "The elevator is moving at a <b>constant velocity</b> as it rises. Find the normal force shown on the scale.", vt: "upConst" },
+    { id: "p4", title: "Slowing down going up", group: "Going up", v: 1, a: -2.2, N: FG - M * 2.2, known: "a", text: "The elevator is still moving up but has just started to <b>slow down at a rate of 2.2 m/s²</b> as it approaches the top floor. Find the normal force shown on the scale.", vt: "upSlower" },
+    { id: "p5", title: "Stopped at the top", group: "Going up", v: 0, a: 0, N: FG, known: "N", text: "The elevator has just stopped at the top floor. The scale shows a normal force of <b>686.7 N</b>. Find the acceleration.", vt: "zero" },
+    { id: "p7", title: "Starting to go down", group: "Going down", v: -1, a: -2.2, N: FG - M * 2.2, known: "N", text: "The elevator has just started to <b>accelerate downward</b> from the top floor, and the scale pushes up on the teacher with a normal force of <b>532.7 N</b>. Find the acceleration.", vt: "downFaster" },
+    { id: "p8", title: "Constant velocity down", group: "Going down", v: -1, a: 0, N: FG, known: "a", text: "The elevator is moving at a <b>constant velocity</b> as it descends. Find the normal force shown on the scale.", vt: "downConst" },
+    { id: "p9", title: "Slowing down going down", group: "Going down", v: -1, a: 2.2, N: FG + M * 2.2, known: "N", text: "The elevator is moving down but slowing as it approaches the 1st floor. The scale reads a normal force of <b>840.7 N</b>. Find the acceleration.", vt: "downSlower" },
+    { id: "p6", title: "What if the cable snapped?", group: "What if…?", v: -1, a: -G, N: 0, known: "free", text: "Let’s suppose that instead of being lowered from the top, the cable <b>snapped</b>! The elevator, the teacher and the scale are all in <b>free fall</b>. Find the acceleration and the normal force the scale shows.", vt: "downFaster" }
   ];
   const VT = { zero: "At rest (v = 0)", upFaster: "Up, speeding up", upConst: "Up, constant speed", upSlower: "Up, slowing down", downFaster: "Down, speeding up", downConst: "Down, constant speed", downSlower: "Down, slowing down" };
   const vtPath = k => ({ zero: "M8 35 H102", upFaster: "M8 35 L102 8", upConst: "M8 18 H102", upSlower: "M8 8 L102 35", downFaster: "M8 35 L102 62", downConst: "M8 52 H102", downSlower: "M8 62 L102 35" }[k]);
@@ -137,13 +139,13 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
 
   // ---------- saved progress ----------
   const KEY = "apparent-weight-v1";
-  let S = { name: "", sec: "data", a: {}, finished: null };
+  let S = { name: "", period: "", sec: "data", a: {}, finished: null };
   try { const x = JSON.parse(localStorage.getItem(KEY) || "null"); if (x && x.a) S = x; } catch (e) {}
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
   const A = id => (S.a[id] = S.a[id] || {});
 
   // ---------- sections ----------
-  const SECS = [{ id: "data", title: "1. Real elevator data" }, ...P.map((p, i) => ({ id: p.id, title: `${i + 2}. ${p.title}` })),
+  const SECS = [{ id: "data", title: "1. Predict: up and down" }, ...P.map((p, i) => ({ id: p.id, title: `${i + 2}. ${p.title}` })),
     { id: "ride", title: "11. Ride the elevator" }, { id: "sum", title: "12. Summarize" }, { id: "finish", title: "Finish" }];
   const secDone = id => id === "data" ? dataDone() : id === "ride" ? !!A("ride").seen : id === "sum" ? sumDone() : id === "finish" ? false : probDone(P.find(p => p.id === id));
   function renderNav() {
@@ -157,42 +159,81 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
     if (stopAnim) { stopAnim(); stopAnim = null; }
     renderNav();
     const id = S.sec;
+    if (!S.name.trim() || !(S.period || "").trim()) { renderStart(); return; }
     if (id === "data") renderData(); else if (id === "ride") renderRide(); else if (id === "sum") renderSum(); else if (id === "finish") renderFinish(); else renderProb(P.find(p => p.id === id));
     $("main").querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => go(b.dataset.go)));
   }
   const choice = (name, opts, val, mark) => `<div class="choices">${opts.map(([v, t]) => `<label class="${mark && val === v ? (mark === v ? "right" : "wrong") : ""}"><input type="radio" name="${name}" value="${v}" ${val === v ? "checked" : ""}> <span>${t}</span></label>`).join("")}</div>`;
 
-  // ---------- 1. real data ----------
-  const RD = [["At rest at the bottom", 693, "normal"], ["Starting to go up", 714, "heavier"], ["Constant velocity up", 692, "normal"], ["Slowing down moving up", 664, "lighter"], ["Stopped at the top", 692, "normal"]];
-  const RM = 692 / G;
-  const rdA = r => (r[1] - 692) / RM;
-  function dataDone() { const a = A("data"); return RD.every((r, i) => a["f" + i] === r[2] && Math.abs(parse(a["a" + i]) - rdA(r)) <= 0.03); }
+  const RIDE = [["At rest", 1.5, 0], ["Speeding up, going up", 2, 2.2], ["Constant velocity up", 4, 0], ["Slowing down, going up", 2, -2.2], ["Stopped at the top", 2, 0],
+    ["Speeding up, going down", 2, -2.2], ["Constant velocity down", 4, 0], ["Slowing down, going down", 2, 2.2], ["Stopped at the bottom", 1.5, 0]];
+  const RT = RIDE.reduce((t, r) => t + r[1], 0);
+  function rideAt(t) {   // y, v, a, phase index
+    let y = 0, v = 0, tt = 0;
+    for (let i = 0; i < RIDE.length; i++) { const [, d, a] = RIDE[i];
+      if (t <= tt + d) { const u = t - tt; return { y: y + v * u + 0.5 * a * u * u, v: v + a * u, a, i }; }
+      y += v * d + 0.5 * a * d * d; v += a * d; tt += d; }
+    return { y, v, a: 0, i: RIDE.length - 1 };
+  }
+  const YMAX = rideAt(13.5).y;
+  // ---------- 1. predictions ----------
+  const RD = [["At rest at the bottom", FG, "normal"], ["Starting to go up", FG + M * 2.2, "heavier"], ["Constant velocity up", FG, "normal"], ["Slowing down moving up", FG - M * 2.2, "lighter"], ["Stopped at the top", FG, "normal"],
+    ["Starting to go down", FG - M * 2.2, "lighter"], ["Constant velocity down", FG, "normal"], ["Slowing down moving down", FG + M * 2.2, "heavier"], ["Stopped at the bottom", FG, "normal"]];   // N = m(g + a)
+  const RDIR = { heavier: "up", normal: "zero", lighter: "down" };
+  const DIRS = [["up", "Up (+)"], ["zero", "Zero"], ["down", "Down (−)"]];
+  const rdOK = (a, i) => a["f" + i] === RD[i][2] && a["d" + i] === RDIR[RD[i][2]];
+  function dataDone() { const a = A("data"); return !!a.revealed && RD.every((r, i) => rdOK(a, i)); }
   function renderData() {
-    const a = A("data");
-    $("main").innerHTML = `<section class="panel card"><h2>Real elevator data: going up</h2>
-      <p>A student stood on a force scale during a real elevator ride up. Their <b>actual weight is 692 N</b> (that’s F<sub>g</sub> = mg). The table shows the average scale reading in each part of the ride.</p>
-      <p class="hint">Their mass: m = F<sub>g</sub> / g = 692 N ÷ 9.8 N/kg = <b>70.6 kg</b>. To find the acceleration: ΣF = F<sub>N</sub> − F<sub>g</sub> = ma, so a = (F<sub>N</sub> − F<sub>g</sub>) / m.</p>
-      <div style="overflow-x:auto"><table class="data"><thead><tr><th>Part of the ride</th><th>Scale reading</th><th>They feel…</th><th>Acceleration (m/s²)</th></tr></thead><tbody>
-      ${RD.map((r, i) => { const f = a["f" + i], av = a["a" + i], okA = av != null && av !== "" && Math.abs(parse(av) - rdA(r)) <= 0.03;
-        return `<tr><td>${r[0]}</td><td><b>${r[1]} N</b></td><td><select data-f="${i}" aria-label="How they feel: ${r[0]}" style="${f ? `border-color:${f === r[2] ? "var(--ok)" : "var(--bad)"}` : ""}"><option value="">choose…</option>${["heavier", "normal", "lighter"].map(o => `<option ${f === o ? "selected" : ""}>${o}</option>`).join("")}</select></td>
-          <td><input type="text" class="num" data-a="${i}" value="${esc(av || "")}" inputmode="decimal" aria-label="Acceleration: ${r[0]}" style="${av ? `border-color:${okA ? "var(--ok)" : "var(--bad)"}` : ""}"> ${okA ? "✓" : ""}</td></tr>`; }).join("")}
+    if (stopAnim) { stopAnim(); stopAnim = null; }
+    const a = A("data"), rev = !!a.revealed, all = RD.every((r, i) => a["f" + i] && a["d" + i]);
+    const mark = (ok, v) => !rev || !v ? "" : `border-color:${ok ? "var(--ok)" : "var(--bad)"}`;
+    $("main").innerHTML = `<section class="panel card"><h2>Predict: an elevator ride up and down</h2>
+      <p>A 70 kg student stands on a force scale during an elevator ride up to the top floor and back down. Their <b>actual weight is (70 kg)(9.81 N/kg) = 686.7 N</b>. The scale measures their <b>apparent weight</b>: how hard the scale pushes up on them.</p>
+      <div class="probtop" style="margin:10px 0"><div><div id="upelev"></div><div class="bar" style="margin-top:8px"><button class="btn" id="upplay">▶ Play</button><button class="btn ghost" id="upreset">⟲ Replay</button></div></div>
+        <div><p style="margin-top:0">Watch the ride up and back down. The red arrow shows which way the elevator is moving.</p><p class="readout" id="upread" style="margin:6px 0"></p>
+        ${rev ? `<p class="hint">Now the scale shows its readings, and the blue arrow shows the acceleration.</p>` : `<p class="hint">The scale reading and the acceleration are hidden until you check your predictions.</p>`}
+        <p><b>Predict</b> for each part of the ride: will they feel heavier, normal or lighter? And which way does the acceleration point? (Up is positive.)</p></div></div>
+      <div style="overflow-x:auto"><table class="data"><thead><tr><th>Part of the ride</th><th>They will feel…</th><th>Acceleration points…</th>${rev ? "<th>Scale reading</th>" : ""}</tr></thead><tbody>
+      ${RD.map((r, i) => { const f = a["f" + i], d = a["d" + i];
+        return `<tr><td>${r[0]}</td>
+          <td><select data-f="${i}" aria-label="How they will feel: ${r[0]}" style="${mark(f === r[2], f)}"><option value="">predict…</option>${["heavier", "normal", "lighter"].map(o => `<option ${f === o ? "selected" : ""}>${o}</option>`).join("")}</select></td>
+          <td><select data-d="${i}" aria-label="Direction of the acceleration: ${r[0]}" style="${mark(d === RDIR[r[2]], d)}"><option value="">predict…</option>${DIRS.map(([v, t]) => `<option value="${v}" ${d === v ? "selected" : ""}>${t}</option>`).join("")}</select></td>
+          ${rev ? `<td><b>${r[1].toFixed(1)} N</b> <span class="hint">(${Math.abs(r[1] - FG) < 0.05 ? "the same as 686.7 N" : r[1] > FG ? "more than 686.7 N" : "less than 686.7 N"})</span>${rdOK(a, i) ? " ✓" : ""}</td>` : ""}</tr>`; }).join("")}
       </tbody></table></div>
-      <p class="hint">Round to 2 decimal places. Use a negative sign for downward acceleration.</p>
-      <p class="fb ${dataDone() ? "ok" : ""}" id="dfb">${dataDone() ? "All correct! Even a small change in the scale reading means the elevator is accelerating." : ""}</p>
-      ${dataDone() ? `<div class="work"><b>Notice:</b> when the scale reads more than 692 N the acceleration is up (+); less than 692 N, it’s down (−); exactly 692 N, there’s no acceleration, even while moving at constant velocity.</div>` : ""}
+      ${rev ? "" : `<div class="bar" style="margin-top:12px"><button class="btn" id="reveal" ${all ? "" : "disabled"}>Check my predictions</button><span class="hint">${all ? "" : "Make all 18 predictions first."}</span></div>`}
+      ${rev ? `
+        <div class="work"><b>What the readings show:</b> more than 686.7 N means the acceleration points <b>up</b> and they feel <b>heavier</b>: speeding up going up, or slowing down going down. Less than 686.7 N means the acceleration points <b>down</b> and they feel <b>lighter</b>: slowing down going up, or speeding up going down. At rest and at <b>constant velocity</b> (up or down) the reading equals their weight: <b>no acceleration</b>, so they feel normal, even while moving.</div>
+        <p class="fb ${dataDone() ? "ok" : "bad"}" id="dfb">${dataDone() ? "Your predictions now match the scale readings. Next, you’ll calculate the accelerations for a 70 kg teacher." : "Update any prediction marked in red so it matches the data."}</p>` : ""}
       ${nextBtn("data")}</section>`;
     // redraw after the browser finishes moving focus (tabbing from one box to the next)
-    const later = () => setTimeout(() => { const f = document.activeElement && document.activeElement.dataset; const key = f && (f.f != null ? "[data-f='" + f.f + "']" : f.a != null ? "[data-a='" + f.a + "']" : null);
+    const later = () => setTimeout(() => { const f = document.activeElement && document.activeElement.dataset; const key = f && (f.f != null ? "[data-f='" + f.f + "']" : f.d != null ? "[data-d='" + f.d + "']" : null);
       renderData(); renderNav(); if (key && $("main").querySelector(key)) $("main").querySelector(key).focus(); }, 0);
     $("main").querySelectorAll("[data-f]").forEach(s => s.addEventListener("change", e => { a["f" + e.target.dataset.f] = e.target.value; save(); later(); }));
-    $("main").querySelectorAll("[data-a]").forEach(s => s.addEventListener("change", e => { a["a" + e.target.dataset.a] = e.target.value; save(); later(); }));
+    $("main").querySelectorAll("[data-d]").forEach(s => s.addEventListener("change", e => { a["d" + e.target.dataset.d] = e.target.value; save(); later(); }));
+    if ($("reveal")) $("reveal").addEventListener("click", () => { a.revealed = true; save(); renderData(); renderNav(); });
+    stopAnim = upRide(rev);
   }
+  // the full ride, with the scale readings once revealed
+  function upRide(rev) {   // the full ride: up to the top floor and back down, with the readings once revealed
+    let t = 0, raf = 0, last = 0, playing = false;
+    const draw = () => { if (!$("upelev")) return; const st = rideAt(t);
+      $("upelev").innerHTML = elevSVG({ y: 75 - st.y / YMAX * 135, v: Math.abs(st.v) < 0.01 ? 0 : st.v, a: st.a, N: rev ? RD[st.i][1] : null, hideA: !rev });
+      $("upread").innerHTML = `<span>t = ${t.toFixed(1)} s</span><span>${RD[st.i][0]}</span>`; };
+    const tick = now => { t = Math.min(RT, t + (now - last) / 1000); last = now; draw();
+      if (t < RT && playing) raf = requestAnimationFrame(tick); else { playing = false; $("upplay").textContent = "▶ Play"; } };
+    $("upplay").addEventListener("click", () => { if (playing) { playing = false; cancelAnimationFrame(raf); $("upplay").textContent = "▶ Play"; return; }
+      if (t >= RT) t = 0; playing = true; $("upplay").textContent = "❚❚ Pause"; last = performance.now(); raf = requestAnimationFrame(tick); });
+    $("upreset").addEventListener("click", () => { cancelAnimationFrame(raf); playing = false; $("upplay").textContent = "▶ Play"; t = 0; draw(); });
+    draw();
+    return () => cancelAnimationFrame(raf);
+  }
+
 
   // ---------- elevator picture (SVG), animated for a moment ----------
   function elevSVG(state) {   // state: { y: car offset px, v, a, N (or null), cut, float }
     const c = { ink: css("--ink"), muted: css("--muted"), shaft: css("--shaft"), car: css("--car"), line: css("--carline"), vel: css("--vel"), a: css("--a"), skin: css("--skin") };
     const cy = 70 + state.y, arrow = (x, y1, y2, col, lab) => y1 === y2 ? "" : `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2 + (y2 < y1 ? 8 : -8)}" stroke="${col}" stroke-width="4"/><path d="M${x} ${y2} l-7 ${y2 < y1 ? 11 : -11} h14 z" fill="${col}"/><text x="${x + 9}" y="${(y1 + y2) / 2 + 4}" font-size="13" font-weight="700" fill="${col}">${lab}</text>`;
-    const vLen = state.v === 0 ? 0 : 34 * Math.sign(state.v), aLen = Math.abs(state.a) < 1e-6 ? 0 : (Math.abs(state.a) > 5 ? 50 : 30) * Math.sign(state.a);
+    const vLen = state.v === 0 ? 0 : 34 * Math.sign(state.v), aLen = state.hideA ? 0 : Math.abs(state.a) < 1e-6 ? 0 : (Math.abs(state.a) > 5 ? 50 : 30) * Math.sign(state.a);
     const fy = state.float ? -6 : 0;
     return `<svg class="elev" viewBox="0 0 230 300" role="img" aria-label="Elevator with the teacher standing on a scale">
       <rect x="40" y="0" width="110" height="300" fill="${c.shaft}"/>
@@ -205,41 +246,46 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
         <line x1="95" y1="${cy + 90}" x2="84" y2="${cy + 118}" stroke="${c.ink}" stroke-width="3"/><line x1="95" y1="${cy + 90}" x2="106" y2="${cy + 118}" stroke="${c.ink}" stroke-width="3"/>
       </g>
       <rect x="74" y="${cy + 119}" width="42" height="10" rx="2" fill="${c.muted}"/>
-      <rect x="60" y="${cy + 8}" width="70" height="16" rx="3" fill="${c.ink}"/><text x="95" y="${cy + 20}" font-size="11" font-weight="700" text-anchor="middle" fill="${c.car}">${state.N == null ? "scale: ?" : `scale: ${Math.round(state.N)} N`}</text>
+      <rect x="60" y="${cy + 8}" width="70" height="16" rx="3" fill="${c.ink}"/><text x="95" y="${cy + 20}" font-size="11" font-weight="700" text-anchor="middle" fill="${c.car}">${state.N == null ? "scale: ?" : `scale: ${fmtN(state.N)} N`}</text>
       ${arrow(172, 150, 150 - vLen, c.vel, "v")}${arrow(204, 150, 150 - aLen, c.a, "a")}
-      ${state.v === 0 ? `<text x="160" y="154" font-size="12" font-weight="700" fill="${c.vel}">v = 0</text>` : ""}${aLen === 0 ? `<text x="160" y="${state.v === 0 ? 172 : 154}" font-size="12" font-weight="700" fill="${c.a}" ${state.v === 0 ? "" : 'dx="34"'}>a = 0</text>` : ""}
+      ${state.v === 0 ? `<text x="160" y="154" font-size="12" font-weight="700" fill="${c.vel}">v = 0</text>` : ""}${aLen === 0 && !state.hideA ? `<text x="160" y="${state.v === 0 ? 172 : 154}" font-size="12" font-weight="700" fill="${c.a}" ${state.v === 0 ? "" : 'dx="34"'}>a = 0</text>` : ""}
     </svg>`;
   }
-  function animate(el, p, showN) {      // loop the moment: the car drifts in the direction of motion
-    let raf = 0, t0 = performance.now();
-    const tick = now => {
-      const t = ((now - t0) / 1000) % 2.4, k = p.id === "p6" ? 1 : 0.6;
-      let y = 0; if (p.v !== 0) { const v0 = p.v * 12, acc = p.a * (p.id === "p6" ? 6 : 6); y = -(v0 * t + 0.5 * acc * t * t) * k; y = Math.max(-60, Math.min(80, y)); }
-      el.innerHTML = elevSVG({ y, v: p.v, a: p.a, N: showN ? p.N : null, cut: p.id === "p6", float: p.id === "p6" });
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
+  // one moment of the ride: Play runs it once; "Return to start" puts the elevator back
+  function momentPlayer(box, p, showN) {
+    const DUR = p.id === "p6" ? 1.6 : 2.6, y0 = p.v > 0 ? 70 : p.v < 0 ? -55 : 0;
+    const yAt = t => { if (p.v === 0) return 0; const v0 = p.v * 22, acc = p.a * (p.id === "p6" ? 9 : 7); return Math.max(-62, Math.min(82, y0 - (v0 * t + 0.5 * acc * t * t))); };
+    let t = 0, raf = 0, last = 0;
+    box.innerHTML = `<div id="elevpic"></div><div class="bar" style="margin-top:8px"><button class="btn" id="mplay">▶ Play</button><button class="btn ghost" id="mreset">⟲ Return to start</button></div>
+      ${p.v === 0 ? `<p class="hint" style="margin:6px 0 0">The elevator isn’t moving at this moment.</p>` : ""}`;
+    const draw = () => { if (!$("elevpic")) return; $("elevpic").innerHTML = elevSVG({ y: yAt(t), v: p.v, a: p.a, N: showN ? p.N : null, cut: p.id === "p6", float: p.id === "p6" }); };
+    const tick = now => { t = Math.min(DUR, t + (now - last) / 1000); last = now; draw(); if (t < DUR) raf = requestAnimationFrame(tick); else $("mplay").disabled = false; };
+    $("mplay").addEventListener("click", () => { cancelAnimationFrame(raf); if (t >= DUR) t = 0; $("mplay").disabled = true; last = performance.now(); raf = requestAnimationFrame(tick); });
+    $("mreset").addEventListener("click", () => { cancelAnimationFrame(raf); t = 0; $("mplay").disabled = false; draw(); });
+    draw();
     return () => cancelAnimationFrame(raf);
   }
   function fbdSVG(N) {
     const c = { ink: css("--ink"), fg: css("--fg"), fn: css("--fn"), muted: css("--muted") }, k = 0.11, cx = 100, cy = 110;
     const arr = (len, col, lab, up) => len < 1 ? "" : `<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy + (up ? -1 : 1) * (len - 9)}" stroke="${col}" stroke-width="5"/><path d="M${cx} ${cy + (up ? -len : len)} l-8 ${up ? 13 : -13} h16 z" fill="${col}"/>
       <text x="${cx + 12}" y="${cy + (up ? -1 : 1) * len * 0.6 + 4}" font-size="12" font-weight="700" fill="${col}">${lab}</text>`;
-    return `<svg class="fbd" viewBox="0 0 200 220" role="img" aria-label="Force diagram for the teacher">${arr(FG * k, c.fg, `F<tspan baseline-shift="sub" font-size="9">g,T,E</tspan> = 686 N`, false)}${arr(N * k, c.fn, `F<tspan baseline-shift="sub" font-size="9">N,T,S</tspan> = ${Math.round(N)} N`, true)}
+    return `<svg class="fbd" viewBox="0 0 200 220" role="img" aria-label="Force diagram for the teacher">${arr(FG * k, c.fg, `F<tspan baseline-shift="sub" font-size="9">g,T,E</tspan> = 686.7 N`, false)}${arr(N * k, c.fn, `F<tspan baseline-shift="sub" font-size="9">N,T,S</tspan> = ${fmtN(N)} N`, true)}
       <circle cx="${cx}" cy="${cy}" r="6" fill="${c.ink}"/>${N < 1 ? `<text x="${cx + 12}" y="${cy - 10}" font-size="12" font-weight="700" fill="${c.fn}">F<tspan baseline-shift="sub" font-size="9">N</tspan> = 0</text>` : ""}</svg>`;
   }
 
-  // ---------- 2–10. the worksheet problems ----------
-  function probDone(p) { const a = A(p.id); return a.dirOK && a.cmpOK && a.valOK && a.vtOK; }
+  // ---------- 2–10. the problems ----------
+  function probDone(p) { const a = A(p.id); return a.dirOK && a.cmpOK && a.valOK && a.fbdOK && a.vtOK && (p.id !== "p1" || a.idOK); }
   function renderProb(p) {
+    if (stopAnim) { stopAnim(); stopAnim = null; }
     const a = A(p.id), i = P.indexOf(p), aDir = p.a > 0 ? "up" : p.a < 0 ? "down" : "zero", cmp = p.N > FG ? "greater" : p.N < FG ? "less" : "equal";
     let h = `<section class="panel card"><div class="hint" style="font-weight:700">${p.group} · Problem ${i + 1} of 9</div><h2>${esc(p.title)}</h2>
       <div class="probtop"><div id="elev"></div><div>
         <p style="margin-top:0">${p.text}</p>
-        <div class="given"><b>m</b><span>70 kg</span><b>F<sub>g</sub> = mg</b><span>(70 kg)(9.8 N/kg) = 686 N</span>
+        <div class="given"><b>m</b><span>70 kg</span><b>F<sub>g</sub> = mg</b><span>(70 kg)(9.81 N/kg) = 686.7 N</span>
           <b>Motion</b><span>${p.v === 0 ? "at rest" : (p.v > 0 ? "moving up" : "moving down")}</span>
-          ${p.known === "N" ? `<b>F<sub>N</sub></b><span>${p.N} N (scale reading)</span><b>a</b><span>?</span>` : p.known === "a" ? `<b>a</b><span>${p.id === "p4" ? "−2.2 m/s² (slowing while moving up)" : "0 (constant velocity)"}</span><b>F<sub>N</sub></b><span>?</span>` : `<b>a</b><span>?</span><b>F<sub>N</sub></b><span>?</span>`}</div>
-        <p class="hint" style="margin:0">Draw the system diagram, interaction diagram and force diagram on your worksheet as you go.</p></div></div>`;
+          ${p.known === "N" ? `<b>F<sub>N</sub></b><span>${fmtN(p.N)} N (scale reading)</span><b>a</b><span>?</span>` : p.known === "a" ? `<b>a</b><span>${p.id === "p4" ? "−2.2 m/s² (slowing while moving up)" : "0 (constant velocity)"}</span><b>F<sub>N</sub></b><span>?</span>` : `<b>a</b><span>?</span><b>F<sub>N</sub></b><span>?</span>`}</div>
+        </div></div>`;
+    if (p.id === "p1") h += idHTML(a);
     h += `<div class="q"><h3><span class="n">a.</span>Which way does the acceleration point?</h3>${choice("dir", [["up", "Up"], ["zero", "Zero (no acceleration)"], ["down", "Down"]], a.dir, a.dir ? aDir : null)}
       <p class="fb ${a.dir ? (a.dirOK ? "ok" : "bad") : ""}">${a.dir ? (a.dirOK ? dirWhy(p) : "Not quite. Is the velocity changing? If it is, which way is it changing?") : ""}</p></div>`;
     h += `<div class="q"><h3><span class="n">b.</span>Compare the normal force (scale) with the force of gravity.</h3>${choice("cmp", [["greater", "F<sub>N</sub> &gt; F<sub>g</sub>"], ["equal", "F<sub>N</sub> = F<sub>g</sub>"], ["less", "F<sub>N</sub> &lt; F<sub>g</sub>"]], a.cmp, a.cmp ? cmp : null)}
@@ -247,11 +293,14 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
     const ask = p.known === "N" ? [["a", "Acceleration a", "m/s²"]] : p.known === "a" ? [["N", "Normal force F<sub>N</sub>", "N"]] : [["a", "Acceleration a", "m/s²"], ["N", "Normal force F<sub>N</sub>", "N"]];
     h += `<div class="q"><h3><span class="n">c.</span>Solve: ΣF = F<sub>N</sub> − F<sub>g</sub> = ma</h3><div class="bar">${ask.map(([k, lab, u]) => `<label>${lab} = <input type="text" class="num" data-v="${k}" value="${esc(a["v" + k] || "")}" inputmode="decimal"> ${u}</label>`).join("")}<button class="btn ghost" id="chkv">Check</button></div>
       <p class="fb ${a.vTried ? (a.valOK ? "ok" : "bad") : ""}">${a.vTried ? (a.valOK ? "Correct!" : "Not yet. Remember up is positive: a downward acceleration is negative.") : ""}</p>${a.valOK ? workHTML(p) : ""}</div>`;
-    h += `<div class="q"><h3><span class="n">d.</span>Which velocity vs. time graph matches this moment?</h3><div class="vt" role="radiogroup">${Object.keys(VT).map(k => `<label class="${a.vt === k ? (a.vtOK ? "right" : "wrong") : ""}"><input type="radio" name="vt" value="${k}" ${a.vt === k ? "checked" : ""}>${vtSVG(k)}<span>${VT[k]}</span></label>`).join("")}</div>
+    h += fbdBuilderHTML(p, a);
+    h += `<div class="q"><h3><span class="n">e.</span>Which velocity vs. time graph matches this moment?</h3><div class="vt" role="radiogroup">${Object.keys(VT).map(k => `<label class="${a.vt === k ? (a.vtOK ? "right" : "wrong") : ""}"><input type="radio" name="vt" value="${k}" ${a.vt === k ? "checked" : ""}>${vtSVG(k)}<span>${VT[k]}</span></label>`).join("")}</div>
       <p class="fb ${a.vt ? (a.vtOK ? "ok" : "bad") : ""}">${a.vt ? (a.vtOK ? "Correct! The slope of the v–t graph is the acceleration." : "Not quite. Up is positive: is v above or below zero, and is it getting farther from zero or closer?") : ""}</p></div>`;
     h += nextBtn(p.id) + `</section>`;
     $("main").innerHTML = h;
-    stopAnim = animate($("elev"), p, a.valOK || p.known === "N");
+    stopAnim = momentPlayer($("elev"), p, a.valOK || p.known === "N");
+    if (p.id === "p1") bindID(p, a);
+    bindFBD(p, a);
     $("main").querySelectorAll("input[name=dir]").forEach(r => r.addEventListener("change", e => { a.dir = e.target.value; a.dirOK = a.dir === aDir; save(); renderProb(p); renderNav(); }));
     $("main").querySelectorAll("input[name=cmp]").forEach(r => r.addEventListener("change", e => { a.cmp = e.target.value; a.cmpOK = a.cmp === cmp; save(); renderProb(p); renderNav(); }));
     $("main").querySelectorAll("input[name=vt]").forEach(r => r.addEventListener("change", e => { a.vt = e.target.value; a.vtOK = a.vt === p.vt; save(); renderProb(p); renderNav(); }));
@@ -260,34 +309,111 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
     $("chkv").addEventListener("click", check);
     $("main").querySelectorAll("[data-v]").forEach(inp => inp.addEventListener("keydown", e => { if (e.key === "Enter") check(); }));
   }
+  // interaction diagram: which objects interact with the teacher, and how?
+  const IDOBJ = [["Earth", "gravitational"], ["scale", "normal"], ["elevator floor", "none"], ["cable", "none"], ["air", "none"]];
+  const ITYPE = [["none", "no interaction"], ["gravitational", "gravitational"], ["normal", "normal (support)"], ["tension", "tension"], ["applied", "applied (push/pull)"], ["friction", "friction"]];
+  function idHTML(a) {
+    const sel = a.id || {}, tried = a.idTried;
+    return `<div class="q"><h3><span class="n">First:</span> Build the interaction diagram</h3>
+      <p style="margin:0 0 6px">The system is the <b>teacher</b> (inside the dashed boundary). For each object, choose how it interacts <b>directly</b> with the teacher, if at all.</p>
+      <div class="fbdwrap" style="grid-template-columns:minmax(0,300px) 1fr"><svg class="fbd" id="idsvg" viewBox="0 0 300 226" style="width:100%;height:auto" role="img" aria-label="Your interaction diagram"></svg>
+        <div class="sort">${IDOBJ.map(([o, ans]) => { const v = sel[o] || ""; const okv = v === ans;
+          return `<div class="row"><span>${o} ↔ teacher</span><select data-id="${esc(o)}" style="${tried && v ? `border-color:${okv ? "var(--ok)" : "var(--bad)"}` : ""}"><option value="">choose…</option>${ITYPE.map(([t, lab]) => `<option value="${t}" ${v === t ? "selected" : ""}>${lab}</option>`).join("")}</select></div>`; }).join("")}
+          <div class="bar" style="margin-top:8px"><button class="btn ghost" id="chkid">Check</button></div></div></div>
+      <p class="fb ${tried ? (a.idOK ? "ok" : "bad") : ""}">${tried ? (a.idOK ? "Correct! Each interaction becomes a force: gravity by the Earth (down) and the normal force by the scale (up). The floor, cable and air don’t touch the teacher directly." : idHint(sel)) : ""}</p></div>`;
+  }
+  function idHint(sel) {
+    if (IDOBJ.some(([o]) => !sel[o])) return "Choose an answer for every object.";
+    if (sel["elevator floor"] && sel["elevator floor"] !== "none") return "Look closely: the teacher stands on the scale, not on the elevator floor. Only things that touch (or pull on) the teacher directly interact with them.";
+    if (sel.cable !== "none") return "The cable pulls on the elevator, not directly on the teacher.";
+    if (sel.air !== "none") return "Inside the elevator the air doesn’t push on the teacher in any way that matters here.";
+    return "Check the type of each interaction. Which object pulls without touching? Which one supports the teacher from below?";
+  }
+  function drawID(a) {
+    const svg = $("idsvg"); if (!svg) return; const sel = a.id || {}, ink = css("--ink"), sys = css("--fn"), muted = css("--muted"), panel = css("--panel");
+    const on = IDOBJ.filter(([o]) => sel[o] && sel[o] !== "none"), cx = 150, cy = 110;
+    let h = `<defs><marker id="idah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="${ink}"/></marker></defs><circle cx="${cx}" cy="${cy}" r="46" fill="none" stroke="${sys}" stroke-width="2" stroke-dasharray="6 5"/>`;
+    const POS = { Earth: [52, 200], scale: [248, 200], "elevator floor": [248, 26], cable: [150, 20], air: [52, 26] };
+    on.forEach(([o]) => { const [x, y] = POS[o], dx = x - cx, dy = y - cy, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+      const x1 = cx + ux * 38, y1 = cy + uy * 24, x2 = x - ux * 40, y2 = y - uy * 18, mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+      h += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${ink}" stroke-width="1.8" marker-start="url(#idah)" marker-end="url(#idah)"/>
+        <text x="${mx + (ux > 0 ? 6 : -6)}" y="${my + 4}" font-size="10" text-anchor="${ux > 0 ? "start" : "end"}" fill="${muted}" paint-order="stroke" stroke="${css("--tint")}" stroke-width="3">${esc(sel[o])}</text>
+        <ellipse cx="${x}" cy="${y}" rx="38" ry="16" fill="${panel}" stroke="${ink}" stroke-width="1.5"/><text x="${x}" y="${y + 4}" font-size="11" text-anchor="middle" fill="${ink}">${esc(o.length > 12 ? o.slice(0, 11) + "…" : o)}</text>`; });
+    h += `<ellipse cx="${cx}" cy="${cy}" rx="34" ry="20" fill="${panel}" stroke="${sys}" stroke-width="2.5"/><text x="${cx}" y="${cy + 5}" font-size="13" font-weight="700" text-anchor="middle" fill="${sys}">teacher</text>`;
+    svg.innerHTML = h;
+  }
+  function bindID(p, a) {
+    drawID(a);
+    $("main").querySelectorAll("[data-id]").forEach(sl => sl.addEventListener("change", e => { a.id = a.id || {}; a.id[e.target.dataset.id] = e.target.value; save(); drawID(a); }));
+    $("chkid").addEventListener("click", () => { a.idTried = true; a.idOK = IDOBJ.every(([o, ans]) => (a.id || {})[o] === ans); save(); renderProb(p); renderNav(); });
+  }
+  // quantitative force diagram: each force has a type, a dealer, a direction and a size in newtons
+  const FTYPE = [["gravity", "Gravity (g)"], ["normal", "Normal (N)"], ["tension", "Tension (T)"], ["applied", "Applied (A)"], ["drag", "Drag (D)"]];
+  const FBY = ["Earth", "scale", "elevator floor", "cable", "air"];
+  const FSUB = { gravity: "g", normal: "N", tension: "T", applied: "A", drag: "D" };
+  const fbdWant = p => [{ type: "gravity", by: "Earth", dir: "down", mag: FG }, ...(p.N > 0 ? [{ type: "normal", by: "scale", dir: "up", mag: p.N }] : [])];
+  function fbdBuilderHTML(p, a) {
+    if (!a.valOK) return `<div class="q"><h3><span class="n">d.</span>Draw the force diagram (to scale)</h3><p class="hint">Solve part c first: you’ll need the size of every force.</p></div>`;
+    const list = a.fbd || (a.fbd = []);
+    return `<div class="q"><h3><span class="n">d.</span>Draw the force diagram (to scale)</h3>
+      <p style="margin:0 0 6px">Add each force on the teacher: its type, the object exerting it (the dealer), its direction and its size.</p>
+      <div class="fbdwrap"><svg class="fbd" id="fbdsvg" viewBox="0 0 200 220" role="img" aria-label="Your force diagram"></svg>
+        <div><div class="sort" id="flist">${list.length ? list.map((f, i) => `<div class="row" style="grid-template-columns:1fr auto"><span class="bar" style="gap:5px">F
+          <select data-k="type" data-i="${i}" aria-label="Type">${`<option value="">type…</option>` + FTYPE.map(([v, t]) => `<option value="${v}" ${f.type === v ? "selected" : ""}>${t}</option>`).join("")}</select>
+          on teacher by <select data-k="by" data-i="${i}" aria-label="Dealer"><option value="">dealer…</option>${FBY.map(o => `<option ${f.by === o ? "selected" : ""}>${o}</option>`).join("")}</select>
+          <select data-k="dir" data-i="${i}" aria-label="Direction"><option value="">direction…</option><option value="up" ${f.dir === "up" ? "selected" : ""}>↑ up</option><option value="down" ${f.dir === "down" ? "selected" : ""}>↓ down</option></select>
+          <input type="text" class="num" data-k="mag" data-i="${i}" value="${esc(f.mag || "")}" inputmode="decimal" aria-label="Size in newtons"> N</span>
+          <button class="btn ghost" data-rm="${i}" aria-label="Remove this force" style="padding:2px 10px">×</button></div>`).join("") : `<p class="hint">No forces yet.</p>`}</div>
+          <div class="bar" style="margin-top:8px"><button class="btn ghost" id="addf">+ Add a force</button><button class="btn ghost" id="chkf">Check</button></div></div></div>
+      <p class="fb ${a.fbdTried ? (a.fbdOK ? "ok" : "bad") : ""}">${a.fbdTried ? (a.fbdOK ? fbdPraise(p) : a.fbdMsg) : ""}</p></div>`;
+  }
+  const fbdPraise = p => p.N === 0 ? "Correct! Only gravity acts: the scale falls with the teacher and doesn’t push at all." : p.N > FG + 0.5 ? "Correct! The normal force arrow is longer than gravity, so the net force points up." : p.N < FG - 0.5 ? "Correct! The normal force arrow is shorter than gravity, so the net force points down." : "Correct! The two arrows are the same length: balanced forces.";
+  function drawFBD(a) {
+    const svg = $("fbdsvg"); if (!svg) return; const k = 0.105, cx = 100, cy = 110, ink = css("--ink");
+    const col = t => t === "gravity" ? css("--fg") : t === "normal" ? css("--fn") : css("--muted");
+    let h = "";
+    (a.fbd || []).forEach(f => { const m = parse(f.mag); if (!f.dir || !isFinite(m) || m <= 0) return; const L = Math.min(105, m * k), up = f.dir === "up", c = col(f.type);
+      h += `<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy + (up ? -1 : 1) * (L - 9)}" stroke="${c}" stroke-width="5"/><path d="M${cx} ${cy + (up ? -L : L)} l-8 ${up ? 13 : -13} h16 z" fill="${c}"/>
+        <text x="${cx + 12}" y="${cy + (up ? -1 : 1) * L * 0.6 + 4}" font-size="12" font-weight="700" fill="${c}">F<tspan baseline-shift="sub" font-size="9">${FSUB[f.type] || "?"}</tspan> = ${esc(f.mag)} N</text>`; });
+    svg.innerHTML = h + `<circle cx="${cx}" cy="${cy}" r="6" fill="${ink}"/>`;
+  }
+  function checkFBD(p, a) {
+    const want = fbdWant(p), list = (a.fbd || []).filter(f => f.type || f.by || f.dir || f.mag), used = new Set(), msgs = [];
+    if (list.some(f => !f.type || !f.by || !f.dir || f.mag === "" || !isFinite(parse(f.mag)))) return "Finish every force: type, dealer, direction and size.";
+    want.forEach(w => { const i = list.findIndex((f, j) => !used.has(j) && f.type === w.type && f.by === w.by);
+      if (i < 0) { msgs.push(list.some(f => f.by === w.by) ? `The force by the ${w.by} has the wrong type.` : `A force is missing: ${w.by === "Earth" ? "what pulls the teacher down without touching?" : "what pushes up on the teacher’s feet?"}`); return; }
+      used.add(i); const f = list[i];
+      if (f.dir !== w.dir) msgs.push(`Check the direction of the ${w.type} force.`);
+      else if (Math.abs(parse(f.mag) - w.mag) > Math.max(2, w.mag * 0.015)) msgs.push(`Check the size of the ${w.type} force: use your answers above (F<sub>g</sub> = 686.7 N${w.type === "normal" ? `, F<sub>N</sub> = ${fmtN(w.mag)} N` : ""}).`); });
+    list.forEach((f, j) => { if (used.has(j)) return; if (p.N === 0 && f.type === "normal" && f.by === "scale" && parse(f.mag) === 0) return;
+      msgs.push(f.by === "cable" ? "The cable pulls on the elevator, not on the teacher." : f.by === "elevator floor" ? "The teacher stands on the scale, not the floor." : `There’s no ${f.type} force by the ${f.by} on the teacher.`); });
+    return msgs.length ? msgs[0] : "";
+  }
+  function bindFBD(p, a) {
+    if (!a.valOK) return; drawFBD(a);
+    $("addf").addEventListener("click", () => { a.fbd.push({ type: "", by: "", dir: "", mag: "" }); save(); renderProb(p); });
+    $("chkf").addEventListener("click", () => { const m = checkFBD(p, a); a.fbdTried = true; a.fbdOK = !m; a.fbdMsg = m; save(); renderProb(p); renderNav(); });
+    $("flist").addEventListener("click", e => { const b = e.target.closest("[data-rm]"); if (!b) return; a.fbd.splice(+b.dataset.rm, 1); save(); renderProb(p); });
+    $("flist").addEventListener("change", e => { const el = e.target.closest("[data-k]"); if (!el || el.dataset.k === "mag") return; a.fbd[+el.dataset.i][el.dataset.k] = el.value; save(); drawFBD(a); });
+    $("flist").addEventListener("input", e => { const el = e.target.closest("[data-k=mag]"); if (!el) return; a.fbd[+el.dataset.i].mag = el.value; save(); drawFBD(a); });
+  }
   function dirWhy(p) {
-    if (p.id === "p6") return "Right: in free fall the only force is gravity, so a = −9.8 m/s² (down).";
+    if (p.id === "p6") return "Right: in free fall the only force is gravity, so a = −9.81 m/s² (down).";
     if (p.a === 0) return p.v === 0 ? "Right: at rest, the velocity isn’t changing." : "Right: constant velocity means no acceleration, even while moving.";
     const speeding = Math.sign(p.a) === Math.sign(p.v);
     return `Right: it’s moving ${p.v > 0 ? "up" : "down"} and ${speeding ? "speeding up, so the acceleration points the same way as the motion" : "slowing down, so the acceleration points opposite the motion"}: ${p.a > 0 ? "up" : "down"}.`;
   }
   function workHTML(p) {
     let lines;
-    if (p.known === "N") lines = [`ΣF = F<sub>N</sub> − F<sub>g</sub> = ma`, `a = (F<sub>N</sub> − F<sub>g</sub>) / m`, `a = (${p.N} N − 686 N) / 70 kg`, `a = ${fmt(p.N - FG, 0)} N / 70 kg = <b>${fmt(p.a)} m/s²</b>`];
-    else if (p.known === "a") lines = [`ΣF = F<sub>N</sub> − F<sub>g</sub> = ma`, `F<sub>N</sub> = F<sub>g</sub> + ma`, `F<sub>N</sub> = 686 N + (70 kg)(${fmt(p.a)} m/s²)`, `F<sub>N</sub> = 686 N ${p.a < 0 ? "−" : "+"} ${Math.abs(M * p.a).toFixed(0)} N = <b>${p.N} N</b>`];
-    else lines = [`Free fall: the only force is gravity, so a = −g = <b>−9.8 m/s²</b>`, `F<sub>N</sub> = F<sub>g</sub> + ma = 686 N + (70 kg)(−9.8 m/s²)`, `F<sub>N</sub> = 686 N − 686 N = <b>0 N</b> (the teacher feels weightless)`];
-    return `<div class="work">${lines.map(l => `<div class="ln">${l}</div>`).join("")}</div>
-      <div class="fbdwrap">${fbdSVG(p.N)}<div><b>Force diagram, to scale.</b> ${p.N > FG ? "The normal force is longer than gravity: the net force points up." : p.N < FG ? (p.N === 0 ? "Only gravity acts: the net force is the whole weight, pointing down." : "The normal force is shorter than gravity: the net force points down.") : "The two forces are equal: balanced, no acceleration."}
-        <p class="hint" style="margin:6px 0 0">Apparent weight (the scale reading) = <b>${p.N} N</b>; actual weight = 686 N. The teacher feels <b>${p.N > FG ? "heavier" : p.N < FG ? (p.N === 0 ? "weightless" : "lighter") : "normal"}</b>.</p></div></div>`;
+    if (p.known === "N") lines = [`ΣF = F<sub>N</sub> − F<sub>g</sub> = ma`, `a = (F<sub>N</sub> − F<sub>g</sub>) / m`, `a = (${fmtN(p.N)} N − 686.7 N) / 70 kg`, `a = ${fmt(p.N - FG, 1)} N / 70 kg = <b>${fmt(p.a, 2)} m/s²</b>`];
+    else if (p.known === "a") lines = [`ΣF = F<sub>N</sub> − F<sub>g</sub> = ma`, `F<sub>N</sub> = F<sub>g</sub> + ma`, `F<sub>N</sub> = 686.7 N + (70 kg)(${fmt(p.a, 1)} m/s²)`, `F<sub>N</sub> = 686.7 N ${p.a < 0 ? "−" : "+"} ${Math.abs(M * p.a).toFixed(0)} N = <b>${fmtN(p.N)} N</b>`];
+    else lines = [`Free fall: the only force is gravity, so a = −g = <b>−9.81 m/s²</b>`, `F<sub>N</sub> = F<sub>g</sub> + ma = 686.7 N + (70 kg)(−9.81 m/s²)`, `F<sub>N</sub> = 686.7 N − 686.7 N = <b>0 N</b> (the teacher feels weightless)`];
+    return `<div class="work">${lines.map(l => `<div class="ln">${l}</div>`).join("")}
+      <p class="hint" style="margin:6px 0 0">Apparent weight (the scale reading) = <b>${fmtN(p.N)} N</b>; actual weight = 686.7 N. The teacher feels <b>${p.N > FG + 0.5 ? "heavier" : p.N < FG - 0.5 ? (p.N === 0 ? "weightless" : "lighter") : "normal"}</b>.</p></div>`;
   }
 
+
   // ---------- 11. full ride ----------
-  const RIDE = [["At rest", 1.5, 0], ["Speeding up, going up", 2, 2.2], ["Constant velocity up", 4, 0], ["Slowing down, going up", 2, -2.2], ["Stopped at the top", 2, 0],
-    ["Speeding up, going down", 2, -2.2], ["Constant velocity down", 4, 0], ["Slowing down, going down", 2, 2.2], ["Stopped at the bottom", 1.5, 0]];
-  const RT = RIDE.reduce((t, r) => t + r[1], 0);
-  function rideAt(t) {   // y, v, a, phase index
-    let y = 0, v = 0, tt = 0;
-    for (let i = 0; i < RIDE.length; i++) { const [, d, a] = RIDE[i];
-      if (t <= tt + d) { const u = t - tt; return { y: y + v * u + 0.5 * a * u * u, v: v + a * u, a, i }; }
-      y += v * d + 0.5 * a * d * d; v += a * d; tt += d; }
-    return { y, v, a: 0, i: RIDE.length - 1 };
-  }
-  const YMAX = rideAt(13.5).y;
   function renderRide() {
     const a = A("ride");
     $("main").innerHTML = `<section class="panel card"><h2>Ride the elevator: up, stopped, down</h2>
@@ -304,11 +430,11 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
       const st = rideAt(t), N = M * (G + st.a); maxT = Math.max(maxT, t);
       $("relev").innerHTML = elevSVG({ y: 60 - st.y / YMAX * 120, v: Math.abs(st.v) < 0.01 ? 0 : st.v, a: st.a, N });
       $("rfbd").innerHTML = fbdSVG(N);
-      $("rread").innerHTML = `<span>t = ${t.toFixed(1)} s</span><span>${RIDE[st.i][0]}</span><span style="color:var(--vel)">v = ${fmt(st.v)} m/s</span><span style="color:var(--a)">a = ${fmt(st.a)} m/s²</span><span style="color:var(--fn)">scale = ${Math.round(N)} N</span><span>feels ${N > FG + 1 ? "heavier" : N < FG - 1 ? "lighter" : "normal"}</span>`;
+      $("rread").innerHTML = `<span>t = ${t.toFixed(1)} s</span><span>${RIDE[st.i][0]}</span><span style="color:var(--vel)">v = ${fmt(st.v)} m/s</span><span style="color:var(--a)">a = ${fmt(st.a)} m/s²</span><span style="color:var(--fn)">scale = ${fmtN(N)} N</span><span>feels ${N > FG + 1 ? "heavier" : N < FG - 1 ? "lighter" : "normal"}</span>`;
       plot("gy", "Position y (m)", -2, YMAX + 3, tt => rideAt(tt).y, css("--pos"), t, maxT);
       plot("gv", "Velocity v (m/s)", -6, 6, tt => rideAt(tt).v, css("--vel"), t, maxT);
       plot("ga", "Acceleration a (m/s²)", -3.5, 3.5, tt => rideAt(tt).a, css("--a"), t, maxT, true);
-      plot("gn", "Scale reading (N)", 400, 950, tt => M * (G + rideAt(tt).a), css("--fn"), t, maxT, true, 686);
+      plot("gn", "Scale reading (N)", 400, 950, tt => M * (G + rideAt(tt).a), css("--fn"), t, maxT, true, FG);
       $("rt").value = t;
       if (t >= RT - 0.05) { a.seen = true; save(); renderNav(); }
     };
@@ -326,7 +452,7 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
     c.strokeStyle = css("--line"); c.lineWidth = 1; c.font = "11px 'Atkinson Hyperlegible', system-ui"; c.fillStyle = css("--muted");
     let tt = 0; RIDE.forEach(rr => { tt += rr[1]; c.beginPath(); c.moveTo(X(tt), T); c.lineTo(X(tt), H - B); c.stroke(); });
     if (lo < 0 && hi > 0) { c.strokeStyle = css("--muted"); c.beginPath(); c.moveTo(L, Y(0)); c.lineTo(W - R, Y(0)); c.stroke(); c.fillText("0", L - 12, Y(0) + 4); }
-    if (ref) { c.setLineDash([4, 4]); c.strokeStyle = css("--fg"); c.beginPath(); c.moveTo(L, Y(ref)); c.lineTo(W - R, Y(ref)); c.stroke(); c.setLineDash([]); c.fillStyle = css("--fg"); c.fillText("686", 6, Y(ref) + 4); }
+    if (ref) { c.setLineDash([4, 4]); c.strokeStyle = css("--fg"); c.beginPath(); c.moveTo(L, Y(ref)); c.lineTo(W - R, Y(ref)); c.stroke(); c.setLineDash([]); c.fillStyle = css("--fg"); c.fillText("686.7", 2, Y(ref) + 4); }
     c.fillStyle = css("--ink"); c.font = "bold 12px 'Atkinson Hyperlegible', system-ui"; c.fillText(label, L + 4, 13);
     c.strokeStyle = col; c.lineWidth = 2.5; c.beginPath();
     const n = 400; let first = true;
@@ -352,7 +478,7 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
     const gsvg = (k, o) => `<svg viewBox="0 0 200 100" aria-hidden="true"><line x1="5" y1="${k === "y" ? 80 : 50}" x2="195" y2="${k === "y" ? 80 : 50}" stroke="${css("--muted")}" stroke-width="1"/><line x1="5" y1="6" x2="5" y2="94" stroke="${css("--muted")}" stroke-width="1"/><path d="${o.d}" fill="none" stroke="${css(col[k])}" stroke-width="3"/></svg>`;
     let h = `<section class="panel card"><h2>Summarize</h2><h3>Complete the sentences</h3>${FILL.map((f, i) => `<p style="margin:6px 0">${f[0]} <select data-fill="${i}" style="${a["f" + i] ? `border-color:${a["f" + i] === f[1] ? "var(--ok)" : "var(--bad)"}` : ""}"><option value="">choose…</option>${["equal to", "greater than", "less than"].map(o => `<option ${a["f" + i] === o ? "selected" : ""}>${o}</option>`).join("")}</select> your actual weight.</p>`).join("")}
       <div class="q"><h3>Do you feel heavier or lighter?</h3><div class="sort">${SORTS.map((s, i) => `<div class="row"><span>${s[0]}</span><select data-sort="${i}" style="${a["s" + i] ? `border-color:${a["s" + i] === s[1] ? "var(--ok)" : "var(--bad)"}` : ""}"><option value="">choose…</option>${["heavier", "normal", "lighter", "weightless"].map(o => `<option ${a["s" + i] === o ? "selected" : ""}>${o}</option>`).join("")}</select></div>`).join("")}</div></div>
-      <div class="q"><h3>The whole ride: up, stopped at the top, down</h3><p class="hint">Sketch these on your worksheet first, then choose the graph that matches each one. Each graph starts at rest at the bottom, and up is positive.</p>
+      <div class="q"><h3>The whole ride: up, stopped at the top, down</h3><p class="hint">Picture each graph first, then choose the one that matches. Each graph starts at rest at the bottom, and up is positive.</p>
       ${["y", "v", "a"].map(k => `<p style="margin:10px 0 4px"><b>${nm[k]}</b></p><div class="gchoice">${ORDER[k].map(oi => { const sel = a["g" + k] != null && +a["g" + k] === oi; return `<label class="${sel ? (GOPTS[k][oi].ok ? "right" : "wrong") : ""}"><input type="radio" name="g${k}" value="${oi}" ${sel ? "checked" : ""} class="sr-only" style="position:absolute;opacity:0">${gsvg(k, GOPTS[k][oi])}</label>`; }).join("")}</div>
         <p class="fb ${a["g" + k] != null ? (GOPTS[k][+a["g" + k]].ok ? "ok" : "bad") : ""}">${a["g" + k] != null ? (GOPTS[k][+a["g" + k]].ok ? "Correct!" : "Not quite. Compare with the graphs on the “Ride the elevator” page.") : ""}</p>`).join("")}</div>
       <p class="fb ${sumDone() ? "ok" : ""}">${sumDone() ? "Summary complete!" : ""}</p>${nextBtn("sum")}</section>`;
@@ -362,18 +488,65 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
     $("main").querySelectorAll("input[name^=g]").forEach(r => r.addEventListener("change", e => { a[e.target.name] = e.target.value; save(); renderSum(); renderNav(); }));
   }
 
+  // ---------- start: name and period ----------
+  function renderStart() {
+    $("main").innerHTML = `<section class="panel card"><h2>Before you start</h2><p>Your name and class period go on the PDF you’ll turn in on Canvas at the end.</p>
+      <div class="bar"><label>Name <input type="text" id="nm" value="${esc(S.name)}" autocomplete="name" style="min-width:220px"></label><label>Period <input type="text" id="pd" value="${esc(S.period || "")}" style="width:6ch"></label>
+        <button class="btn" id="start">Start</button></div><p class="fb bad" id="sfb"></p></section>`;
+    const go1 = () => { const n = $("nm").value.trim(), pd = $("pd").value.trim(); if (n.length < 2 || !pd) { $("sfb").textContent = "Enter your name and class period."; return; } S.name = n; S.period = pd; save(); render(); };
+    $("start").addEventListener("click", go1); ["nm", "pd"].forEach(id => $(id).addEventListener("keydown", e => { if (e.key === "Enter") go1(); }));
+  }
   // ---------- finish ----------
   function renderFinish() {
     const all = SECS.filter(s => s.id !== "finish"), done = all.filter(s => secDone(s.id)).length, complete = done === all.length;
     if (complete && !S.finished) { S.finished = new Date().toISOString(); save(); }
     $("main").innerHTML = `<section class="panel card ${complete ? "done-hero" : ""}">${complete ? `<div class="big" aria-hidden="true">✓</div>` : ""}<h2 style="${complete ? "" : ""}">${complete ? "Apparent weight: complete" : "Almost there"}</h2>
-      <p><label>Your name: <input type="text" id="nm" value="${esc(S.name)}" autocomplete="name" style="min-width:220px"></label></p>
+      <p><label>Name: <input type="text" id="nm" value="${esc(S.name)}" autocomplete="name" style="min-width:220px"></label> &nbsp; <label>Period: <input type="text" id="pd" value="${esc(S.period || "")}" style="width:6ch"></label></p>
       ${complete ? `<p>Finished ${new Date(S.finished).toLocaleDateString()} at ${new Date(S.finished).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</p>` : `<p>${done} of ${all.length} sections complete. Finish the ones marked ○.</p>`}
       <div class="donelist">${all.map(s => `<span class="${secDone(s.id) ? "y" : "n"}">${esc(s.title)}</span>`).join("")}</div>
-      ${complete ? `<p class="hint">Take a screenshot of this screen to turn in.</p>` : ""}</section>`;
+      <div class="bar" style="justify-content:center;margin-top:8px"><button class="btn" id="pdf">Download PDF for Canvas</button></div>
+      <p class="hint">${complete ? "Upload the PDF to your Canvas assignment." : "You can download a PDF now, but it will show the sections that aren’t finished yet."}</p></section>`;
     $("nm").addEventListener("input", e => { S.name = e.target.value; save(); });
+    $("pd").addEventListener("input", e => { S.period = e.target.value; save(); });
+    $("pdf").addEventListener("click", makePDF);
   }
 
+  // ---------- PDF for Canvas ----------
+  function makePDF() {
+    const plain = x => String(x == null ? "" : x).replace(/<[^>]+>/g, "").replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/[–—]/g, "-").replace(/−/g, "-").replace(/…/g, "...").replace(/[^\x00-\xff]/g, "");
+    if (!window.jspdf) { window.print(); return; }
+    const doc = new window.jspdf.jsPDF({ unit: "pt", format: "letter" }), PW = 612, Mg = 54, TW = PW - 2 * Mg; let y = Mg;
+    const need = h => { if (y + h > 792 - Mg) { doc.addPage(); y = Mg; } };
+    const text = (t, size = 10.5, bold = false, color = [20, 30, 35], x = Mg) => { doc.setFont("helvetica", bold ? "bold" : "normal"); doc.setFontSize(size); doc.setTextColor(...color);
+      doc.splitTextToSize(plain(t), TW - (x - Mg)).forEach(l => { need(size * 1.4); doc.text(l, x, y + size); y += size * 1.4; }); };
+    const ok = b => b ? [26, 127, 55] : [180, 35, 24];
+    const all = SECS.filter(x => x.id !== "finish"), done = all.filter(x => secDone(x.id)).length;
+    text("Apparent Weight in an Elevator", 17, true);
+    text(`Name: ${S.name}     Period: ${S.period || ""}     Downloaded: ${new Date().toLocaleString()}`, 10.5);
+    text(`Sections complete: ${done} of ${all.length}${S.finished ? "  (finished " + new Date(S.finished).toLocaleString() + ")" : ""}`, 10.5, true, ok(done === all.length)); y += 6;
+    // 1. predictions
+    const d = A("data"); text("1. Predict: elevator ride up and down (70 kg, actual weight 686.7 N)", 13, true, [31, 111, 180]);
+    RD.forEach((r, i) => text(`${r[0]}: predicted ${d["f" + i] || "-"}, acceleration ${({ up: "up (+)", zero: "zero", down: "down (-)" })[d["d" + i]] || "-"}${d.revealed ? `; scale reading ${r[1].toFixed(1)} N${rdOK(d, i) ? " (matches)" : " (does not match)"}` : ""}`, 10, false, d.revealed ? ok(rdOK(d, i)) : [20, 30, 35], Mg + 10));
+    y += 6;
+    // 2-10. problems
+    P.forEach((p, i) => {
+      const a = A(p.id); need(70); text(`${i + 2}. ${p.title} (${p.group})`, 12, true, [31, 111, 180]);
+      const vals = p.known === "N" ? `a = ${a.va || "-"} m/s^2` : p.known === "a" ? `FN = ${a.vN || "-"} N` : `a = ${a.va || "-"} m/s^2, FN = ${a.vN || "-"} N`;
+      if (p.id === "p1") text(`Interaction diagram: ${IDOBJ.map(([o]) => `${o}: ${(a.id || {})[o] || "-"}`).join(", ")}${a.idTried ? (a.idOK ? " (correct)" : " (incorrect)") : ""}`, 10, false, a.idTried ? ok(a.idOK) : [20, 30, 35], Mg + 10);
+      text(`a. Acceleration direction: ${a.dir || "-"}${a.dir ? (a.dirOK ? " (correct)" : " (incorrect)") : ""}`, 10, false, a.dir ? ok(a.dirOK) : [20, 30, 35], Mg + 10);
+      text(`b. FN compared with Fg: ${({ greater: "FN > Fg", equal: "FN = Fg", less: "FN < Fg" })[a.cmp] || "-"}${a.cmp ? (a.cmpOK ? " (correct)" : " (incorrect)") : ""}`, 10, false, a.cmp ? ok(a.cmpOK) : [20, 30, 35], Mg + 10);
+      text(`c. ${vals}${a.vTried ? (a.valOK ? " (correct)" : " (incorrect)") : ""}`, 10, false, a.vTried ? ok(a.valOK) : [20, 30, 35], Mg + 10);
+      text(`d. Force diagram: ${(a.fbd || []).filter(f => f.type).map(f => `F${FSUB[f.type] || "?"} by ${f.by || "?"} ${f.dir || "?"} ${f.mag || "?"} N`).join("; ") || "-"}${a.fbdTried ? (a.fbdOK ? " (correct)" : " (incorrect)") : ""}`, 10, false, a.fbdTried ? ok(a.fbdOK) : [20, 30, 35], Mg + 10);
+      text(`e. Velocity vs. time graph: ${VT[a.vt] || "-"}${a.vt ? (a.vtOK ? " (correct)" : " (incorrect)") : ""}`, 10, false, a.vt ? ok(a.vtOK) : [20, 30, 35], Mg + 10);
+    });
+    y += 4; text(`11. Ride the elevator: ${A("ride").seen ? "watched the full ride" : "not finished"}`, 12, true, [31, 111, 180]);
+    // 12. summary
+    const su = A("sum"); y += 4; text("12. Summarize", 12, true, [31, 111, 180]);
+    FILL.forEach((f, i) => text(`${f[0]} ${su["f" + i] || "____"} your actual weight.`, 10, false, su["f" + i] ? ok(su["f" + i] === f[1]) : [20, 30, 35], Mg + 10));
+    SORTS.forEach((x, i) => text(`${x[0]}: feel ${su["s" + i] || "-"}`, 10, false, su["s" + i] ? ok(su["s" + i] === x[1]) : [20, 30, 35], Mg + 10));
+    ["y", "v", "a"].forEach(k => { const v = su["g" + k]; text(`Whole-ride ${({ y: "position", v: "velocity", a: "acceleration" })[k]} vs. time graph: ${v == null ? "not chosen" : GOPTS[k][+v].ok ? "correct" : "incorrect"}`, 10, false, v == null ? [20, 30, 35] : ok(GOPTS[k][+v].ok), Mg + 10); });
+    doc.save(`Apparent-Weight-${plain(S.name).replace(/[^A-Za-z0-9]+/g, "-")}-P${plain(S.period).replace(/[^A-Za-z0-9]+/g, "")}.pdf`);
+  }
   addEventListener("resize", () => { if (S.sec === "ride") { const v = $("rt"); if (v) v.dispatchEvent(new Event("input")); } });
   render();
 })();
