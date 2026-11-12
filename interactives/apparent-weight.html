@@ -250,6 +250,20 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
 
 
   // ---------- elevator picture (SVG), animated for a moment ----------
+  // "Oh snap!" and friends: one is picked at random each time the cable snaps
+  const SNAPLINES = ["Oh snap!", "We’re cooked! 💀", "Ain’t no way!", "Bruh.", "Nah, it’s over 💀", "This is NOT it", "Not the cable 😭", "No cap, we’re falling",
+    "Low key panicking rn", "Low key weightless rn", "Low key regret this", "Scale says 0\u00a0N?!", "It’s giving free fall", "Gravity said bye 👋", "Bro, I’m floating 😳"];
+  let lastLine = -1;
+  const pickLine = () => { let i; do { i = Math.floor(Math.random() * SNAPLINES.length); } while (i === lastLine && SNAPLINES.length > 1); lastLine = i; return SNAPLINES[i]; };
+  function bubble(say, cy, fy, c) {
+    // wrap onto at most two lines of about 13 characters
+    const words = say.split(" "), lines = [""];
+    words.forEach(w => { const cur = lines[lines.length - 1]; if (cur && (cur + " " + w).length > 13 && lines.length < 2) lines.push(w); else lines[lines.length - 1] = cur ? cur + " " + w : w; });
+    // to the right of the shaft (open space above the floor numbers), with the tail pointing back to the student
+    const w = Math.max(54, Math.min(86, 12 + 6.2 * Math.max(...lines.map(l => [...l].length)))), h = 10 + 13 * lines.length, x0 = 229 - w, y0 = cy + 10;
+    return `<g><path d="M${x0 + 4} ${y0 + h / 2 + 4} L${108} ${cy + 46 + fy}" stroke="${c.ink}" stroke-width="1.5"/><rect x="${x0}" y="${y0}" width="${w}" height="${h}" rx="10" fill="#fff" stroke="${c.ink}" stroke-width="1.5"/>
+      <text x="${x0 + w / 2}" y="${y0 + 15}" font-size="10.5" font-weight="700" text-anchor="middle" fill="#15232b">${lines.map((l, i) => `<tspan x="${x0 + w / 2}" dy="${i ? 13 : 0}">${esc(l)}</tspan>`).join("")}</text></g>`;
+  }
   function elevSVG(state) {   // state: { y: car offset px, v, a, N (or null), cut, float }
     const c = { ink: css("--ink"), muted: css("--muted"), shaft: css("--shaft"), car: css("--car"), line: css("--carline"), vel: css("--vel"), a: css("--a"), skin: css("--skin") };
     const cy = 70 + state.y, arrow = (x, y1, y2, col, lab) => y1 === y2 ? "" : `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2 + (y2 < y1 ? 8 : -8)}" stroke="${col}" stroke-width="4"/><path d="M${x} ${y2} l-7 ${y2 < y1 ? 11 : -11} h14 z" fill="${col}"/><text x="${x + 9}" y="${(y1 + y2) / 2 + 4}" font-size="13" font-weight="700" fill="${col}">${lab}</text>`;
@@ -269,8 +283,7 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
         <line x1="95" y1="${cy + 90}" x2="${84 + (state.step || 0) * 9}" y2="${cy + 118}" stroke="${c.ink}" stroke-width="3"/><line x1="95" y1="${cy + 90}" x2="${106 - (state.step || 0) * 9}" y2="${cy + 118}" stroke="${c.ink}" stroke-width="3"/>
       </g>
       <g transform="translate(${(-14 * fl).toFixed(1)} ${(-(6 * fl + 4 * spin)).toFixed(1)}) rotate(${(8 * fl + 10 * spin).toFixed(1)} 95 ${cy + 133})"><rect x="72" y="${cy + 128}" width="46" height="11" rx="2" fill="${c.muted}"/></g>
-      ${state.say ? `<g><path d="M58 ${cy + 36} L${80} ${cy + 44 + fy}" stroke="${c.ink}" stroke-width="1.5"/><rect x="1" y="${cy + 18}" width="62" height="24" rx="11" fill="#fff" stroke="${c.ink}" stroke-width="1.5"/>
-        <text x="32" y="${cy + 34}" font-size="11.5" font-weight="700" text-anchor="middle" fill="#15232b">${esc(state.say)}</text></g>` : ""}
+      ${state.say ? bubble(state.say, cy, fy, c) : ""}
       <rect x="51" y="${cy + 8}" width="88" height="16" rx="3" fill="${c.ink}"/><text x="95" y="${cy + 20}" font-size="11" font-weight="700" text-anchor="middle" fill="${c.car}">${state.N == null ? "scale: ?" : `scale: ${fmtN(state.N)} N`}</text>
       ${arrow(172, 150, 150 - vLen, c.vel, "v")}${arrow(204, 150, 150 - aLen, c.a, "a")}
       ${state.v === 0 ? `<text x="176" y="154" font-size="12" font-weight="700" fill="${c.vel}">v = 0</text>` : ""}${aLen === 0 && !state.hideA ? `<text x="176" y="172" font-size="12" font-weight="700" fill="${c.a}">a = 0</text>` : ""}
@@ -284,17 +297,17 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
     const DUR = p.id === "p6" ? SNAP + FALL : PART[p.id][1] - PART[p.id][0];
     const at = t => { if (p.id === "p6") { const u = Math.max(0, t - SNAP); return { y: YMAX - 0.5 * G * u * u, v: -G * u }; }
       const st = rideAt(PART[p.id][0] + t); return { y: st.y, v: st.v }; };
-    let t = 0, raf = 0, last = 0;
+    let t = 0, raf = 0, last = 0, line = pickLine();
     box.innerHTML = `<div id="elevpic"></div><div class="bar" style="margin-top:8px"><button class="btn" id="mplay">▶ Play</button><span class="hint" id="mreplay"></span></div>
       ${p.v === 0 ? `<p class="hint" id="stillmsg" style="margin:6px 0 0">The elevator isn’t moving at this moment.</p>` : ""}`;
     const draw = () => { if (!$("elevpic")) return; const m = at(t);
       const ff = p.id === "p6", snapped = ff && t >= SNAP, u = t - SNAP;
       $("elevpic").innerHTML = elevSVG({ y: 75 - m.y / YMAX * 135, v: Math.abs(m.v) < 0.05 ? 0 : m.v, a: ff && !snapped ? 0 : p.a,
         N: showN ? (ff && !snapped ? FG : p.N) : null, cut: snapped, cutY: snapped ? 75 - YMAX / YMAX * 135 + 70 - 40 : null,
-        float: snapped ? Math.min(1, u / 0.9) : 0, spin: snapped ? u : 0, say: snapped && u < 1.7 ? "Oh snap!" : null }); };
+        float: snapped ? Math.min(1, u / 0.9) : 0, spin: snapped ? u : 0, say: snapped && u < 1.7 ? line : null }); };
     const tick = now => { t = Math.min(DUR, t + (now - last) / 1000); last = now; draw(); if (t < DUR) raf = requestAnimationFrame(tick); else { $("mplay").disabled = false; if ($("mreplay")) $("mreplay").textContent = "Click again to replay from start"; } };
     $("mplay").addEventListener("click", () => { if (p.v === 0 && $("stillmsg")) { $("stillmsg").style.color = "var(--bad)"; $("stillmsg").style.fontWeight = "700"; }   // pressing Play while at rest: point out that nothing moves
-      cancelAnimationFrame(raf); if (t >= DUR) t = 0; if (!DUR) return; $("mplay").disabled = true; $("mreplay").textContent = ""; last = performance.now(); raf = requestAnimationFrame(tick); });
+      cancelAnimationFrame(raf); if (t >= DUR) { t = 0; line = pickLine(); } if (!DUR) return; $("mplay").disabled = true; $("mreplay").textContent = ""; last = performance.now(); raf = requestAnimationFrame(tick); });
     draw();
     return () => cancelAnimationFrame(raf);
   }
