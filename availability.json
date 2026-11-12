@@ -22,6 +22,7 @@
     "force-diagrams/cp34": false,
     "force-diagrams/cp5": false,
     "force-diagrams-review": true,
-    "projectile-walkthrough": true
+    "projectile-walkthrough": true,
+    "apparent-weight": true
   }
 }
