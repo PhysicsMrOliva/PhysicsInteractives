@@ -11,6 +11,10 @@
     "force-diagrams/cp34": true,
     "force-diagrams/cp5": true,
     "force-diagrams-review": true,
+<<<<<<< HEAD
+    "projectile-walkthrough": true,
+    "apparent-weight": true
+=======
     "guess-practice": true,
     "relationship-explorer": true,
     "constant-acceleration": true,
@@ -23,5 +27,6 @@
     "broom-ball": true,
     "newtons-blocks-lab": true,
     "newtons-blocks-explorer": true
+>>>>>>> 97f8e5c897aae280b3304967fb0b8d1910c77b17
   }
 }
