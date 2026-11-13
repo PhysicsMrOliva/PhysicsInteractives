@@ -23,6 +23,7 @@
     "broom-ball": true,
     "newtons-blocks-lab": true,
     "newtons-blocks-explorer": true,
-    "apparent-weight": true
+    "apparent-weight": true,
+    "newton2-guess": true
   }
 }
