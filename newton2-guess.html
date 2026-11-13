@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Newton’s 2nd Law: GUESS problem solving</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  --bg: #eaf1ee; --grid: #d3e0da; --panel: #ffffff; --ink: #15232b; --muted: #56666e; --line: #c4d3cc; --tint: #f3f7f5;
+  --acc: #1f6fb4; --ok: #1a7f37; --okbg: #dff3e4; --bad: #b42318; --badbg: #fde7e4; --focus: #1f6fb4; --btn: #15232b; --btn-ink: #fff;
+  --pos: #23913a; --vel: #d22b2b; --sys: #7a3fe0; --cart: #5fd35f; --track: #8a7a66;
+  --f-gravity: #2e7d32; --f-normal: #1f6fb4; --f-thrust: #b7791f; --f-applied: #d35400; --f-tension: #8e44ad; --f-friction: #c0392b; --f-drag: #16808a;
+  font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42; --tint: #1b282e;
+  --acc: #5aa9ff; --ok: #6fd37a; --okbg: #17331f; --bad: #ff8a80; --badbg: #3d1c1a; --focus: #5aa9ff; --btn: #e5eef0; --btn-ink: #0f171b;
+  --pos: #4cc76a; --vel: #ff6b6b; --sys: #b28cff; --cart: #4cc76a; --track: #a08a76;
+  --f-gravity: #6fd37a; --f-normal: #5aa9ff; --f-thrust: #f2c94c; --f-applied: #ffa94d; --f-tension: #c39bff; --f-friction: #ff8a80; --f-drag: #4fd1db; } }
+:root[data-theme="dark"] {
+  --bg: #0f171b; --grid: #1c292f; --panel: #162126; --ink: #e5eef0; --muted: #9aaab1; --line: #2b3b42; --tint: #1b282e;
+  --acc: #5aa9ff; --ok: #6fd37a; --okbg: #17331f; --bad: #ff8a80; --badbg: #3d1c1a; --focus: #5aa9ff; --btn: #e5eef0; --btn-ink: #0f171b;
+  --pos: #4cc76a; --vel: #ff6b6b; --sys: #b28cff; --cart: #4cc76a; --track: #a08a76;
+  --f-gravity: #6fd37a; --f-normal: #5aa9ff; --f-thrust: #f2c94c; --f-applied: #ffa94d; --f-tension: #c39bff; --f-friction: #ff8a80; --f-drag: #4fd1db; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+*, *::before, *::after { box-sizing: inherit; }
+body { margin: 0; color: var(--ink); background-color: var(--bg); line-height: 1.5;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 24px 24px; }
+header { max-width: 1180px; margin: 0 auto; padding: 28px 20px 8px; }
+h1 { font-size: clamp(1.6rem, 3.4vw, 2.4rem); margin: 0 0 4px; letter-spacing: -0.01em; }
+header .back { display: inline-block; margin-bottom: 10px; color: var(--ink); font-weight: 700; }
+header p { margin: 0; color: var(--muted); max-width: 90ch; }
+main { max-width: 1180px; margin: 0 auto; padding: 12px 20px 48px; display: grid; gap: 14px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+h2 { margin: 0 0 6px; font-size: 1.3rem; } h3 { margin: 0 0 6px; font-size: 1.08rem; }
+.hint { color: var(--muted); font-size: 0.93rem; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+select, input[type=text] { font: inherit; padding: 6px 9px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); }
+input.num { width: 8ch; text-align: right; }
+button.btn { font: inherit; font-weight: 700; border: 2px solid var(--btn); background: var(--btn); color: var(--btn-ink); border-radius: 8px; padding: 7px 16px; cursor: pointer; }
+button.btn.ghost { background: transparent; color: var(--ink); }
+button.btn:disabled { opacity: 0.4; cursor: default; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.ptext { font-size: 1.05rem; margin: 8px 0 0; }
+.ptext b { white-space: nowrap; }
+/* the worksheet */
+.sheet { display: grid; gap: 0; border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; }
+.sheet .top { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 2px solid var(--ink); }
+@media (max-width: 820px) { .sheet .top { grid-template-columns: 1fr; } }
+.sheet .cell { padding: 8px 10px; min-height: 230px; }
+.sheet .top .cell + .cell { border-left: 1.5px solid var(--ink); }
+@media (max-width: 820px) { .sheet .top .cell + .cell { border-left: 0; border-top: 1.5px solid var(--ink); } }
+.sheet .cell h4 { margin: 0 0 4px; text-align: center; font-size: 0.95rem; color: var(--muted); }
+.sheet svg { width: 100%; height: auto; display: block; }
+.sheet .bottom { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); gap: 14px; padding: 10px 12px; }
+@media (max-width: 820px) { .sheet .bottom { grid-template-columns: 1fr; } }
+.guess h4 { margin: 0 0 6px; font-style: italic; }
+.gfields { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 18px; font-family: "Cambria Math", "Times New Roman", serif; font-size: 1.05rem; }
+.gfields .f.empty { color: var(--muted); }
+.gfields .f b { font-weight: 400; }
+.calc { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 6px; font-family: "Cambria Math", "Times New Roman", serif; font-size: 1.02rem; }
+.calc .ln { margin: 2px 0; }
+.graphs svg { max-width: 300px; }
+/* step panel */
+.stephead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; align-items: baseline; }
+.stephead .n { color: var(--muted); font-weight: 700; font-size: 0.92rem; }
+.nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+.fb { font-weight: 700; min-height: 1.3em; margin: 6px 0 0; }
+.fb.ok { color: var(--ok); } .fb.bad { color: var(--bad); }
+.rows { display: grid; gap: 6px; margin: 8px 0; }
+.row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; border-bottom: 1px dashed var(--line); padding: 5px 0; }
+.choices { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+.choices label { display: inline-flex; gap: 7px; align-items: center; border: 1.5px solid var(--line); border-radius: 8px; padding: 5px 11px; cursor: pointer; }
+.choices label.right { border-color: var(--ok); background: var(--okbg); } .choices label.wrong { border-color: var(--bad); background: var(--badbg); }
+.m { font-family: "Cambria Math", "Times New Roman", serif; font-size: 1.12rem; }
+.gopts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.gopts label { border: 1.5px solid var(--line); border-radius: 8px; padding: 4px; cursor: pointer; display: grid; justify-items: center; font-size: 0.85rem; }
+.gopts label:has(input:checked) { border-color: var(--acc); box-shadow: 0 0 0 2px var(--acc) inset; }
+.gopts label.right { border-color: var(--ok); background: var(--okbg); } .gopts label.wrong { border-color: var(--bad); background: var(--badbg); }
+.gopts input { position: absolute; opacity: 0; pointer-events: none; }
+.gopts svg { width: 140px; height: 80px; }
+.review { background: var(--tint); border-left: 4px solid var(--acc); padding: 8px 12px; border-radius: 0 8px 8px 0; margin-bottom: 10px; }
+.done-hero { text-align: center; }
+.done-hero .big { font-size: 2.6rem; color: var(--ok); line-height: 1; }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../interactives.html">Back to Interactives</a>
+  <h1>Newton’s 2nd Law: GUESS problem solving</h1>
+  <p>Work through a force problem one step at a time: picture, interaction diagram, force diagram, summing the forces, kinematics and Newton’s 2nd Law (F<sub>net</sub> = ma). Your GUESS sheet fills in as you go. As usual, we will use <b>“right and up are positive.”</b></p>
+</header>
+<main>
+  <section class="panel">
+    <div class="bar"><label for="psel" class="hint" style="font-weight:700">Problem</label><select id="psel" style="min-width:min(100%,420px)"></select>
+      <button class="btn ghost" id="restart">Start this problem over</button></div>
+    <p class="ptext" id="ptext"></p>
+  </section>
+  <section class="panel">
+    <h2 style="font-size:1.05rem">Your GUESS sheet</h2>
+    <div class="sheet">
+      <div class="top">
+        <div class="cell"><h4>System Picture</h4><div id="sPic"></div>
+          <div class="bar" id="picbar" style="justify-content:center"><button class="btn ghost" id="picplay" style="padding:4px 14px">▶ Play</button><span class="hint" id="picnote"></span></div></div>
+        <div class="cell"><h4>Interaction Diagram</h4><div id="sID"></div></div>
+        <div class="cell"><h4>Force Diagram</h4><div id="sFD"></div></div>
+      </div>
+      <div class="bottom">
+        <div class="guess"><h4>GUESS (Given, Unknown, Equations, Solve, Substitute)</h4><div class="gfields" id="sFields"></div><div class="calc" id="sCalc"><b style="font-family:inherit">Calculations:</b></div></div>
+        <div class="graphs" id="sGraphs"></div>
+      </div>
+    </div>
+  </section>
+  <section class="panel" id="stage" aria-live="polite"></section>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const parse = s => Number(String(s).trim().replace(/−/g, "-").replace(",", ".").replace(/\s*(m\/s²|m\/s2|m\/s|n|s|kg)$/i, ""));
+  const fmt = (v, d = 2) => (v < 0 ? "−" : "") + Math.abs(v).toFixed(d);
+  const sig3 = v => { const t = Number(v.toPrecision(3)); return (t < 0 ? "−" : "") + Math.abs(t).toString(); };
+  const close = (a, b, rel = 0.012, abs = 0.011) => isFinite(a) && Math.abs(a - b) <= Math.max(abs, Math.abs(b) * rel);
+
+  // ================= Problems =================
+  // To add a problem: copy this object, change the numbers, objects and forces.
+  // Directions: "right", "left", "up", "down". A force's value is a number (N), "Fg" (= mg), "Fg-balance" (equals Fg), or "?" for the unknown.
+  const PROBLEMS = [
+    {
+      id: "fan-hand", title: "Fan cart stopped by a hand", g: 9.81,
+      text: "A <b>0.17 N</b> thrust is accelerating a <b>0.50 kg</b> fan cart along a track, reaching a maximum velocity of <b>0.75 m/s</b>, when a hand suddenly slows it to a stop in <b>0.176 seconds</b>. Determine the force applied by the hand to stop the cart. Assume negligible drag and friction.",
+      system: "cart", systemLong: "fan cart", picture: "fanHand",
+      motion: { velocity: "right", v0: 0.75, vf: 0, dt: 0.176 },   // moving right, slowing to a stop
+      m: 0.50,
+      interactions: { Earth: "gravitational", track: "normal", air: "thrust", hand: "applied" },
+      distractors: ["wheels", "fan motor", "table"],
+      forces: [
+        { type: "gravity", by: "Earth", dir: "down", value: "Fg" },
+        { type: "normal", by: "track", dir: "up", value: "Fg-balance" },
+        { type: "thrust", by: "air", dir: "right", value: 0.17 },
+        { type: "applied", by: "hand", dir: "left", value: "?" }
+      ],
+      unknown: { type: "applied", by: "hand", label: "the force applied by the hand" }
+    }
+  ];
+
+  // ================= state =================
+  const TYPES = { gravity: "gravitational", normal: "normal (support)", thrust: "thrust", applied: "applied (push/pull)", tension: "tension", friction: "friction", drag: "drag" };
+  const FTYPES = ["gravity", "normal", "thrust", "applied", "tension", "friction", "drag"];
+  const ITYPES = ["none", "gravitational", "normal", "thrust", "applied", "tension", "friction", "drag"];
+  const TYPE_OF = { gravitational: "gravity", normal: "normal", thrust: "thrust", applied: "applied", tension: "tension", friction: "friction", drag: "drag" };
+  const KEY = "n2-guess-v1";
+  let ALL = {}; try { ALL = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { ALL = {}; }
+  const saveAll = () => { try { localStorage.setItem(KEY, JSON.stringify(ALL)); } catch (e) {} };
+  let P = PROBLEMS[0], S = null, view = null, justDone = null;   // justDone: the step just finished stays on screen (with its feedback) until Next   // view: index of a finished step being reviewed (null = current step)
+
+  // derived values for the current problem
+  const D = () => {
+    const g = P.g, Fg = P.m * g, dv = P.motion.vf - P.motion.v0, ax = dv / P.motion.dt;
+    const ax2 = Number(ax.toFixed(2)), sumFx = P.m * ax2, sumFx2 = Number(sumFx.toFixed(2));
+    const xs = P.forces.filter(f => f.dir === "left" || f.dir === "right");
+    const known = xs.filter(f => f.value !== "?").reduce((t, f) => t + (f.dir === "right" ? 1 : -1) * f.value, 0);
+    const u = P.forces.find(f => f.value === "?"), uSign = u.dir === "right" ? 1 : -1;
+    const unknown = (sumFx2 - known) / uSign;     // magnitude of the unknown force
+    return { g, Fg: Number(Fg.toFixed(2)), dv, ax: ax2, sumFx: sumFx2, unknown: Number(unknown.toFixed(2)), u };
+  };
+  const valOf = f => { const d = D(); return f.value === "Fg" || f.value === "Fg-balance" ? d.Fg : f.value === "?" ? d.unknown : f.value; };
+
+  const STEPS = [
+    { id: "given", title: "Given & Unknown" },
+    { id: "pic", title: "System picture: velocity vector" },
+    { id: "id", title: "Interaction diagram" },
+    { id: "fd", title: "Force diagram" },
+    { id: "sum", title: "Sum the forces" },
+    { id: "kin", title: "Kinematics: find the acceleration" },
+    { id: "n2", title: "Newton’s 2nd Law: solve for the unknown" },
+    { id: "graphs", title: "Sketch the graphs" },
+    { id: "done", title: "Done!" }
+  ];
+  function load() { S = ALL[P.id] = ALL[P.id] || { step: 0, done: {}, a: {} }; view = null; justDone = null; }
+
+  // ================= drawing helpers =================
+  const arrowSVG = (x1, y1, x2, y2, col, w = 3.5, dash) => { const a = Math.atan2(y2 - y1, x2 - x1), h = 10;
+    return `<line x1="${x1}" y1="${y1}" x2="${x2 - Math.cos(a) * 6}" y2="${y2 - Math.sin(a) * 6}" stroke="${col}" stroke-width="${w}" ${dash ? 'stroke-dasharray="6 4"' : ""}/>
+      <path d="M${x2} ${y2} L${x2 - h * Math.cos(a - 0.42)} ${y2 - h * Math.sin(a - 0.42)} L${x2 - h * Math.cos(a + 0.42)} ${y2 - h * Math.sin(a + 0.42)} Z" fill="${col}"/>`; };
+  // a cartoon hand reaching in from the right, fingers toward the cart
+  function handSVG(ink, skin) {
+    const shade = "#d9a37a", sleeve = "#4a6fa5", cuff = "#3a5a8a";
+    const finger = (x, y, len, h, rot = 0) => `<rect x="${x - len}" y="${y - h / 2}" width="${len + 8}" height="${h}" rx="${h / 2}" fill="${skin}" stroke="${ink}" stroke-width="1.4" transform="rotate(${rot} ${x} ${y})"/>`;
+    return `<g aria-hidden="true">
+      <rect x="250" y="95" width="52" height="44" rx="4" fill="${sleeve}" stroke="${ink}" stroke-width="1.4"/>
+      <rect x="244" y="92" width="12" height="50" rx="3" fill="${cuff}" stroke="${ink}" stroke-width="1.4"/>
+      <path d="M238 102 C230 92 220 84 210 82 C202 81 199 89 205 93 C212 97 218 101 222 106 Z" fill="${skin}" stroke="${ink}" stroke-width="1.4"/>
+      <path d="M244 100 C232 96 214 96 206 102 L204 128 C214 136 232 136 244 132 Z" fill="${skin}" stroke="${ink}" stroke-width="1.4"/>
+      <path d="M222 104 C226 101 232 99 238 100" fill="none" stroke="${skin}" stroke-width="3"/>
+      ${finger(208, 104, 30, 9, 4)}${finger(208, 113, 34, 9, 1)}${finger(208, 122, 32, 9, -1)}${finger(208, 130, 26, 8, -4)}
+      <path d="M244 104 C234 103 222 104 210 106" fill="none" stroke="${shade}" stroke-width="2"/>
+      ${[[183, 104], [178, 113], [180, 122], [186, 130]].map(([x, y]) => `<path d="M${x + 6} ${y - 3} q2 3 0 6" fill="none" stroke="${shade}" stroke-width="1.2"/>`).join("")}
+    </g>`;
+  }
+  function picSVG(vel, anim) {   // anim: { dx, handDx, v, label } while the motion plays
+    const ink = css("--ink"), cart = css("--cart"), track = css("--track"), skin = "#f1c69b";
+    let s = `<svg viewBox="0 0 300 190" role="img" aria-label="Fan cart moving toward a hand">
+      <line x1="10" y1="150" x2="290" y2="150" stroke="${track}" stroke-width="4"/>
+      ${[...Array(14)].map((_, i) => `<line x1="${20 + i * 20}" y1="152" x2="${12 + i * 20}" y2="162" stroke="${track}" stroke-width="1.5"/>`).join("")}
+      <g transform="translate(${anim ? anim.dx.toFixed(1) : 0} 0)">
+      <rect x="70" y="112" width="80" height="26" rx="4" fill="${cart}" stroke="${ink}" stroke-width="1.5"/>
+      <circle cx="86" cy="142" r="7" fill="${cart}" stroke="${ink}" stroke-width="1.5"/><circle cx="134" cy="142" r="7" fill="${cart}" stroke="${ink}" stroke-width="1.5"/>
+      <rect x="96" y="94" width="10" height="20" fill="${cart}" stroke="${ink}" stroke-width="1.5"/>
+      <path d="M86 70 a24 24 0 0 1 0 44 z" fill="${cart}" stroke="${ink}" stroke-width="1.5" transform="translate(4 -6)"/>
+      <path d="M72 76 q-8 12 0 24 M64 72 q-11 16 0 32" fill="none" stroke="${css("--muted")}" stroke-width="1.5"/></g>
+      <g transform="translate(${anim ? anim.handDx.toFixed(1) : 0} 0)">${handSVG(ink, skin)}</g>`;
+    if (anim) {                                           // the moving cart's velocity arrow and the part of the motion
+      const L = anim.v / 0.75 * 56, x0 = 112 + anim.dx;
+      s += L > 3 ? arrowSVG(x0, 60, x0 + L, 60, css("--vel"), 4) + `<text x="${x0 + L / 2}" y="50" font-size="14" font-weight="700" text-anchor="middle" fill="${css("--vel")}">v</text>`
+        : `<text x="${x0 - 8}" y="58" font-size="14" font-weight="700" fill="${css("--vel")}">v = 0</text>`;
+      s += `<text x="8" y="18" font-size="12" font-weight="700" fill="${ink}">${esc(anim.label)}</text><text x="8" y="34" font-size="11" fill="${css("--muted")}">v = ${anim.v.toFixed(2)} m/s</text>`;
+      return s + `</svg>`;
+    }
+    if (vel === "right") s += arrowSVG(112, 60, 172, 60, css("--vel"), 4) + `<text x="140" y="50" font-size="14" font-weight="700" fill="${css("--vel")}">v</text>`;
+    if (vel === "left") s += arrowSVG(132, 60, 72, 60, css("--vel"), 4) + `<text x="98" y="50" font-size="14" font-weight="700" fill="${css("--vel")}">v</text>`;
+    if (vel === "none") s += `<text x="110" y="58" font-size="14" font-weight="700" fill="${css("--vel")}">v = 0</text>`;
+    return s + `</svg>`;
+  }
+  function idSVG(sel) {
+    const ink = css("--ink"), sys = css("--sys"), muted = css("--muted"), panel = css("--panel"), cx = 150, cy = 100;
+    const objs = Object.keys(sel || {}).filter(o => sel[o] && sel[o] !== "none");
+    const POS = [[150, 22], [262, 70], [262, 160], [150, 182], [38, 160], [38, 70], [262, 115], [38, 115]];
+    let s = `<svg viewBox="0 0 300 200" role="img" aria-label="Interaction diagram"><defs><marker id="ida" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="${ink}"/></marker></defs>
+      <rect x="${cx - 46}" y="${cy - 26}" width="92" height="52" rx="6" fill="none" stroke="${css("--bad")}" stroke-width="2" stroke-dasharray="7 5"/>`;
+    objs.forEach((o, i) => { const [x, y] = POS[i % POS.length], dx = x - cx, dy = y - cy, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+      s += `<line x1="${cx + ux * 38}" y1="${cy + uy * 22}" x2="${x - ux * 36}" y2="${y - uy * 15}" stroke="${ink}" stroke-width="1.6" marker-start="url(#ida)" marker-end="url(#ida)"/>
+        <ellipse cx="${x}" cy="${y}" rx="36" ry="15" fill="${panel}" stroke="${ink}" stroke-width="1.4"/><text x="${x}" y="${y + 4}" font-size="11" text-anchor="middle" fill="${ink}">${esc(o)}</text>`; });
+    s += `<ellipse cx="${cx}" cy="${cy}" rx="34" ry="18" fill="${panel}" stroke="${sys}" stroke-width="2"/><text x="${cx}" y="${cy + 4}" font-size="12" font-weight="700" text-anchor="middle" fill="${sys}">${esc(P.systemLong)}</text></svg>`;
+    return s;
+  }
+  // force diagram: arrows from the dot, length ∝ size; the unknown is dashed
+  function fdSVG(list, opts = {}) {
+    const ink = css("--ink"), cx = 150, cy = 105, k = 14, minL = 22;
+    let s = `<svg viewBox="0 0 300 215" role="img" aria-label="Force diagram">`;
+    (list || []).forEach(f => {
+      if (!f.dir) return; const unk = f.value === "?" || f.value === "", v = unk ? null : parse(f.value);
+      const L = unk ? 36 : Math.max(minL, Math.min(88, Math.abs(v) * k)), col = css("--f-" + (f.type || "applied")) || ink;
+      const d = { up: [0, -1], down: [0, 1], right: [1, 0], left: [-1, 0] }[f.dir]; if (!d) return;
+      const x2 = cx + d[0] * L, y2 = cy + d[1] * L; s += arrowSVG(cx, cy, x2, y2, col, 3.5, unk);
+      const lab = `F<tspan baseline-shift="sub" font-size="8">${esc(f.type || "?")}, on ${esc(P.system)}, by ${esc(f.by || "?")}</tspan>`;
+      const val = unk ? (opts.solved != null ? `= ? = ${opts.solved.toFixed(2)} N` : "= ?") : `= ${esc(String(f.value).replace("-", "−"))} N`;
+      if (f.dir === "up") s += `<text x="${cx + 8}" y="${y2 + 4}" font-size="11" font-weight="700" fill="${col}">${lab}<tspan x="${cx + 14}" dy="15">${val}</tspan></text>`;
+      if (f.dir === "down") s += `<text x="${cx + 8}" y="${y2 - 10}" font-size="11" font-weight="700" fill="${col}">${lab}<tspan x="${cx + 14}" dy="15">${val}</tspan></text>`;
+      if (f.dir === "right") s += `<text x="${Math.min(x2 + 4, 186)}" y="${cy - 22}" font-size="11" font-weight="700" fill="${col}">${lab}<tspan x="${Math.min(x2 + 10, 192)}" dy="15">${val}</tspan></text>`;
+      if (f.dir === "left") s += `<text x="${x2 - 4}" y="${cy - 22}" font-size="11" font-weight="700" fill="${col}" text-anchor="end">${lab}<tspan x="${x2 - 4}" dy="15">${val}</tspan></text>`;
+    });
+    if (opts.net) s += arrowSVG(cx - 10, 196, cx - 10 + (opts.net < 0 ? -40 : 40), 196, ink, 2.5) + `<text x="${cx + 40}" y="200" font-size="11" font-weight="700" fill="${ink}">ΣF<tspan baseline-shift="sub" font-size="8">x</tspan> = ${fmt(opts.net)} N</text>`;
+    return s + `<circle cx="${cx}" cy="${cy}" r="6" fill="${ink}"/></svg>`;
+  }
+  const GRAPHS = {
+    x: { right: "M10 70 C40 30 80 18 130 14", up: "M10 70 C60 66 100 40 130 10", line: "M10 70 L130 14", flat: "M10 40 H130", down: "M10 14 C40 50 80 62 130 66" },
+    v: { dec: "M10 14 L130 50", inc: "M10 50 L130 14", flat: "M10 22 H130", zero: "M10 50 H130", negdec: "M10 50 L130 76" }
+  };
+  function graphSVG(kind, key, ok) {
+    const muted = css("--muted"), col = kind === "x" ? css("--pos") : css("--vel"), zeroY = kind === "x" ? 70 : 50;
+    return `<svg viewBox="0 0 140 80" aria-hidden="true"><line x1="10" y1="4" x2="10" y2="78" stroke="${muted}"/><line x1="10" y1="${zeroY}" x2="136" y2="${zeroY}" stroke="${muted}"/>
+      <text x="1" y="${zeroY + 4}" font-size="9" fill="${muted}">0</text>${key ? `<path d="${GRAPHS[kind][key]}" fill="none" stroke="${col}" stroke-width="3"/>` : ""}</svg>`;
+  }
+
+  // ================= the sheet =================
+  function renderSheet() {
+    const a = S.a, d = D(), done = S.done;
+    $("ptext").innerHTML = P.text;
+    if (!motionAnim || !motionAnim.playing) $("sPic").innerHTML = picSVG(done.pic ? a.vel : null);
+    $("picbar").style.display = P.picture === "fanHand" ? "" : "none";
+    $("sID").innerHTML = done.id ? idSVG(a.id) : `<p class="hint" style="text-align:center">(step 3)</p>`;
+    $("sFD").innerHTML = done.fd ? fdSVG(a.fd, { net: done.n2 ? d.sumFx : null, solved: done.n2 ? d.unknown : null }) : `<p class="hint" style="text-align:center">(step 4)</p>`;
+    const F = (lab, val) => `<span class="f ${val ? "" : "empty"}">${lab} = ${val || ""}</span>`;
+    const xs = (a.fd || []).filter(f => f.dir === "left" || f.dir === "right"), ys = (a.fd || []).filter(f => f.dir === "up" || f.dir === "down");
+    $("sFields").innerHTML = [
+      F("m", `${P.m.toFixed(2)} kg`), F("F<sub>g</sub>", done.given ? `mg = ${P.m.toFixed(2)} kg × ${P.g} N/kg = ${d.Fg.toFixed(2)} N` : ""),
+      F("a<sub>x</sub>", done.kin ? `${fmt(d.ax)} m/s²` : done.given ? "?" : ""), F("a<sub>y</sub>", done.sum ? "0 m/s²" : ""),
+      F("ΣF<sub>x</sub>", done.n2 ? `${fmt(d.sumFx)} N` : done.sum ? sumExpr(a.sx, xs) : ""), F("ΣF<sub>y</sub>", done.sum ? `${sumExpr(a.sy, ys)} = 0 N` : ""),
+      F("v<sub>0x</sub>", done.given ? `${P.motion.v0} m/s` : ""), F("v<sub>fx</sub>", done.given ? `${P.motion.vf} m/s` : ""),
+      F("Δv", done.kin ? `${P.motion.vf} − ${P.motion.v0} m/s = ${fmt(d.dv)} m/s` : ""), F("Δt", done.given ? `${P.motion.dt} s` : "")
+    ].join("");
+    let calc = `<b style="font-family:inherit">Calculations (show all work):</b>`;
+    if (done.kin) calc += `<div class="ln">a<sub>x</sub> = Δv / Δt &nbsp;(v<sub>f</sub> = a<sub>x</sub>Δt + v<sub>0</sub>)</div><div class="ln">&nbsp;&nbsp;= ${fmt(d.dv)} (m/s) / ${P.motion.dt} (s) = ${fmt(d.ax)} (m/s²)</div>`;
+    if (done.n2) { const u = d.u;
+      calc += `<div class="ln">ΣF<sub>x</sub> = ma<sub>x</sub> = ${P.m.toFixed(2)} (kg) × (${fmt(d.ax)} m/s²) = ${fmt(d.sumFx)} (N)</div>
+        <div class="ln">ΣF<sub>x</sub> = ${sumExpr(a.sx, xs)} &nbsp;⇒&nbsp; F<sub>${u.type}</sub> = ${unknownExpr()}</div>
+        <div class="ln">&nbsp;&nbsp;= ${unknownSub()} = <b>${d.unknown.toFixed(2)} N</b></div>`; }
+    $("sCalc").innerHTML = calc;
+    $("sGraphs").innerHTML = `<div class="hint" style="text-align:center;font-weight:700;text-decoration:underline">Position vs Time</div>${graphSVG("x", done.graphs ? a.gx : null)}
+      <div class="hint" style="text-align:center;font-weight:700;text-decoration:underline;margin-top:4px">Velocity vs Time</div>${graphSVG("v", done.graphs ? a.gv : null)}`;
+  }
+  const short = f => `F<sub>${f.type}</sub>`;
+  function sumExpr(signs, list) { if (!signs || !list || !list.length) return "?";
+    return list.map((f, i) => `${i ? (signs[i] === "-" ? " − " : " + ") : (signs[i] === "-" ? "−" : "")}${short(f)}`).join(""); }
+  // rearranged form of ΣFx = (signs)·forces for the unknown, using the student's own signs
+  function unknownExpr() { const xs = (S.a.fd || []).filter(f => f.dir === "left" || f.dir === "right"), ui = xs.findIndex(f => f.value === "?" || f.value === ""), su = S.a.sx[ui];
+    const others = xs.map((f, i) => i === ui ? "" : `${(S.a.sx[i] === "-") === (su === "-") ? " − " : " + "}${short(f)}`).join("");
+    return su === "-" ? `${others.replace(/^ \+ /, "").replace(/^ − /, "−")} − ΣF<sub>x</sub>` : `ΣF<sub>x</sub>${others}`; }
+  function unknownSub() { const d = D(), xs = (S.a.fd || []).filter(f => f.dir === "left" || f.dir === "right"), ui = xs.findIndex(f => f.value === "?" || f.value === ""), su = S.a.sx[ui];
+    const others = xs.map((f, i) => i === ui ? "" : `${(S.a.sx[i] === "-") === (su === "-") ? " − " : " + "}${valOf(P.forces.find(pf => pf.type === f.type && pf.by === f.by))} N`).join("");
+    return su === "-" ? `${others.replace(/^ \+ /, "").replace(/^ − /, "−")} − (${fmt(d.sumFx)} N)` : `(${fmt(d.sumFx)} N)${others}`; }
+
+  // ================= the steps =================
+  function render() {
+    renderSheet();
+    const cur = S.step, i = view == null ? cur : view, st = STEPS[i], reviewing = view != null && view < cur && view !== justDone;
+    let h = `<div class="stephead"><span class="n">Step ${i + 1} of ${STEPS.length}</span></div>`;
+    if (reviewing) h += `<div class="review">Reviewing a finished step. Use Forward or “Back to current step” to continue.</div>`;
+    h += `<h2>${(i === cur || i === justDone) && st.id !== "done" ? `<span class="hint" style="font-size:1rem">Next step:</span> ` : ""}${st.title}</h2>`;
+    h += `<div id="body" ${reviewing ? "inert" : ""}>${stepHTML(st.id)}</div>`;
+    h += `<div class="nav"><button class="btn ghost" id="back" ${i === 0 ? "disabled" : ""}>◀ Back</button>
+      <span class="bar">${reviewing ? `<button class="btn ghost" id="cur">Back to current step</button>` : ""}<button class="btn" id="fwd" ${i < cur && i !== justDone ? "" : "disabled"}>Forward ▶</button></span></div>`;
+    $("stage").innerHTML = h;
+    $("back").addEventListener("click", () => { justDone = null; view = Math.max(0, i - 1); render(); });
+    $("fwd").addEventListener("click", () => { justDone = null; const n = i + 1; view = n >= cur ? null : n; render(); });
+    if ($("cur")) $("cur").addEventListener("click", () => { justDone = null; view = null; render(); });
+    if (!reviewing) bindStep(st.id);
+  }
+  function finish(id) { S.done[id] = true; const i = STEPS.findIndex(s => s.id === id); if (S.step === i) { S.step = i + 1; justDone = i; view = i; } saveAll(); }
+  const nextBtn = id => S.done[id] ? `<div class="bar" style="margin-top:10px"><button class="btn" id="go">Next step ▶</button></div>` : "";
+
+  function stepHTML(id) {
+    const a = S.a, d = D();
+    if (id === "given") return `<p>Record the values given in the problem, then find the force of gravity on the ${esc(P.systemLong)}.</p>
+      <div class="rows"><div class="row"><span class="m">m = ${P.m.toFixed(2)} kg</span><span class="m">v<sub>0x</sub> = ${P.motion.v0} m/s</span><span class="m">v<sub>fx</sub> = ${P.motion.vf} m/s</span><span class="m">Δt = ${P.motion.dt} s</span>
+        ${P.forces.filter(f => typeof f.value === "number").map(f => `<span class="m">F<sub>${f.type}</sub> = ${f.value} N</span>`).join("")}</div>
+      <div class="row"><label class="m">F<sub>g</sub> = mg = <input type="text" class="num" id="iFg" value="${esc(a.Fg || "")}" inputmode="decimal"> N</label><span class="hint">(g = ${P.g} N/kg)</span></div>
+      <div class="row"><span>What are you solving for?</span><select id="iUnk"><option value="">choose…</option>${P.forces.map((f, i) => `<option value="${i}" ${a.unk === String(i) ? "selected" : ""}>the ${f.type} force by the ${f.by}</option>`).join("")}<option value="a" ${a.unk === "a" ? "selected" : ""}>the acceleration</option></select></div></div>
+      <button class="btn ghost" id="chk">Check</button><p class="fb ${a.gTried ? (S.done.given ? "ok" : "bad") : ""}">${a.gTried ? (S.done.given ? `Correct! F<sub>g</sub> = (${P.m.toFixed(2)} kg)(${P.g} N/kg) = ${d.Fg.toFixed(2)} N, and the unknown is ${esc(P.unknown.label)}.` : a.gMsg) : ""}</p>${nextBtn("given")}`;
+    if (id === "pic") return `<p>Which way is the ${esc(P.systemLong)} moving at this moment (while the hand slows it down)? Your answer adds the velocity vector to the picture.</p>
+      <div class="choices">${[["right", "→ To the right"], ["left", "← To the left"], ["none", "Not moving"]].map(([v, t]) => `<label class="${a.vel === v ? (v === P.motion.velocity ? "right" : "wrong") : ""}"><input type="radio" name="vel" value="${v}" ${a.vel === v ? "checked" : ""}> ${t}</label>`).join("")}</div>
+      <p class="fb ${a.vel ? (S.done.pic ? "ok" : "bad") : ""}">${a.vel ? (S.done.pic ? `Right: it’s still moving to the right at ${P.motion.v0} m/s when the hand starts slowing it.` : "Look at the problem again: which way is the cart traveling before it stops?") : ""}</p>${nextBtn("pic")}`;
+    if (id === "id") { const objs = [...Object.keys(P.interactions), ...P.distractors].sort((x, y) => x.localeCompare(y)), sel = a.id || {};
+      return `<p>The system is the <b>${esc(P.systemLong)}</b> (inside the dashed box). For each object, choose how it interacts <b>directly</b> with the ${esc(P.system)}, if at all.</p>
+        <div class="rows">${objs.map(o => `<div class="row"><span style="min-width:9em">${esc(o)} ↔ ${esc(P.system)}</span><select data-o="${esc(o)}" style="${a.idTried && sel[o] ? `border-color:${(P.interactions[o] || "none") === sel[o] ? "var(--ok)" : "var(--bad)"}` : ""}"><option value="">choose…</option>${ITYPES.map(t => `<option value="${t}" ${sel[o] === t ? "selected" : ""}>${t === "none" ? "no interaction" : t}</option>`).join("")}</select></div>`).join("")}</div>
+        <button class="btn ghost" id="chk">Check</button><p class="fb ${a.idTried ? (S.done.id ? "ok" : "bad") : ""}">${a.idTried ? (S.done.id ? "Correct! Each interaction becomes a force on your force diagram." : a.idMsg) : ""}</p>${nextBtn("id")}`; }
+    if (id === "fd") { const list = a.fd || (a.fd = []);
+      return `<p>Add each force on the ${esc(P.system)}: its type, the dealer, its direction and its value in newtons. Type <b>?</b> for the unknown force.</p>
+        <div class="rows" id="flist">${list.length ? list.map((f, i) => `<div class="row">F <select data-k="type" data-i="${i}" aria-label="Type"><option value="">type…</option>${FTYPES.map(t => `<option ${f.type === t ? "selected" : ""}>${t}</option>`).join("")}</select>
+          on ${esc(P.system)} by <select data-k="by" data-i="${i}" aria-label="Dealer"><option value="">dealer…</option>${[...Object.keys(P.interactions), ...P.distractors].sort().map(o => `<option ${f.by === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>
+          <select data-k="dir" data-i="${i}" aria-label="Direction"><option value="">direction…</option>${[["up", "↑ up"], ["down", "↓ down"], ["right", "→ right"], ["left", "← left"]].map(([v, t]) => `<option value="${v}" ${f.dir === v ? "selected" : ""}>${t}</option>`).join("")}</select>
+          = <input type="text" class="num" data-k="value" data-i="${i}" value="${esc(f.value || "")}" aria-label="Value in newtons"> N <button class="btn ghost" data-rm="${i}" style="padding:2px 10px" aria-label="Remove">×</button></div>`).join("") : `<p class="hint">No forces yet.</p>`}</div>
+        <div class="bar"><button class="btn ghost" id="add">+ Add a force</button><button class="btn ghost" id="chk">Check</button></div>
+        <p class="hint">Your diagram is drawn in the Force Diagram box above as you type. The unknown force is dashed.</p>
+        <p class="fb ${a.fdTried ? (S.done.fd ? "ok" : "bad") : ""}">${a.fdTried ? (S.done.fd ? "Correct! The vertical forces balance, and the hand’s push is the unknown." : a.fdMsg) : ""}</p>${nextBtn("fd")}`; }
+    if (id === "sum") { const xs = a.fd.filter(f => f.dir === "left" || f.dir === "right"), ys = a.fd.filter(f => f.dir === "up" || f.dir === "down"); a.sx = a.sx || {}; a.sy = a.sy || {};
+      const sel = (axis, i, f) => `<span class="row" style="border:0;padding:2px 0"><select data-ax="${axis}" data-i="${i}" aria-label="Sign"><option value="">±</option><option value="+" ${a[axis][i] === "+" ? "selected" : ""}>+</option><option value="-" ${a[axis][i] === "-" ? "selected" : ""}>−</option></select> <span class="m">${short(f)}</span></span>`;
+      return `<p>Sum the forces in each direction. Choose <b>+</b> for forces pointing right or up and <b>−</b> for left or down.</p>
+        <div class="rows"><div class="row"><span class="m" style="min-width:4em">ΣF<sub>x</sub> =</span>${xs.map((f, i) => sel("sx", i, f)).join("")}</div>
+          <div class="row"><span class="m" style="min-width:4em">ΣF<sub>y</sub> =</span>${ys.map((f, i) => sel("sy", i, f)).join("")}</div>
+          <div class="row"><span>The cart stays on the track, so a<sub>y</sub> = </span><input type="text" class="num" id="iay" value="${esc(a.ay || "")}"> m/s² <span>and ΣF<sub>y</sub> = </span><input type="text" class="num" id="isy" value="${esc(a.sFy || "")}"> N</div></div>
+        <button class="btn ghost" id="chk">Check</button><p class="fb ${a.sTried ? (S.done.sum ? "ok" : "bad") : ""}">${a.sTried ? (S.done.sum ? `Correct! ΣF<sub>x</sub> = ${sumExpr(a.sx, xs)} and ΣF<sub>y</sub> = ${sumExpr(a.sy, ys)} = 0 N.` : a.sMsg) : ""}</p>${nextBtn("sum")}`; }
+    if (id === "kin") return `<p>Use the motion to find the acceleration. With v<sub>0</sub>, v<sub>f</sub> and Δt known, use <span class="m">v<sub>f</sub> = a<sub>x</sub>Δt + v<sub>0</sub></span>, so <span class="m">a<sub>x</sub> = Δv / Δt</span>.</p>
+      <div class="rows"><div class="row"><label class="m">Δv = v<sub>f</sub> − v<sub>0</sub> = <input type="text" class="num" id="idv" value="${esc(a.dv || "")}" inputmode="decimal"> m/s</label></div>
+        <div class="row"><label class="m">a<sub>x</sub> = Δv / Δt = <input type="text" class="num" id="iax" value="${esc(a.ax || "")}" inputmode="decimal"> m/s²</label><span class="hint">(2 decimal places)</span></div></div>
+      <button class="btn ghost" id="chk">Check</button><p class="fb ${a.kTried ? (S.done.kin ? "ok" : "bad") : ""}">${a.kTried ? (S.done.kin ? `Correct! a<sub>x</sub> = ${fmt(d.dv)} m/s ÷ ${P.motion.dt} s = ${fmt(d.ax)} m/s². Negative: it’s slowing down while moving right.` : a.kMsg) : ""}</p>${nextBtn("kin")}`;
+    if (id === "n2") { const xs = a.fd.filter(f => f.dir === "left" || f.dir === "right");
+      const opts = rearrangeOptions();
+      return `<p>Apply Newton’s 2nd Law in the x-direction, then solve your ΣF<sub>x</sub> equation for the unknown force.</p>
+        <div class="rows"><div class="row"><label class="m">ΣF<sub>x</sub> = ma<sub>x</sub> = <input type="text" class="num" id="isfx" value="${esc(a.sFx || "")}" inputmode="decimal"> N</label></div>
+          <div class="row"><span>Rearrange <span class="m">ΣF<sub>x</sub> = ${sumExpr(a.sx, xs)}</span>:</span></div>
+          <div class="choices">${opts.map((o, i) => `<label class="${a.re != null && +a.re === i ? (o.ok ? "right" : "wrong") : ""}"><input type="radio" name="re" value="${i}" ${a.re != null && +a.re === i ? "checked" : ""}> <span class="m">${o.html}</span></label>`).join("")}</div>
+          <div class="row"><label class="m">F<sub>${d.u.type}</sub> = <input type="text" class="num" id="iun" value="${esc(a.un || "")}" inputmode="decimal"> N</label></div></div>
+        <button class="btn ghost" id="chk">Check</button><p class="fb ${a.nTried ? (S.done.n2 ? "ok" : "bad") : ""}">${a.nTried ? (S.done.n2 ? `Correct! The hand pushes with ${d.unknown.toFixed(2)} N to the left.` : a.nMsg) : ""}</p>${nextBtn("n2")}`; }
+    if (id === "graphs") { const xo = [["right", "Curving, leveling off"], ["line", "Straight line up"], ["up", "Curving upward (steeper)"], ["flat", "Flat"]], vo = [["dec", "Decreasing to zero"], ["inc", "Increasing"], ["flat", "Constant"], ["negdec", "Below zero, decreasing"]];
+      const grp = (name, kind, opts, val, ans) => `<div class="gopts">${opts.map(([k, t]) => `<label class="${val === k ? (k === ans ? "right" : "wrong") : ""}"><input type="radio" name="${name}" value="${k}" ${val === k ? "checked" : ""}>${graphSVG(kind, k)}<span>${t}</span></label>`).join("")}</div>`;
+      return `<p>Assume the forces stay constant while the hand stops the cart. Which graphs show this motion?</p>
+        <h3>Position vs. time</h3>${grp("gx", "x", xo, a.gx, "right")}<h3 style="margin-top:10px">Velocity vs. time</h3>${grp("gv", "v", vo, a.gv, "dec")}
+        <p class="fb ${a.gx && a.gv ? (S.done.graphs ? "ok" : "bad") : ""}">${a.gx && a.gv ? (S.done.graphs ? "Correct! It keeps moving right but slows down: the position curve levels off, and the velocity falls steadily to zero (slope = a<sub>x</sub>)." : "Not quite. Moving right but slowing down: does the position keep increasing? How does the velocity change?") : ""}</p>${nextBtn("graphs")}`; }
+    if (id === "done") return `<div class="done-hero"><div class="big" aria-hidden="true">✓</div><h3>Problem solved!</h3><p>The hand applies <b>${d.unknown.toFixed(2)} N</b> to the left. Your completed GUESS sheet is above.</p>
+      <div class="bar" style="justify-content:center"><button class="btn ghost" id="again">Start this problem over</button>${PROBLEMS.length > 1 ? `<button class="btn" id="nextp">Next problem</button>` : ""}</div></div>`;
+    return "";
+  }
+  // choices for solving ΣFx = … for the unknown (built from the student's own signs)
+  function rearrangeOptions() {
+    const xs = S.a.fd.filter(f => f.dir === "left" || f.dir === "right"), ui = xs.findIndex(f => f.value === "?" || f.value === ""), u = xs[ui], k = xs.find((f, i) => i !== ui);
+    const U = short(u), Kf = k ? short(k) : "0", SF = "ΣF<sub>x</sub>";
+    const correct = S.a.sx[ui] === "-" ? (S.a.sx[xs.indexOf(k)] === "-" ? `${U} = −${Kf} − ${SF}` : `${U} = ${Kf} − ${SF}`) : (S.a.sx[xs.indexOf(k)] === "-" ? `${U} = ${SF} + ${Kf}` : `${U} = ${SF} − ${Kf}`);
+    const all = [`${U} = ${Kf} − ${SF}`, `${U} = ${SF} − ${Kf}`, `${U} = ${SF} + ${Kf}`, `${U} = −${Kf} − ${SF}`];
+    const uniq = [...new Set([correct, ...all])].slice(0, 4);
+    return uniq.sort().map(h => ({ html: h, ok: h === correct }));
+  }
+
+  function bindStep(id) {
+    const a = S.a, d = D(), go = () => { justDone = null; view = null; render(); window.scrollTo({ top: $("stage").getBoundingClientRect().top + scrollY - 12, behavior: "smooth" }); };
+    if ($("go")) $("go").addEventListener("click", go);
+    if (id === "given") $("chk").addEventListener("click", () => { a.Fg = $("iFg").value; a.unk = $("iUnk").value; a.gTried = true;
+      const ui = String(P.forces.findIndex(f => f.value === "?"));
+      if (!close(parse(a.Fg), d.Fg)) a.gMsg = `Check F<sub>g</sub>: use F<sub>g</sub> = mg with m = ${P.m.toFixed(2)} kg and g = ${P.g} N/kg.`;
+      else if (a.unk !== ui) a.gMsg = "Read the question again: what does it ask you to determine?";
+      else { finish("given"); a.gMsg = ""; }
+      saveAll(); render(); });
+    if (id === "pic") $("body").querySelectorAll("input[name=vel]").forEach(r => r.addEventListener("change", e => { a.vel = e.target.value; if (a.vel === P.motion.velocity) finish("pic"); else { S.done.pic = false; } saveAll(); render(); }));
+    if (id === "id") {
+      $("body").querySelectorAll("[data-o]").forEach(sl => sl.addEventListener("change", e => { a.id = a.id || {}; a.id[e.target.dataset.o] = e.target.value; saveAll(); $("sID").innerHTML = idSVG(a.id); }));
+      $("chk").addEventListener("click", () => { a.idTried = true; const sel = a.id || {}, objs = [...Object.keys(P.interactions), ...P.distractors];
+        const miss = objs.filter(o => !sel[o]);
+        if (miss.length) a.idMsg = "Choose an answer for every object.";
+        else { const wrong = objs.filter(o => (P.interactions[o] || "none") !== sel[o]);
+          if (!wrong.length) { finish("id"); a.idMsg = ""; }
+          else { const w = wrong[0]; a.idMsg = P.interactions[w] ? `The ${esc(w)} does interact with the ${esc(P.system)}. Check the type: ${w === "Earth" ? "what pulls without touching?" : w === "air" ? "the fan pushes air backward, so the air pushes the cart forward." : "is it a push from a surface, or a push by a hand?"}` : `The ${esc(w)} ${w === "wheels" || w === "fan motor" ? (w.endsWith("s") ? "are" : "is") + " part of the cart (inside the system), so " + (w.endsWith("s") ? "they aren’t a separate object" : "it isn’t a separate object") + " pushing on it." : (w.endsWith("s") ? "don’t" : "doesn’t") + " touch the cart."}`; } }
+        saveAll(); render(); });
+    }
+    if (id === "fd") {
+      $("add").addEventListener("click", () => { a.fd.push({ type: "", by: "", dir: "", value: "" }); saveAll(); render(); });
+      $("flist").addEventListener("click", e => { const b = e.target.closest("[data-rm]"); if (b) { a.fd.splice(+b.dataset.rm, 1); saveAll(); render(); } });
+      $("flist").addEventListener("change", e => { const el = e.target.closest("[data-k]"); if (!el || el.dataset.k === "value") return; a.fd[+el.dataset.i][el.dataset.k] = el.value; saveAll(); $("sFD").innerHTML = fdSVG(a.fd); });
+      $("flist").addEventListener("input", e => { const el = e.target.closest("[data-k=value]"); if (!el) return; a.fd[+el.dataset.i].value = el.value.trim(); saveAll(); $("sFD").innerHTML = fdSVG(a.fd); });
+      $("chk").addEventListener("click", () => { a.fdTried = true; a.fdMsg = checkFD(); if (!a.fdMsg) finish("fd"); else S.done.fd = false; saveAll(); render(); });
+    }
+    if (id === "sum") {
+      $("body").querySelectorAll("[data-ax]").forEach(sl => sl.addEventListener("change", e => { a[e.target.dataset.ax][+e.target.dataset.i] = e.target.value; saveAll(); }));
+      $("chk").addEventListener("click", () => { a.ay = $("iay").value; a.sFy = $("isy").value; a.sTried = true;
+        const xs = a.fd.filter(f => f.dir === "left" || f.dir === "right"), ys = a.fd.filter(f => f.dir === "up" || f.dir === "down");
+        const bad = (list, signs) => list.findIndex((f, i) => signs[i] !== ((f.dir === "right" || f.dir === "up") ? "+" : "-"));
+        const bx = bad(xs, a.sx), by = bad(ys, a.sy);
+        if (bx >= 0) a.sMsg = `Check the sign of ${short(xs[bx])}: it points ${xs[bx].dir}.`;
+        else if (by >= 0) a.sMsg = `Check the sign of ${short(ys[by])}: it points ${ys[by].dir}.`;
+        else if (!close(parse(a.ay), 0) || a.ay === "") a.sMsg = "The cart doesn’t move up or down, so a<sub>y</sub> = 0.";
+        else if (!close(parse(a.sFy), 0) || a.sFy === "") a.sMsg = "With a<sub>y</sub> = 0, Newton’s 2nd Law gives ΣF<sub>y</sub> = ma<sub>y</sub> = 0.";
+        else { finish("sum"); a.sMsg = ""; }
+        saveAll(); render(); });
+    }
+    if (id === "kin") $("chk").addEventListener("click", () => { a.dv = $("idv").value; a.ax = $("iax").value; a.kTried = true;
+      if (!close(parse(a.dv), d.dv)) a.kMsg = `Δv = v<sub>f</sub> − v<sub>0</sub> = ${P.motion.vf} − ${P.motion.v0}. Watch the sign!`;
+      else if (!close(parse(a.ax), d.ax, 0.004, 0.006)) a.kMsg = `Divide Δv by Δt = ${P.motion.dt} s, and keep the sign.`;
+      else { finish("kin"); a.kMsg = ""; }
+      saveAll(); render(); });
+    if (id === "n2") {
+      $("body").querySelectorAll("input[name=re]").forEach(r => r.addEventListener("change", e => { a.re = e.target.value; a.sFx = $("isfx").value; a.un = $("iun").value; saveAll(); render(); }));
+      $("chk").addEventListener("click", () => { a.sFx = $("isfx").value; a.un = $("iun").value; a.nTried = true; const opts = rearrangeOptions();
+        if (!close(parse(a.sFx), d.sumFx, 0.006, 0.011)) a.nMsg = `ΣF<sub>x</sub> = ma<sub>x</sub> = (${P.m.toFixed(2)} kg)(${fmt(d.ax)} m/s²). Keep the sign.`;
+        else if (a.re == null || !opts[+a.re].ok) a.nMsg = "Choose the correct rearrangement: isolate the unknown force, one step at a time.";
+        else if (!close(parse(a.un), d.unknown, 0.01, 0.011)) a.nMsg = "Substitute into your rearranged equation. Careful with subtracting a negative ΣF<sub>x</sub>.";
+        else { finish("n2"); a.nMsg = ""; }
+        saveAll(); render(); });
+    }
+    if (id === "graphs") $("body").querySelectorAll("input[name=gx], input[name=gv]").forEach(r => r.addEventListener("change", e => { a[e.target.name] = e.target.value; if (a.gx === "right" && a.gv === "dec") finish("graphs"); else S.done.graphs = false; saveAll(); render(); }));
+    if (id === "done") { $("again").addEventListener("click", restart); if ($("nextp")) $("nextp").addEventListener("click", () => { const i = PROBLEMS.indexOf(P); choose(PROBLEMS[(i + 1) % PROBLEMS.length].id); }); }
+  }
+  function checkFD() {
+    const list = S.a.fd.filter(f => f.type || f.by || f.dir || f.value);
+    if (list.some(f => !f.type || !f.by || !f.dir || f.value === "")) return "Finish every force: type, dealer, direction and value (or ? for the unknown).";
+    const want = P.forces, used = new Set();
+    for (const w of want) {
+      const i = list.findIndex((f, j) => !used.has(j) && f.type === w.type && f.by === w.by);
+      if (i < 0) return list.some(f => f.by === w.by) ? `The force by the ${esc(w.by)} has the wrong type.` : `A force is missing: your interaction diagram shows the ${esc(w.by)} interacting with the ${esc(P.system)}.`;
+      used.add(i); const f = list[i];
+      if (f.dir !== w.dir) return `Check the direction of F<sub>${w.type}</sub> by the ${esc(w.by)}.`;
+      if (w.value === "?") { if (f.value !== "?") return `F<sub>${w.type}</sub> by the ${esc(w.by)} is the unknown: type ? for its value.`; }
+      else if (!close(parse(f.value), valOf(w))) return w.value === "Fg-balance" ? `The cart doesn’t move up or down, so F<sub>${w.type}</sub> balances F<sub>g</sub> = ${D().Fg.toFixed(2)} N.` : `Check the value of F<sub>${w.type}</sub> by the ${esc(w.by)}.`;
+    }
+    const extra = list.find((f, j) => !used.has(j));
+    if (extra) return P.interactions[extra.by] ? `Extra force: there’s no ${extra.type} force by the ${esc(extra.by)}.` : `There’s no force on the ${esc(P.system)} by the ${esc(extra.by)}.`;
+    return "";
+  }
+
+  // ================= problem selection =================
+  function choose(id) { if (typeof motionAnim !== "undefined") motionAnim.stop(); P = PROBLEMS.find(p => p.id === id) || PROBLEMS[0]; $("psel").value = P.id; load(); render(); }
+  function restart() { ALL[P.id] = { step: 0, done: {}, a: {} }; saveAll(); load(); render(); }
+  $("psel").innerHTML = PROBLEMS.map((p, i) => `<option value="${p.id}">${i + 1}. ${esc(p.title)}</option>`).join("") + `<option disabled>More problems coming soon…</option>`;
+  $("psel").addEventListener("change", e => choose(e.target.value));
+  $("restart").addEventListener("click", () => { if (confirm("Start this problem over? Your answers for it will be cleared.")) restart(); });
+  const motionAnim = (() => {
+    let raf = 0, t0 = 0, playing = false;
+    const K = 80, SLOW = 8;                                   // 80 px per metre; the hand's 0.176 s plays 8× slower
+    function plan() { const th = P.forces.find(f => f.type === "thrust").value, a1 = th / P.m, v = P.motion.v0, t1 = v / a1, x1 = v * v / (2 * a1);
+      const a2 = (P.motion.vf - v) / P.motion.dt, t2 = P.motion.dt, x2 = v * t2 + 0.5 * a2 * t2 * t2;
+      return { a1, t1, x1, a2, t2, x2, rest: 0.6, hold: 1.0 }; }
+    function frame(el) {                                      // el: elapsed real seconds
+      const q = plan(), contactDx = 22, startDx = contactDx - q.x1 * K;
+      if (el < q.rest) return { dx: startDx, handDx: 0, v: 0, label: "At rest" };
+      let t = el - q.rest;
+      if (t < q.t1) return { dx: startDx + 0.5 * q.a1 * t * t * K, handDx: 0, v: q.a1 * t, label: "Speeding up: the fan’s thrust" };
+      t -= q.t1; const tt = t / SLOW;
+      if (tt < q.t2) { const x = P.motion.v0 * tt + 0.5 * q.a2 * tt * tt; return { dx: contactDx + x * K, handDx: x * K, v: P.motion.v0 + q.a2 * tt, label: "The hand slows it (slow motion ×8)" }; }
+      return { dx: contactDx + q.x2 * K, handDx: q.x2 * K, v: 0, label: "Stopped" };
+    }
+    const total = () => { const q = plan(); return q.rest + q.t1 + q.t2 * SLOW + q.hold; };
+    function tick(now) { const el = (now - t0) / 1000; $("sPic").innerHTML = picSVG(null, frame(el));
+      if (el < total()) raf = requestAnimationFrame(tick); else { playing = false; $("picplay").disabled = false; $("picnote").textContent = "Click again to replay from start"; renderSheet(); } }
+    return {
+      play() { if (P.picture !== "fanHand") return; cancelAnimationFrame(raf); playing = true; $("picplay").disabled = true; $("picnote").textContent = ""; t0 = performance.now(); raf = requestAnimationFrame(tick); },
+      stop() { cancelAnimationFrame(raf); playing = false; $("picplay").disabled = false; $("picnote").textContent = ""; },
+      get playing() { return playing; }
+    };
+  })();
+  $("picplay").addEventListener("click", () => motionAnim.play());
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+  choose(PROBLEMS[0].id);
+})();
+</script>
+<!-- lock check: hides this interactive until the teacher opens it (settings in ../availability.json) -->
+<script>
+(function () {
+  var id = location.pathname.split("/").pop().replace(".html", "");
+  fetch("../availability.json?t=" + Date.now(), { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (cfg) {
+      if (!cfg || !cfg.labs || cfg.labs[id] !== false) return;
+      var teacher = false; try { teacher = localStorage.getItem("teacherPreview") === "1"; } catch (e) {}
+      var font = "font-family:'Atkinson Hyperlegible','Segoe UI',system-ui,sans-serif;";
+      if (teacher) {
+        var b = document.createElement("div");
+        b.setAttribute("role", "status");
+        b.style.cssText = font + "position:sticky;top:0;z-index:50;background:#7a3fe0;color:#fff;font-weight:700;text-align:center;padding:8px 12px;";
+        b.textContent = "Teacher preview: this interactive is locked for students.";
+        document.body.prepend(b);
+        return;
+      }
+      var o = document.createElement("div");
+      o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-labelledby", "lockTitle");
+      o.style.cssText = font + "position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:var(--bg,#eaf1ee);";
+      o.innerHTML = '<div style="max-width:520px;background:var(--panel,#fff);color:var(--ink,#15232b);border:1px solid var(--line,#c4d3cc);border-radius:12px;padding:28px;text-align:center">' +
+        '<h1 id="lockTitle" style="margin:0 0 8px;font-size:1.6rem">Not open yet</h1>' +
+        '<p style="margin:0 0 18px;line-height:1.5">This interactive opens after we do the class activity that goes with it. Check back then!</p>' +
+        '<a href="../interactives.html" style="display:inline-block;font-weight:700;padding:8px 18px;border-radius:8px;background:var(--ink,#15232b);color:var(--panel,#fff);text-decoration:none">Back to Interactives</a></div>';
+      document.body.appendChild(o);
+      document.documentElement.style.overflow = "hidden";
+      Array.prototype.forEach.call(document.body.children, function (el) { if (el !== o) el.setAttribute("aria-hidden", "true"); });
+    })
+    .catch(function () {});
+})();
+</script>
+</body>
+</html>
