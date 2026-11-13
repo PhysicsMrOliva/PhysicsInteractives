@@ -114,23 +114,28 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-  const G = 9.81, M = 70, FG = M * G;   // 686.7 N
+  const G = 9.81;
+  const M = (() => { try { const x = JSON.parse(localStorage.getItem("apparent-weight-v1") || "null");
+      if (x && x.mass) return x.mass; if (x && x.a && Object.keys(x.a).length) return 70; } catch (e) {}
+    return 50 + Math.floor(Math.random() * 41); })();   // a random mass from 50 to 90 kg, so neighbours have different numbers
+  const FG = M * G;
   const fmtN = v => Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1);
+  const WS = () => fmtN(FG), NUP = () => fmtN(FG + M * 2.2), NDN = () => fmtN(FG - M * 2.2);   // weight and the two given readings, as text
   const fmt = (v, d = 1) => (v < 0 ? "−" : "") + Math.abs(v).toFixed(d);
   const parse = s => Number(String(s).trim().replace("−", "-").replace(",", ".").replace(/\s*(m\/s²|m\/s2|n)$/i, ""));
 
-  // ---------- the nine moments (70 kg student, Fg = (70 kg)(9.81 N/kg) = 686.7 N) ----------
+  // ---------- the nine moments (the student’s mass M, Fg = M × 9.81 N/kg) ----------
   // v: direction of motion (1 up, -1 down, 0 at rest), a: acceleration (m/s², up +), N: scale reading
   const P = [
-    { id: "p1", title: "At rest at the bottom", group: "Going up", v: 0, a: 0, N: FG, known: "N", text: "The elevator is at rest at the bottom and hasn’t started moving yet. The scale shows a normal force of <b>686.7 N</b> on the student. Find the acceleration.", vt: "zero" },
-    { id: "p2", title: "Starting to go up", group: "Going up", v: 1, a: 2.2, N: FG + M * 2.2, known: "N", text: "The elevator has just started to <b>accelerate upward</b>, and the scale pushes up with a normal force of <b>840.7 N</b>. Find the acceleration.", vt: "upFaster" },
-    { id: "p3", title: "Constant velocity up", group: "Going up", v: 1, a: 0, N: FG, known: "a", text: "The elevator is moving at a <b>constant velocity</b> as it rises. Find the normal force shown on the scale.", vt: "upConst" },
-    { id: "p4", title: "Slowing down going up", group: "Going up", v: 1, a: -2.2, N: FG - M * 2.2, known: "a", text: "The elevator is still moving up but has just started to <b>slow down at a rate of 2.2 m/s²</b> as it approaches the top floor. Find the normal force shown on the scale.", vt: "upSlower" },
-    { id: "p5", title: "Stopped at the top", group: "Going up", v: 0, a: 0, N: FG, known: "N", text: "The elevator has just stopped at the top floor. The scale shows a normal force of <b>686.7 N</b>. Find the acceleration.", vt: "zero" },
-    { id: "p7", title: "Starting to go down", group: "Going down", v: -1, a: -2.2, N: FG - M * 2.2, known: "N", text: "The elevator has just started to <b>accelerate downward</b> from the top floor, and the scale pushes up on the student with a normal force of <b>532.7 N</b>. Find the acceleration.", vt: "downFaster" },
-    { id: "p8", title: "Constant velocity down", group: "Going down", v: -1, a: 0, N: FG, known: "a", text: "The elevator is moving at a <b>constant velocity</b> as it descends. Find the normal force shown on the scale.", vt: "downConst" },
-    { id: "p9", title: "Slowing down going down", group: "Going down", v: -1, a: 2.2, N: FG + M * 2.2, known: "N", text: "The elevator is moving down but slowing as it approaches the 1st floor. The scale reads a normal force of <b>840.7 N</b>. Find the acceleration.", vt: "downSlower" },
-    { id: "p6", title: "What if the cable snapped?", group: "What if…?", v: -1, a: -G, N: 0, known: "free", text: "Let’s suppose that instead of being lowered from the top, the cable <b>snapped</b>! The elevator, the student and the scale are all in <b>free fall</b>. Find the acceleration and the normal force the scale shows.", vt: "downFaster" }
+    { id: "p1", title: "At rest at the bottom", group: "Going up", v: 0, a: 0, N: FG, known: "N", text: `The elevator is at rest at the bottom and hasn’t started moving yet. The scale shows a normal force of <b>${WS()} N</b> on the student. Find the acceleration.`, vt: "zero" },
+    { id: "p2", title: "Starting to go up", group: "Going up", v: 1, a: 2.2, N: FG + M * 2.2, known: "N", text: `The elevator has just started to <b>accelerate upward</b>, and the scale pushes up with a normal force of <b>${NUP()} N</b>. Find the acceleration.`, vt: "upFaster" },
+    { id: "p3", title: "Constant velocity up", group: "Going up", v: 1, a: 0, N: FG, known: "a", text: `The elevator is moving at a <b>constant velocity</b> as it rises. Find the normal force shown on the scale.`, vt: "upConst" },
+    { id: "p4", title: "Slowing down going up", group: "Going up", v: 1, a: -2.2, N: FG - M * 2.2, known: "a", text: `The elevator is still moving up but has just started to <b>slow down at a rate of 2.2 m/s²</b> as it approaches the top floor. Find the normal force shown on the scale.`, vt: "upSlower" },
+    { id: "p5", title: "Stopped at the top", group: "Going up", v: 0, a: 0, N: FG, known: "N", text: `The elevator has just stopped at the top floor. The scale shows a normal force of <b>${WS()} N</b>. Find the acceleration.`, vt: "zero" },
+    { id: "p7", title: "Starting to go down", group: "Going down", v: -1, a: -2.2, N: FG - M * 2.2, known: "N", text: `The elevator has just started to <b>accelerate downward</b> from the top floor, and the scale pushes up on the student with a normal force of <b>${NDN()} N</b>. Find the acceleration.`, vt: "downFaster" },
+    { id: "p8", title: "Constant velocity down", group: "Going down", v: -1, a: 0, N: FG, known: "a", text: `The elevator is moving at a <b>constant velocity</b> as it descends. Find the normal force shown on the scale.`, vt: "downConst" },
+    { id: "p9", title: "Slowing down going down", group: "Going down", v: -1, a: 2.2, N: FG + M * 2.2, known: "N", text: `The elevator is moving down but slowing as it approaches the 1st floor. The scale reads a normal force of <b>${NUP()} N</b>. Find the acceleration.`, vt: "downSlower" },
+    { id: "p6", title: "What if the cable snapped?", group: "What if…?", v: -1, a: -G, N: 0, known: "free", text: `Let’s suppose that instead of being lowered from the top, the cable <b>snapped</b>! The elevator, the student and the scale are all in <b>free fall</b>. Find the acceleration and the normal force the scale shows.`, vt: "downFaster" }
   ];
   const VT = { zero: "At rest (v = 0)", upFaster: "Up, speeding up", upConst: "Up, constant speed", upSlower: "Up, slowing down", downFaster: "Down, speeding up", downConst: "Down, constant speed", downSlower: "Down, slowing down" };
   const vtPath = k => ({ zero: "M8 35 H102", upFaster: "M8 35 L102 8", upConst: "M8 18 H102", upSlower: "M8 8 L102 35", downFaster: "M8 35 L102 62", downConst: "M8 52 H102", downSlower: "M8 62 L102 35" }[k]);
@@ -141,7 +146,7 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
   const KEY = "apparent-weight-v1";
   let S = { name: "", period: "", sec: "data", a: {}, finished: null };
   try { const x = JSON.parse(localStorage.getItem(KEY) || "null"); if (x && x.a) S = x; } catch (e) {}
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+  const save = () => { S.mass = M; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
   const A = id => (S.a[id] = S.a[id] || {});
 
   // ---------- sections ----------
@@ -152,6 +157,8 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
     $("nav").innerHTML = SECS.map(s => `<li><button data-s="${s.id}" ${S.sec === s.id ? 'aria-current="page"' : ""} class="${secDone(s.id) ? "done" : ""}">${s.title}</button></li>`).join("");
   }
   $("nav").addEventListener("click", e => { const b = e.target.closest("[data-s]"); if (b) go(b.dataset.s); });
+  // every “Next” button, including ones redrawn after an answer, is handled here
+  $("main").addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) go(b.dataset.go); });
   function go(id) { S.sec = id; save(); render(); window.scrollTo({ top: 0, behavior: "smooth" }); }
   const nextBtn = id => { const i = SECS.findIndex(s => s.id === id), n = SECS[i + 1]; return n ? `<div class="bar" style="margin-top:16px"><button class="btn" data-go="${n.id}">Next: ${esc(n.title.replace(/^\d+\.\s*/, ""))} ▶</button></div>` : ""; };
   let stopAnim = null;
@@ -161,7 +168,6 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
     const id = S.sec;
     if (!S.name.trim() || !(S.period || "").trim()) { renderStart(); return; }
     if (id === "data") renderData(); else if (id === "ride") renderRide(); else if (id === "sum") renderSum(); else if (id === "finish") renderFinish(); else renderProb(P.find(p => p.id === id));
-    $("main").querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => go(b.dataset.go)));
   }
   const choice = (name, opts, val, mark) => `<div class="choices">${opts.map(([v, t]) => `<label class="${mark && val === v ? (mark === v ? "right" : "wrong") : ""}"><input type="radio" name="${name}" value="${v}" ${val === v ? "checked" : ""}> <span>${t}</span></label>`).join("")}</div>`;
 
@@ -189,43 +195,48 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
     $("wt").addEventListener("input", e => { a.w = e.target.value; save(); });
   }   // complete once the predictions are locked in (they aren't marked)
   function renderData() {
+    { const a0 = A("data"); if (!a0.played && (a0.revealed || RD.some((r, i) => a0["f" + i] || a0["d" + i]))) a0.played = true; }
     if (stopAnim) { stopAnim(); stopAnim = null; }
     const a = A("data"), rev = !!a.revealed, all = RD.every((r, i) => a["f" + i] && a["d" + i]);
     const mark = () => "";
+    const watched = !!A("data").played;
     $("main").innerHTML = `<section class="panel card"><h2>Predict: an elevator ride up and down</h2>
-      <p>A student with a mass of <b>70 kg</b> steps onto a force scale in an elevator on the 1st floor, rides up to the top floor and back down. The scale measures their <b>apparent weight</b>: how hard the scale pushes up on them.</p>
+      <p>A student with a mass of <b>${M} kg</b> steps onto a force scale in an elevator on the 1st floor, rides up to the top floor and back down. The scale measures their <b>apparent weight</b>: how hard the scale pushes up on them.</p>
       <div class="q" style="border-top:0;margin-top:4px;padding-top:0"><h3>First: what is the student’s actual weight?</h3>
         <div class="bar"><label>F<sub>g</sub> = <input type="text" class="num" id="wt" value="${esc(a.w || "")}" inputmode="decimal" aria-label="Weight in newtons"> N</label><button class="btn ghost" id="chkw" ${a.wOK ? "disabled" : ""}>Check</button></div>
-        <p class="fb ${a.wTried ? (a.wOK ? "ok" : "bad") : ""}" id="wfb">${a.wTried ? (a.wOK ? "Correct! F<sub>g</sub> = mg = (70 kg)(9.81 N/kg) = 686.7 N. That’s what the scale reads when the student stands still." : "Not quite. Remember: <b>F<sub>g</sub> = mg</b>, with m = 70 kg and g = 9.81 N/kg.") : ""}</p></div>
+        <p class="fb ${a.wTried ? (a.wOK ? "ok" : "bad") : ""}" id="wfb">${a.wTried ? (a.wOK ? `Correct! F<sub>g</sub> = mg = (${M} kg)(9.81 N/kg) = ${WS()} N. That’s what the scale reads when the student stands still.` : `Not quite. Remember: <b>F<sub>g</sub> = mg</b>, with m = ${M} kg and g = 9.81 N/kg.`) : ""}</p></div>
       ${a.wOK ? "" : `<p class="hint">Calculate the weight to unlock the animation and your predictions.</p>`}
       ${a.wOK ? `      <div class="probtop" style="margin:10px 0"><div><div id="upelev"></div><div class="bar" style="margin-top:8px"><button class="btn" id="upplay">▶ Play</button><button class="btn ghost" id="upreset">⟲ Replay</button></div></div>
         <div><p style="margin-top:0">Watch the student step onto the scale on the 1st floor, then ride up and back down. The red arrow shows which way the elevator is moving.</p><p class="readout" id="upread" style="margin:6px 0"></p>
         ${rev ? `<p class="hint">Now the scale shows its readings, and the blue arrow shows the acceleration. Compare them with your predictions.</p>` : `<p class="hint">The scale reading and the acceleration are hidden until you check your predictions.</p>`}
-        <p><b>Predict</b> for each part of the ride: will they feel heavier, normal or lighter? And which way does the acceleration point? (Up is positive.)</p></div></div>
+        <p><b>Predict</b> for each part of the ride: will they feel heavier, normal or lighter? And which way does the acceleration point? (Up is positive.)</p>
+        <p class="fb bad" id="upnote" style="${watched ? "display:none" : ""}">▶ Press Play and watch the whole ride (up and back down). Your predictions unlock when it finishes.</p></div></div>
       <div style="overflow-x:auto"><table class="data"><thead><tr><th>Part of the ride</th><th>They will feel…</th><th>Acceleration points…</th>${rev ? "<th>Scale reading</th>" : ""}</tr></thead><tbody>
       ${RD.map((r, i) => { const f = a["f" + i], d = a["d" + i];
         return `<tr><td>${r[0]}</td>
-          <td><select data-f="${i}" ${rev ? "disabled" : ""} aria-label="How they will feel: ${r[0]}" style="${mark(f === r[2], f)}"><option value="">predict…</option>${["heavier", "normal", "lighter"].map(o => `<option ${f === o ? "selected" : ""}>${o}</option>`).join("")}</select></td>
-          <td><select data-d="${i}" ${rev ? "disabled" : ""} aria-label="Direction of the acceleration: ${r[0]}" style="${mark(d === RDIR[r[2]], d)}"><option value="">predict…</option>${DIRS.map(([v, t]) => `<option value="${v}" ${d === v ? "selected" : ""}>${t}</option>`).join("")}</select></td>
-          ${rev ? `<td><b>${r[1].toFixed(1)} N</b> <span class="hint">(${Math.abs(r[1] - FG) < 0.05 ? "the same as 686.7 N" : r[1] > FG ? "more than 686.7 N" : "less than 686.7 N"})</span></td>` : ""}</tr>`; }).join("")}
+          <td><select data-f="${i}" ${rev || !watched ? "disabled" : ""} aria-label="How they will feel: ${r[0]}" style="${mark(f === r[2], f)}"><option value="">predict…</option>${["heavier", "normal", "lighter"].map(o => `<option ${f === o ? "selected" : ""}>${o}</option>`).join("")}</select></td>
+          <td><select data-d="${i}" ${rev || !watched ? "disabled" : ""} aria-label="Direction of the acceleration: ${r[0]}" style="${mark(d === RDIR[r[2]], d)}"><option value="">predict…</option>${DIRS.map(([v, t]) => `<option value="${v}" ${d === v ? "selected" : ""}>${t}</option>`).join("")}</select></td>
+          ${rev ? `<td><b>${r[1].toFixed(1)} N</b> <span class="hint">(${Math.abs(r[1] - FG) < 0.05 ? `the same as ${WS()} N` : r[1] > FG ? `more than ${WS()} N` : `less than ${WS()} N`})</span></td>` : ""}</tr>`; }).join("")}
       </tbody></table></div>
       ${rev ? "" : `<div class="bar" style="margin-top:12px"><button class="btn" id="reveal" ${all ? "" : "disabled"}>Lock in my predictions</button><span class="hint">${all ? "Once you lock them in, you can’t change them." : "Make all 18 predictions first."}</span></div>`}
 ` : ""}
       ${rev ? `
-        <div class="work"><b>What the readings show:</b> more than 686.7 N means the acceleration points <b>up</b> and they feel <b>heavier</b>: speeding up going up, or slowing down going down. Less than 686.7 N means the acceleration points <b>down</b> and they feel <b>lighter</b>: slowing down going up, or speeding up going down. At rest and at <b>constant velocity</b> (up or down) the reading equals their weight: <b>no acceleration</b>, so they feel normal, even while moving.</div>
-        <p class="hint" id="dfb" style="margin-top:8px"><b>Your predictions are locked in.</b> Compare them with the scale readings and the explanation above, then go on: next, you’ll calculate the accelerations for a 70 kg student.</p>` : ""}
+        <div class="work"><b>What the readings show:</b> more than ${WS()} N means the acceleration points <b>up</b> and they feel <b>heavier</b>: speeding up going up, or slowing down going down. Less than ${WS()} N means the acceleration points <b>down</b> and they feel <b>lighter</b>: slowing down going up, or speeding up going down. At rest and at <b>constant velocity</b> (up or down) the reading equals their weight: <b>no acceleration</b>, so they feel normal, even while moving.</div>
+        <p class="hint" id="dfb" style="margin-top:8px"><b>Your predictions are locked in.</b> Compare them with the scale readings and the explanation above, then go on: next, you’ll calculate the accelerations for a ${M} kg student.</p>` : ""}
       ${nextBtn("data")}</section>`;
     // redraw after the browser finishes moving focus (tabbing from one box to the next)
-    const later = () => setTimeout(() => { const f = document.activeElement && document.activeElement.dataset; const key = f && (f.f != null ? "[data-f='" + f.f + "']" : f.d != null ? "[data-d='" + f.d + "']" : null);
-      renderData(); renderNav(); if (key && $("main").querySelector(key)) $("main").querySelector(key).focus(); }, 0);
-    $("main").querySelectorAll("[data-f]").forEach(s => s.addEventListener("change", e => { a["f" + e.target.dataset.f] = e.target.value; save(); later(); }));
-    $("main").querySelectorAll("[data-d]").forEach(s => s.addEventListener("change", e => { a["d" + e.target.dataset.d] = e.target.value; save(); later(); }));
+    // a choice only updates the Lock-in button: no redraw, so the menu closes normally (refocusing a menu reopens it on iPads and Chromebooks)
+    const refresh = () => { const all = RD.every((r, i) => a["f" + i] && a["d" + i]); const btn = $("reveal"); if (!btn) return;
+      btn.disabled = !all; const h = btn.nextElementSibling; if (h) h.textContent = all ? "Once you lock them in, you can’t change them." : "Make all 18 predictions first."; };
+    $("main").querySelectorAll("[data-f]").forEach(sl => sl.addEventListener("change", e => { a["f" + e.target.dataset.f] = e.target.value; save(); refresh(); renderNav(); }));
+    $("main").querySelectorAll("[data-d]").forEach(sl => sl.addEventListener("change", e => { a["d" + e.target.dataset.d] = e.target.value; save(); refresh(); renderNav(); }));
     if ($("reveal")) $("reveal").addEventListener("click", () => { a.revealed = true; save(); renderData(); renderNav(); });
-    if (a.wOK) stopAnim = upRide(rev);
+    if (a.wOK) stopAnim = upRide(rev, () => { if (!a.played) { a.played = true; save();
+      $("main").querySelectorAll("[data-f], [data-d]").forEach(el => { if (!rev) el.disabled = false; }); const n = $("upnote"); if (n) n.style.display = "none"; } });
     bindWeight(a);
   }
   // the full ride, with the scale readings once revealed
-  function upRide(rev) {   // walk onto the elevator on floor 1, then the full ride up and back down
+  function upRide(rev, onDone) {   // walk onto the elevator on floor 1, then the full ride up and back down
     const WALK = 3, TOT = WALK + RT;
     let t = 0, raf = 0, last = 0, playing = false;
     const draw = () => { if (!$("upelev")) return;
@@ -239,7 +250,7 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
       $("upelev").innerHTML = elevSVG({ y: 75 - st.y / YMAX * 135, v: Math.abs(st.v) < 0.01 ? 0 : st.v, a: st.a, N: rev ? RD[st.i][1] : null, hideA: !rev });
       $("upread").innerHTML = `<span>t = ${(t - WALK).toFixed(1)} s</span><span>${RD[st.i][0]}</span>`; };
     const tick = now => { t = Math.min(TOT, t + (now - last) / 1000); last = now; draw();
-      if (t < TOT && playing) raf = requestAnimationFrame(tick); else { playing = false; $("upplay").textContent = "▶ Play"; } };
+      if (t < TOT && playing) raf = requestAnimationFrame(tick); else { if (t >= TOT && onDone) onDone(); playing = false; $("upplay").textContent = "▶ Play"; } };
     $("upplay").addEventListener("click", () => { if (playing) { playing = false; cancelAnimationFrame(raf); $("upplay").textContent = "▶ Play"; return; }
       if (t >= TOT) t = 0; playing = true; $("upplay").textContent = "❚❚ Pause"; last = performance.now(); raf = requestAnimationFrame(tick); });
     $("upreset").addEventListener("click", () => { cancelAnimationFrame(raf); playing = false; $("upplay").textContent = "▶ Play"; t = 0; draw(); });
@@ -290,7 +301,14 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
     </svg>`;
   }
   // one moment of the ride: Play runs it once; "Return to start" puts the elevator back
-  function momentPlayer(box, p, showN) {
+  // questions stay locked until the section's animation has played to the end once
+  const PLAYNOTE = "▶ Press Play and watch the animation all the way through. The questions unlock when it finishes.";
+  function lockQuestions(locked) {
+    $("main").querySelectorAll(".q input, .q select, .q button, .q textarea").forEach(el => { el.disabled = locked; });
+    $("main").querySelectorAll(".q").forEach(q => { q.style.opacity = locked ? "0.5" : ""; });
+    const n = $("playnote"); if (n) n.style.display = locked ? "" : "none";
+  }
+  function momentPlayer(box, p, showN, onDone) {
     // each moment plays exactly its own part of the full ride (same motion, timing and floors as the ride animation)
     const PART = { p1: [0.5, 0.5], p2: [1.5, 3.5], p3: [3.5, 7.5], p4: [7.5, 9.5], p5: [10.5, 10.5], p7: [11.5, 13.5], p8: [13.5, 17.5], p9: [17.5, 19.5] };
     const SNAP = 0.9, FALL = Math.sqrt(2 * YMAX * (1 + 15 / 135) / G);   // fall until the elevator reaches the bottom of the picture                         // the cable snaps after 0.9 s, then free fall from rest at the top floor
@@ -305,9 +323,9 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
       $("elevpic").innerHTML = elevSVG({ y: 75 - m.y / YMAX * 135, v: Math.abs(m.v) < 0.05 ? 0 : m.v, a: ff && !snapped ? 0 : p.a,
         N: showN ? (ff && !snapped ? FG : p.N) : null, cut: snapped, cutY: snapped ? 75 - YMAX / YMAX * 135 + 70 - 40 : null,
         float: snapped ? Math.min(1, u / 0.9) : 0, spin: snapped ? u : 0, say: snapped && u < 1.7 ? line : null }); };
-    const tick = now => { t = Math.min(DUR, t + (now - last) / 1000); last = now; draw(); if (t < DUR) raf = requestAnimationFrame(tick); else { $("mplay").disabled = false; if ($("mreplay")) $("mreplay").textContent = "Click again to replay from start"; } };
+    const tick = now => { t = Math.min(DUR, t + (now - last) / 1000); last = now; draw(); if (t < DUR) raf = requestAnimationFrame(tick); else { if (onDone) onDone(); $("mplay").disabled = false; if ($("mreplay")) $("mreplay").textContent = "Click again to replay from start"; } };
     $("mplay").addEventListener("click", () => { if (p.v === 0 && $("stillmsg")) { $("stillmsg").style.color = "var(--bad)"; $("stillmsg").style.fontWeight = "700"; }   // pressing Play while at rest: point out that nothing moves
-      cancelAnimationFrame(raf); if (t >= DUR) { t = 0; line = pickLine(); } if (!DUR) return; $("mplay").disabled = true; $("mreplay").textContent = ""; last = performance.now(); raf = requestAnimationFrame(tick); });
+      cancelAnimationFrame(raf); if (t >= DUR) { t = 0; line = pickLine(); } if (!DUR) { if (onDone) onDone(); return; } $("mplay").disabled = true; $("mreplay").textContent = ""; last = performance.now(); raf = requestAnimationFrame(tick); });
     draw();
     return () => cancelAnimationFrame(raf);
   }
@@ -317,7 +335,7 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
     const c = { ink: css("--ink"), fg: css("--fg"), fn: css("--fn"), muted: css("--muted") }, k = 0.11, cx = 60, cy = 110;
     const arr = (len, col, type, by, value, up) => len < 1 ? "" : `<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy + (up ? -1 : 1) * (len - 9)}" stroke="${col}" stroke-width="5"/><path d="M${cx} ${cy + (up ? -len : len)} l-8 ${up ? 13 : -13} h16 z" fill="${col}"/>
       ${fullLabel(cx + 14, cy + (up ? -1 : 1) * len * 0.6 - (up ? 6 : -4), col, type, by, value)}`;
-    return `<svg class="fbd" viewBox="0 0 330 220" role="img" aria-label="Force diagram for the student">${arr(FG * k, c.fg, "gravity", "Earth", "686.7 N", false)}${arr(N * k, c.fn, "normal", "scale", fmtN(N) + " N", true)}
+    return `<svg class="fbd" viewBox="0 0 330 220" role="img" aria-label="Force diagram for the student">${arr(FG * k, c.fg, "gravity", "Earth", WS() + " N", false)}${arr(N * k, c.fn, "normal", "scale", fmtN(N) + " N", true)}
       <circle cx="${cx}" cy="${cy}" r="6" fill="${c.ink}"/>${N < 1 ? fullLabel(cx + 14, cy - 22, c.fn, "normal", "scale", "0 N") : ""}</svg>`;
   }
 
@@ -329,10 +347,11 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
     let h = `<section class="panel card"><div class="hint" style="font-weight:700">${p.group} · Problem ${i + 1} of 9</div><h2>${esc(p.title)}</h2>
       <div class="probtop"><div id="elev"></div><div>
         <p style="margin-top:0">${p.text}</p>
-        <div class="given"><b>m</b><span>70 kg</span><b>F<sub>g</sub> = mg</b><span>(70 kg)(9.81 N/kg) = 686.7 N</span>
+        <div class="given"><b>m</b><span>${M} kg</span><b>F<sub>g</sub> = mg</b><span>(${M} kg)(9.81 N/kg) = ${WS()} N</span>
           <b>Motion</b><span>${p.v === 0 ? "at rest" : (p.v > 0 ? "moving up" : "moving down")}</span>
           ${p.known === "N" ? `<b>F<sub>N</sub></b><span>${fmtN(p.N)} N (scale reading)</span><b>a</b><span>?</span>` : p.known === "a" ? `<b>a</b><span>${p.id === "p4" ? "−2.2 m/s² (slowing while moving up)" : "0 (constant velocity)"}</span><b>F<sub>N</sub></b><span>?</span>` : `<b>a</b><span>?</span><b>F<sub>N</sub></b><span>?</span>`}</div>
-        </div></div>`;
+        </div></div>
+      <p class="fb bad" id="playnote" style="display:none">${PLAYNOTE}</p>`;
     const L = p.id === "p1" ? { fbd: "a", dir: "b", cmp: "c", val: "d", vt: "e" } : { dir: "a", cmp: "b", val: "c", fbd: "d", vt: "e" };
     if (p.id === "p1") { h += idHTML(a); h += fbdBuilderHTML(p, a, L); }
     h += `<div class="q"><h3><span class="n">${L.dir}.</span>Which way does the acceleration point?</h3>${choice("dir", [["up", "Up"], ["zero", "Zero (no acceleration)"], ["down", "Down"]], a.dir, a.dir ? aDir : null)}
@@ -347,7 +366,9 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
       <p class="fb ${a.vt ? (a.vtOK ? "ok" : "bad") : ""}">${a.vt ? (a.vtOK ? "Correct! The slope of the v–t graph is the acceleration." : "Not quite. Up is positive: is v above or below zero, and is it getting farther from zero or closer?") : ""}</p></div>`;
     h += nextBtn(p.id) + `</section>`;
     $("main").innerHTML = h;
-    stopAnim = momentPlayer($("elev"), p, a.valOK || p.known === "N");
+    const started = a.dir || a.cmp || a.vTried || a.vt || a.idTried || (a.id && Object.keys(a.id).length) || (a.fbd && a.fbd.length) || a.va || a.vN;
+    if (!a.played && started) a.played = true;   // work already started before this change: stays open
+    stopAnim = momentPlayer($("elev"), p, a.valOK || p.known === "N", () => { if (!a.played) { a.played = true; save(); lockQuestions(false); } });
     if (p.id === "p1") bindID(p, a);
     bindFBD(p, a);
     $("main").querySelectorAll("input[name=dir]").forEach(r => r.addEventListener("change", e => { a.dir = e.target.value; a.dirOK = a.dir === aDir; save(); renderProb(p); renderNav(); }));
@@ -357,6 +378,7 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
     const check = () => { a.vTried = true; a.valOK = ask.every(([k]) => { const v = parse(a["v" + k]); const want = k === "a" ? p.a : p.N; return isFinite(v) && a["v" + k] !== "" && Math.abs(v - want) <= Math.max(0.06, Math.abs(want) * 0.015); }); save(); renderProb(p); renderNav(); };
     $("chkv").addEventListener("click", check);
     $("main").querySelectorAll("[data-v]").forEach(inp => inp.addEventListener("keydown", e => { if (e.key === "Enter") check(); }));
+    if (!a.played) lockQuestions(true);
   }
   // interaction diagram: which objects interact with the student, and how?
   const IDOBJ = [["Earth", "gravitational"], ["scale", "normal"], ["elevator floor", "none"], ["cable", "none"], ["air", "none"]];
@@ -434,7 +456,7 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
       if (i < 0) { msgs.push(list.some(f => f.by === w.by) ? `The force by the ${w.by} has the wrong type.` : `A force is missing: ${w.by === "Earth" ? "what pulls the student down without touching?" : "what pushes up on the student’s feet?"}`); return; }
       used.add(i); const f = list[i];
       if (f.dir !== w.dir) msgs.push(`Check the direction of the ${w.type} force.`);
-      else if (Math.abs(parse(f.mag) - w.mag) > Math.max(2, w.mag * 0.015)) msgs.push(`Check the size of the ${w.type} force: ${givenForces(p) ? "use the values given above" : "use your answers above"} (F<sub>g</sub> = 686.7 N${w.type === "normal" ? `, F<sub>N</sub> = ${fmtN(w.mag)} N` : ""}).`); });
+      else if (Math.abs(parse(f.mag) - w.mag) > Math.max(2, w.mag * 0.015)) msgs.push(`Check the size of the ${w.type} force: ${givenForces(p) ? "use the values given above" : "use your answers above"} (F<sub>g</sub> = ${WS()} N${w.type === "normal" ? `, F<sub>N</sub> = ${fmtN(w.mag)} N` : ""}).`); });
     list.forEach((f, j) => { if (used.has(j)) return; if (p.N === 0 && f.type === "normal" && f.by === "scale" && parse(f.mag) === 0) return;
       msgs.push(f.by === "cable" ? "The cable pulls on the elevator, not on the student." : f.by === "elevator floor" ? "The student stands on the scale, not the floor." : `There’s no ${f.type} force by the ${f.by} on the student.`); });
     return msgs.length ? msgs[0] : "";
@@ -455,11 +477,11 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
   }
   function workHTML(p) {
     let lines;
-    if (p.known === "N") lines = [`ΣF = F<sub>N</sub> − F<sub>g</sub> = ma`, `a = (F<sub>N</sub> − F<sub>g</sub>) / m`, `a = (${fmtN(p.N)} N − 686.7 N) / 70 kg`, `a = ${fmt(p.N - FG, 1)} N / 70 kg = <b>${fmt(p.a, 2)} m/s²</b>`];
-    else if (p.known === "a") lines = [`ΣF = F<sub>N</sub> − F<sub>g</sub> = ma`, `F<sub>N</sub> = F<sub>g</sub> + ma`, `F<sub>N</sub> = 686.7 N + (70 kg)(${fmt(p.a, 1)} m/s²)`, `F<sub>N</sub> = 686.7 N ${p.a < 0 ? "−" : "+"} ${Math.abs(M * p.a).toFixed(0)} N = <b>${fmtN(p.N)} N</b>`];
-    else lines = [`Free fall: the only force is gravity, so a = −g = <b>−9.81 m/s²</b>`, `F<sub>N</sub> = F<sub>g</sub> + ma = 686.7 N + (70 kg)(−9.81 m/s²)`, `F<sub>N</sub> = 686.7 N − 686.7 N = <b>0 N</b> (the student feels weightless)`];
+    if (p.known === "N") lines = [`ΣF = F<sub>N</sub> − F<sub>g</sub> = ma`, `a = (F<sub>N</sub> − F<sub>g</sub>) / m`, `a = (${fmtN(p.N)} N − ${WS()} N) / ${M} kg`, `a = ${fmt(p.N - FG, 1)} N / ${M} kg = <b>${fmt(p.a, 2)} m/s²</b>`];
+    else if (p.known === "a") lines = [`ΣF = F<sub>N</sub> − F<sub>g</sub> = ma`, `F<sub>N</sub> = F<sub>g</sub> + ma`, `F<sub>N</sub> = ${WS()} N + (${M} kg)(${fmt(p.a, 1)} m/s²)`, `F<sub>N</sub> = ${WS()} N ${p.a < 0 ? "−" : "+"} ${fmtN(Math.abs(M * p.a))} N = <b>${fmtN(p.N)} N</b>`];
+    else lines = [`Free fall: the only force is gravity, so a = −g = <b>−9.81 m/s²</b>`, `F<sub>N</sub> = F<sub>g</sub> + ma = ${WS()} N + (${M} kg)(−9.81 m/s²)`, `F<sub>N</sub> = ${WS()} N − ${WS()} N = <b>0 N</b> (the student feels weightless)`];
     return `<div class="work">${lines.map(l => `<div class="ln">${l}</div>`).join("")}
-      <p class="hint" style="margin:6px 0 0">Apparent weight (the scale reading) = <b>${fmtN(p.N)} N</b>; actual weight = 686.7 N. The student feels <b>${p.N > FG + 0.5 ? "heavier" : p.N < FG - 0.5 ? (p.N === 0 ? "weightless" : "lighter") : "normal"}</b>.</p></div>`;
+      <p class="hint" style="margin:6px 0 0">Apparent weight (the scale reading) = <b>${fmtN(p.N)} N</b>; actual weight = ${WS()} N. The student feels <b>${p.N > FG + 0.5 ? "heavier" : p.N < FG - 0.5 ? (p.N === 0 ? "weightless" : "lighter") : "normal"}</b>.</p></div>`;
   }
 
 
@@ -484,7 +506,7 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
       plot("gy", "Position y (m)", -2, YMAX + 3, tt => rideAt(tt).y, css("--pos"), t, maxT);
       plot("gv", "Velocity v (m/s)", -6, 6, tt => rideAt(tt).v, css("--vel"), t, maxT);
       plot("ga", "Acceleration a (m/s²)", -3.5, 3.5, tt => rideAt(tt).a, css("--a"), t, maxT, true);
-      plot("gn", "Scale reading (N)", 400, 950, tt => M * (G + rideAt(tt).a), css("--fn"), t, maxT, true, FG);
+      plot("gn", "Scale reading (N)", M * (G - 3.5), M * (G + 3.5), tt => M * (G + rideAt(tt).a), css("--fn"), t, maxT, true, FG);
       $("rt").value = t;
       if (t >= RT - 0.05) { a.seen = true; save(); renderNav(); }
     };
@@ -502,7 +524,7 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
     c.strokeStyle = css("--line"); c.lineWidth = 1; c.font = "11px 'Atkinson Hyperlegible', system-ui"; c.fillStyle = css("--muted");
     let tt = 0; RIDE.forEach(rr => { tt += rr[1]; c.beginPath(); c.moveTo(X(tt), T); c.lineTo(X(tt), H - B); c.stroke(); });
     if (lo < 0 && hi > 0) { c.strokeStyle = css("--muted"); c.beginPath(); c.moveTo(L, Y(0)); c.lineTo(W - R, Y(0)); c.stroke(); c.fillText("0", L - 12, Y(0) + 4); }
-    if (ref) { c.setLineDash([4, 4]); c.strokeStyle = css("--fg"); c.beginPath(); c.moveTo(L, Y(ref)); c.lineTo(W - R, Y(ref)); c.stroke(); c.setLineDash([]); c.fillStyle = css("--fg"); c.fillText("686.7", 2, Y(ref) + 4); }
+    if (ref) { c.setLineDash([4, 4]); c.strokeStyle = css("--fg"); c.beginPath(); c.moveTo(L, Y(ref)); c.lineTo(W - R, Y(ref)); c.stroke(); c.setLineDash([]); c.fillStyle = css("--fg"); c.fillText(fmtN(FG), 2, Y(ref) + 4); }
     c.fillStyle = css("--ink"); c.font = "bold 12px 'Atkinson Hyperlegible', system-ui"; c.fillText(label, L + 4, 13);
     c.strokeStyle = col; c.lineWidth = 2.5; c.beginPath();
     const n = 400; let first = true;
@@ -530,7 +552,7 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
   const wrongOrig = () => { const d = A("data"); return RD.map((r, i) => i).filter(i => !(d["f" + i] === RD[i][2] && d["d" + i] === RDIR[RD[i][2]])); };
   function sumDone() { const a = A("sum"); return FILL.every((f, i) => a["f" + i] === f[1]) && REV.every((r, i) => revOK(a, i)) && (a.refl || "").trim().length >= REFMIN && ["y", "v", "a"].every(k => a["g" + k] != null && GOPTS[k][+a["g" + k]].ok); }
   const RIDEGRAPHS = () => [["Position y (m)", -2, YMAX + 3, tt => rideAt(tt).y, css("--pos")], ["Velocity v (m/s)", -6, 6, tt => rideAt(tt).v, css("--vel")],
-    ["Acceleration a (m/s²)", -3.5, 3.5, tt => rideAt(tt).a, css("--a")], ["Scale reading (N)", 400, 950, tt => M * (G + rideAt(tt).a), css("--fn"), FG]];
+    ["Acceleration a (m/s²)", -3.5, 3.5, tt => rideAt(tt).a, css("--a")], ["Scale reading (N)", M * (G - 3.5), M * (G + 3.5), tt => M * (G + rideAt(tt).a), css("--fn"), FG]];
   const PHASELEGEND = RIDE.map((r, i) => `${i + 1} ${r[0].toLowerCase()}`).join(" · ");
   function drawRideGraphs(canvases) { RIDEGRAPHS().forEach((g, i) => plot(canvases[i], g[0], g[1], g[2], g[3], g[4], -1, RT, i >= 2, g[5], true)); }
   function reflectPrompt() {
@@ -540,9 +562,6 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
       <p style="margin:0 0 6px"><b>How has your thinking changed after this activity? What caused your original confusion?</b></p>`;
     return `<p style="margin:0 0 6px">All of your original predictions were right!</p><p style="margin:0 0 6px"><b>Reflect on your overall experience with this interactive. Did it solidify your understanding or provide clarity? How?</b></p>`;
   }
-  // keep keyboard focus on the same control after redrawing
-  function keep(fn) { const el = document.activeElement, key = el && el.dataset ? Object.keys(el.dataset)[0] : null, val = key ? el.dataset[key] : null;
-    setTimeout(() => { fn(); if (key) { const n = $("main").querySelector(`[data-${key}="${val}"]`); if (n) n.focus(); } }, 0); }
   function renderSum() {
     const a = A("sum"), col = { y: "--pos", v: "--vel", a: "--a" }, nm = { y: "Position y vs. time", v: "Velocity v vs. time", a: "Acceleration a vs. time" };
     const gsvg = (k, o) => `<svg viewBox="0 0 200 100" aria-hidden="true"><line x1="5" y1="${k === "y" ? 80 : 50}" x2="195" y2="${k === "y" ? 80 : 50}" stroke="${css("--muted")}" stroke-width="1"/><line x1="5" y1="6" x2="5" y2="94" stroke="${css("--muted")}" stroke-width="1"/><path d="${o.d}" fill="none" stroke="${css(col[k])}" stroke-width="3"/></svg>`;
@@ -569,8 +588,14 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
       <p class="fb ok" id="sumdone">${sumDone() ? "Summary complete!" : ""}</p>${nextBtn("sum")}</section>`;
     $("main").innerHTML = h;
     $("main").querySelectorAll("[data-fill]").forEach(s => s.addEventListener("change", e => { a["f" + e.target.dataset.fill] = e.target.value; save(); renderSum(); renderNav(); }));
-    $("main").querySelectorAll("[data-rf]").forEach(sl => sl.addEventListener("change", e => { a["rf" + e.target.dataset.rf] = e.target.value; save(); keep(() => renderSum()); renderNav(); }));
-    $("main").querySelectorAll("[data-rd]").forEach(sl => sl.addEventListener("change", e => { a["rd" + e.target.dataset.rd] = e.target.value; save(); keep(() => renderSum()); renderNav(); }));
+    const revUpdate = el => {
+      const isF = el.dataset.rf != null, i = +(isF ? el.dataset.rf : el.dataset.rd), want = isF ? REV[i].feel : REV[i].dir;
+      el.style.borderColor = el.value ? (el.value === want ? "var(--ok)" : "var(--bad)") : "";
+      const fb = el.closest(".q").querySelector(".fb"), all = REV.every((r, j) => a["rf" + j] && a["rd" + j]), ok = REV.every((r, j) => revOK(a, j));
+      fb.className = "fb " + (all ? (ok ? "ok" : "bad") : ""); fb.textContent = all ? (ok ? "All correct!" : "Some answers are marked in red. Look back at the problems and the ride if you need to.") : "";
+      const sd = $("sumdone"); if (sd) sd.textContent = sumDone() ? "Summary complete!" : ""; renderNav(); };
+    $("main").querySelectorAll("[data-rf]").forEach(sl => sl.addEventListener("change", e => { a["rf" + e.target.dataset.rf] = e.target.value; save(); revUpdate(e.target); }));
+    $("main").querySelectorAll("[data-rd]").forEach(sl => sl.addEventListener("change", e => { a["rd" + e.target.dataset.rd] = e.target.value; save(); revUpdate(e.target); }));
     const count = () => { const n = (a.refl || "").trim().length; $("reflcount").textContent = n >= REFMIN ? "✓ Thanks for reflecting." : `Write a few sentences (${n} of at least ${REFMIN} characters).`; };
     $("refl").addEventListener("input", e => { a.refl = e.target.value; save(); count(); renderNav(); const done = $("sumdone"); if (done) done.textContent = sumDone() ? "Summary complete!" : ""; });
     count();
@@ -610,11 +635,11 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
     const ok = b => b ? [26, 127, 55] : [180, 35, 24];
     const all = SECS.filter(x => x.id !== "finish"), done = all.filter(x => secDone(x.id)).length;
     text("Apparent Weight in an Elevator", 17, true);
-    text(`Name: ${S.name}     Period: ${S.period || ""}     Downloaded: ${new Date().toLocaleString()}`, 10.5);
+    text(`Name: ${S.name}     Period: ${S.period || ""}     Mass used: ${M} kg     Downloaded: ${new Date().toLocaleString()}`, 10.5);
     text(`Sections complete: ${done} of ${all.length}${S.finished ? "  (finished " + new Date(S.finished).toLocaleString() + ")" : ""}`, 10.5, true, ok(done === all.length)); y += 6;
     // 1. predictions
-    const d = A("data"); text("1. Predictions: elevator ride up and down (70 kg student)", 13, true, [31, 111, 180]);
-    text(`Weight calculation (Fg = mg): first answer ${d.wFirst || "-"} N${d.wFirst != null ? (Math.abs(parse(d.wFirst) - FG) <= 0.6 ? " (correct)" : " (incorrect)") : ""}${d.wOK ? "; final 686.7 N (correct)" : ""}`, 10, false, d.wOK ? ok(true) : [20, 30, 35], Mg + 10); text(d.revealed ? "The student's original predictions, as locked in:" : "Predictions not locked in yet:", 9.5, false, [90, 100, 105], Mg + 10);
+    const d = A("data"); text(`1. Predictions: elevator ride up and down (${M} kg student)`, 13, true, [31, 111, 180]);
+    text(`Weight calculation (Fg = mg): first answer ${d.wFirst || "-"} N${d.wFirst != null ? (Math.abs(parse(d.wFirst) - FG) <= 0.6 ? " (correct)" : " (incorrect)") : ""}${d.wOK ? `; final ${WS()} N (correct)` : ""}`, 10, false, d.wOK ? ok(true) : [20, 30, 35], Mg + 10); text(d.revealed ? "The student's original predictions, as locked in:" : "Predictions not locked in yet:", 9.5, false, [90, 100, 105], Mg + 10);
     RD.forEach((r, i) => text(`${r[0]}: predicted ${d["f" + i] || "-"}, acceleration ${({ up: "up (+)", zero: "zero", down: "down (-)" })[d["d" + i]] || "-"}${d.revealed ? `   (scale reading ${r[1].toFixed(1)} N)` : ""}`, 10, false, [20, 30, 35], Mg + 10));
     y += 6;
     // 2-10. problems
