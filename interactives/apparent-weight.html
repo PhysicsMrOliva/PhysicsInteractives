@@ -40,6 +40,8 @@ nav.side ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; 
 nav.side button { width: 100%; text-align: left; font: inherit; border: 0; background: none; color: var(--muted); padding: 6px 8px; border-radius: 6px; cursor: pointer; }
 nav.side button[aria-current="page"] { background: var(--tint); color: var(--ink); font-weight: 700; }
 nav.side button.done::before { content: "✓ "; color: var(--ok); font-weight: 700; }
+nav.side button.locked { opacity: 0.45; cursor: default; }
+nav.side button.locked::before { content: "🔒 "; }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
 .card { padding: 18px 20px; } .card + .card { margin-top: 14px; }
 h2 { margin: 0 0 8px; font-size: 1.45rem; } h3 { margin: 0 0 6px; font-size: 1.08rem; }
@@ -153,20 +155,27 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
   const SECS = [{ id: "data", title: "1. Predict: up and down" }, ...P.map((p, i) => ({ id: p.id, title: `${i + 2}. ${p.title}` })),
     { id: "ride", title: "11. Ride the elevator" }, { id: "sum", title: "12. Summarize" }, { id: "finish", title: "Finish" }];
   const secDone = id => id === "data" ? dataDone() : id === "ride" ? !!A("ride").seen : id === "sum" ? sumDone() : id === "finish" ? false : probDone(P.find(p => p.id === id));
+  // parts unlock in order: a student can open any finished part and their current (first unfinished) part
+  const firstOpen = () => { const i = SECS.findIndex(x => x.id !== "finish" && !secDone(x.id)); return i < 0 ? SECS.length - 1 : i; };
+  const canOpen = id => SECS.findIndex(x => x.id === id) <= firstOpen();
   function renderNav() {
-    $("nav").innerHTML = SECS.map(s => `<li><button data-s="${s.id}" ${S.sec === s.id ? 'aria-current="page"' : ""} class="${secDone(s.id) ? "done" : ""}">${s.title}</button></li>`).join("");
+    $("nav").innerHTML = SECS.map(s => { const open = canOpen(s.id);
+      return `<li><button data-s="${s.id}" ${S.sec === s.id ? 'aria-current="page"' : ""} ${open ? "" : 'disabled aria-disabled="true" title="Finish the earlier parts first"'} class="${secDone(s.id) ? "done" : open ? "" : "locked"}">${s.title}</button></li>`; }).join("");
+    // the Next button turns on as soon as the current part is finished
+    const nb = $("main").querySelector("[data-go]"); if (nb) { const ok = secDone(S.sec); nb.disabled = !ok; const h = $("nexthint"); if (h) h.style.display = ok ? "none" : ""; }
   }
   $("nav").addEventListener("click", e => { const b = e.target.closest("[data-s]"); if (b) go(b.dataset.s); });
   // every “Next” button, including ones redrawn after an answer, is handled here
   $("main").addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) go(b.dataset.go); });
-  function go(id) { S.sec = id; save(); render(); window.scrollTo({ top: 0, behavior: "smooth" }); }
-  const nextBtn = id => { const i = SECS.findIndex(s => s.id === id), n = SECS[i + 1]; return n ? `<div class="bar" style="margin-top:16px"><button class="btn" data-go="${n.id}">Next: ${esc(n.title.replace(/^\d+\.\s*/, ""))} ▶</button></div>` : ""; };
+  function go(id) { if (!canOpen(id)) return; S.sec = id; save(); render(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  const nextBtn = id => { const i = SECS.findIndex(s => s.id === id), n = SECS[i + 1]; return n ? `<div class="bar" style="margin-top:16px"><button class="btn" data-go="${n.id}" ${secDone(id) ? "" : "disabled"}>Next: ${esc(n.title.replace(/^\d+\.\s*/, ""))} ▶</button><span class="hint" id="nexthint" style="${secDone(id) ? "display:none" : ""}">Finish this part to go on.</span></div>` : ""; };
   let stopAnim = null;
   function render() {
     if (stopAnim) { stopAnim(); stopAnim = null; }
     renderNav();
-    const id = S.sec;
+    let id = S.sec;
     if (!S.name.trim() || !(S.period || "").trim()) { renderStart(); return; }
+    if (!canOpen(S.sec)) { S.sec = SECS[firstOpen()].id; id = S.sec; save(); renderNav(); }
     if (id === "data") renderData(); else if (id === "ride") renderRide(); else if (id === "sum") renderSum(); else if (id === "finish") renderFinish(); else renderProb(P.find(p => p.id === id));
   }
   const choice = (name, opts, val, mark) => `<div class="choices">${opts.map(([v, t]) => `<label class="${mark && val === v ? (mark === v ? "right" : "wrong") : ""}"><input type="radio" name="${name}" value="${v}" ${val === v ? "checked" : ""}> <span>${t}</span></label>`).join("")}</div>`;
@@ -208,21 +217,18 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
       ${a.wOK ? "" : `<p class="hint">Calculate the weight to unlock the animation and your predictions.</p>`}
       ${a.wOK ? `      <div class="probtop" style="margin:10px 0"><div><div id="upelev"></div><div class="bar" style="margin-top:8px"><button class="btn" id="upplay">▶ Play</button><button class="btn ghost" id="upreset">⟲ Replay</button></div></div>
         <div><p style="margin-top:0">Watch the student step onto the scale on the 1st floor, then ride up and back down. The red arrow shows which way the elevator is moving.</p><p class="readout" id="upread" style="margin:6px 0"></p>
-        ${rev ? `<p class="hint">Now the scale shows its readings, and the blue arrow shows the acceleration. Compare them with your predictions.</p>` : `<p class="hint">The scale reading and the acceleration are hidden until you check your predictions.</p>`}
+        <p class="hint">The scale reading and the acceleration are hidden: you’ll find them as you analyze each part of the ride.</p>
         <p><b>Predict</b> for each part of the ride: will they feel heavier, normal or lighter? And which way does the acceleration point? (Up is positive.)</p>
         <p class="fb bad" id="upnote" style="${watched ? "display:none" : ""}">▶ Press Play and watch the whole ride (up and back down). Your predictions unlock when it finishes.</p></div></div>
-      <div style="overflow-x:auto"><table class="data"><thead><tr><th>Part of the ride</th><th>They will feel…</th><th>Acceleration points…</th>${rev ? "<th>Scale reading</th>" : ""}</tr></thead><tbody>
+      <div style="overflow-x:auto"><table class="data"><thead><tr><th>Part of the ride</th><th>They will feel…</th><th>Acceleration points…</th></tr></thead><tbody>
       ${RD.map((r, i) => { const f = a["f" + i], d = a["d" + i];
         return `<tr><td>${r[0]}</td>
           <td><select data-f="${i}" ${rev || !watched ? "disabled" : ""} aria-label="How they will feel: ${r[0]}" style="${mark(f === r[2], f)}"><option value="">predict…</option>${["heavier", "normal", "lighter"].map(o => `<option ${f === o ? "selected" : ""}>${o}</option>`).join("")}</select></td>
-          <td><select data-d="${i}" ${rev || !watched ? "disabled" : ""} aria-label="Direction of the acceleration: ${r[0]}" style="${mark(d === RDIR[r[2]], d)}"><option value="">predict…</option>${DIRS.map(([v, t]) => `<option value="${v}" ${d === v ? "selected" : ""}>${t}</option>`).join("")}</select></td>
-          ${rev ? `<td><b>${r[1].toFixed(1)} N</b> <span class="hint">(${Math.abs(r[1] - FG) < 0.05 ? `the same as ${WS()} N` : r[1] > FG ? `more than ${WS()} N` : `less than ${WS()} N`})</span></td>` : ""}</tr>`; }).join("")}
+          <td><select data-d="${i}" ${rev || !watched ? "disabled" : ""} aria-label="Direction of the acceleration: ${r[0]}" style="${mark(d === RDIR[r[2]], d)}"><option value="">predict…</option>${DIRS.map(([v, t]) => `<option value="${v}" ${d === v ? "selected" : ""}>${t}</option>`).join("")}</select></td></tr>`; }).join("")}
       </tbody></table></div>
       ${rev ? "" : `<div class="bar" style="margin-top:12px"><button class="btn" id="reveal" ${all ? "" : "disabled"}>Lock in my predictions</button><span class="hint">${all ? "Once you lock them in, you can’t change them." : "Make all 18 predictions first."}</span></div>`}
 ` : ""}
-      ${rev ? `
-        <div class="work"><b>What the readings show:</b> more than ${WS()} N means the acceleration points <b>up</b> and they feel <b>heavier</b>: speeding up going up, or slowing down going down. Less than ${WS()} N means the acceleration points <b>down</b> and they feel <b>lighter</b>: slowing down going up, or speeding up going down. At rest and at <b>constant velocity</b> (up or down) the reading equals their weight: <b>no acceleration</b>, so they feel normal, even while moving.</div>
-        <p class="hint" id="dfb" style="margin-top:8px"><b>Your predictions are locked in.</b> Compare them with the scale readings and the explanation above, then go on: next, you’ll calculate the accelerations for a ${M} kg student.</p>` : ""}
+      ${rev ? `<p class="fb ok" id="dfb" style="margin-top:10px">Your predictions are locked in. Now you will analyze each part of the ride to determine if your predictions are accurate.</p>` : ""}
       ${nextBtn("data")}</section>`;
     // redraw after the browser finishes moving focus (tabbing from one box to the next)
     // a choice only updates the Lock-in button: no redraw, so the menu closes normally (refocusing a menu reopens it on iPads and Chromebooks)
@@ -242,12 +248,12 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
     const draw = () => { if (!$("upelev")) return;
       if (t < WALK) {                                     // walking in from the floor-1 landing onto the scale
         const f = Math.min(1, t / (WALK - 0.6)), onScale = f >= 0.97;
-        $("upelev").innerHTML = elevSVG({ y: 75, v: 0, a: 0, N: rev ? (onScale ? FG : 0) : null, hideA: !rev, walk: f, doorOpen: t < WALK - 0.3,
+        $("upelev").innerHTML = elevSVG({ y: 75, v: 0, a: 0, N: null, hideA: true, walk: f, doorOpen: t < WALK - 0.3,
           fx: -82 * (1 - f), offScale: !onScale, step: onScale ? 0 : Math.sin(t * 9) });
         $("upread").innerHTML = `<span>t = ${t.toFixed(1)} s</span><span>${onScale ? "On the scale: at rest at the bottom" : "Walking onto the elevator"}</span>`;
         return; }
       const st = rideAt(t - WALK);
-      $("upelev").innerHTML = elevSVG({ y: 75 - st.y / YMAX * 135, v: Math.abs(st.v) < 0.01 ? 0 : st.v, a: st.a, N: rev ? RD[st.i][1] : null, hideA: !rev });
+      $("upelev").innerHTML = elevSVG({ y: 75 - st.y / YMAX * 135, v: Math.abs(st.v) < 0.01 ? 0 : st.v, a: st.a, N: null, hideA: true });
       $("upread").innerHTML = `<span>t = ${(t - WALK).toFixed(1)} s</span><span>${RD[st.i][0]}</span>`; };
     const tick = now => { t = Math.min(TOT, t + (now - last) / 1000); last = now; draw();
       if (t < TOT && playing) raf = requestAnimationFrame(tick); else { if (t >= TOT && onDone) onDone(); playing = false; $("upplay").textContent = "▶ Play"; } };
@@ -640,7 +646,7 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
     // 1. predictions
     const d = A("data"); text(`1. Predictions: elevator ride up and down (${M} kg student)`, 13, true, [31, 111, 180]);
     text(`Weight calculation (Fg = mg): first answer ${d.wFirst || "-"} N${d.wFirst != null ? (Math.abs(parse(d.wFirst) - FG) <= 0.6 ? " (correct)" : " (incorrect)") : ""}${d.wOK ? `; final ${WS()} N (correct)` : ""}`, 10, false, d.wOK ? ok(true) : [20, 30, 35], Mg + 10); text(d.revealed ? "The student's original predictions, as locked in:" : "Predictions not locked in yet:", 9.5, false, [90, 100, 105], Mg + 10);
-    RD.forEach((r, i) => text(`${r[0]}: predicted ${d["f" + i] || "-"}, acceleration ${({ up: "up (+)", zero: "zero", down: "down (-)" })[d["d" + i]] || "-"}${d.revealed ? `   (scale reading ${r[1].toFixed(1)} N)` : ""}`, 10, false, [20, 30, 35], Mg + 10));
+    RD.forEach((r, i) => text(`${r[0]}: predicted ${d["f" + i] || "-"}, acceleration ${({ up: "up (+)", zero: "zero", down: "down (-)" })[d["d" + i]] || "-"}`, 10, false, [20, 30, 35], Mg + 10));
     y += 6;
     // 2-10. problems
     P.forEach((p, i) => {
