@@ -83,6 +83,25 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .gopts label.right { border-color: var(--ok); background: var(--okbg); } .gopts label.wrong { border-color: var(--bad); background: var(--badbg); }
 .gopts input { position: absolute; opacity: 0; pointer-events: none; }
 .gopts svg { width: 140px; height: 80px; }
+.builder { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 16px; align-items: start; margin: 8px 0; }
+@media (max-width: 820px) { .builder { grid-template-columns: 1fr; } }
+svg.canvas { width: 100%; height: auto; display: block; background: var(--tint); border: 1px solid var(--line); border-radius: 8px; touch-action: none; user-select: none; }
+.flist { display: grid; gap: 8px; }
+.frow { display: grid; grid-template-columns: 14px 1fr auto; gap: 8px; align-items: center; border: 1.5px solid var(--line); border-radius: 8px; padding: 7px 9px; cursor: pointer; }
+.frow.sel { border-color: var(--acc); box-shadow: 0 0 0 2px var(--acc) inset; }
+.frow .sw { width: 14px; height: 14px; border-radius: 3px; }
+.frow .lbl { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.frow select { padding: 3px 6px; }
+.frow .x { font: inherit; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 1.2rem; }
+.palette { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.chip { font: inherit; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 99px; padding: 4px 12px; cursor: pointer; }
+.chip:disabled { opacity: 0.35; cursor: default; }
+.chip.on { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.irow { border: 1.5px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+.irow .top { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+.irow .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.irow .chip { padding: 2px 10px; font-size: 0.9rem; }
+.link { font: inherit; border: 0; background: none; color: var(--acc); cursor: pointer; text-decoration: underline; padding: 0; }
 .review { background: var(--tint); border-left: 4px solid var(--acc); padding: 8px 12px; border-radius: 0 8px 8px 0; margin-bottom: 10px; }
 .done-hero { text-align: center; }
 .done-hero .big { font-size: 2.6rem; color: var(--ok); line-height: 1; }
@@ -134,12 +153,14 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   const PROBLEMS = [
     {
       id: "fan-hand", title: "Fan cart stopped by a hand", g: 9.81,
-      text: "A <b>0.17 N</b> thrust is accelerating a <b>0.50 kg</b> fan cart along a track, reaching a maximum velocity of <b>0.75 m/s</b>, when a hand suddenly slows it to a stop in <b>0.176 seconds</b>. Determine the force applied by the hand to stop the cart. Assume negligible drag and friction.",
+      textFn: v => `A <b>${v.Fth.toFixed(2)} N</b> thrust is accelerating a <b>${v.m.toFixed(2)} kg</b> fan cart along a track, reaching a maximum velocity of <b>${v.v0.toFixed(2)} m/s</b>, when a hand suddenly slows it to a stop in <b>${v.dt.toFixed(3)} seconds</b>. Determine the force applied by the hand to stop the cart. Assume negligible drag and friction.`,
+      original: { m: 0.50, Fth: 0.17, v0: 0.75, dt: 0.176 },                         // the values on the slides
+      random: { m: [0.40, 0.80, 0.05], Fth: [0.10, 0.30, 0.01], v0: [0.50, 1.00, 0.05], dt: [0.120, 0.250, 0.005] },   // [min, max, step] for each student’s own values
       system: "cart", systemLong: "fan cart", picture: "fanHand",
       motion: { velocity: "right", v0: 0.75, vf: 0, dt: 0.176 },   // moving right, slowing to a stop
       m: 0.50,
       interactions: { Earth: "gravitational", track: "normal", air: "thrust", hand: "applied" },
-      distractors: ["wheels", "fan motor", "table"],
+      distractors: [],
       forces: [
         { type: "gravity", by: "Earth", dir: "down", value: "Fg" },
         { type: "normal", by: "track", dir: "up", value: "Fg-balance" },
@@ -183,7 +204,20 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
     { id: "graphs", title: "Sketch the graphs" },
     { id: "done", title: "Done!" }
   ];
-  function load() { S = ALL[P.id] = ALL[P.id] || { step: 0, done: {}, a: {} }; view = null; justDone = null; }
+  // each student gets their own values for a problem, kept with their work (work begun before this change keeps the slide values)
+  const pick = ([lo, hi, step]) => { const n = Math.round((hi - lo) / step); return Number((lo + step * Math.floor(Math.random() * (n + 1))).toFixed(3)); };
+  function useValues(v) {
+    P.m = v.m; P.motion.v0 = v.v0; P.motion.dt = v.dt;
+    const th = P.forces.find(f => f.type === "thrust"); if (th) th.value = v.Fth;
+    P.text = P.textFn ? P.textFn(v) : P.text;
+  }
+  function load() {
+    S = ALL[P.id] = ALL[P.id] || { step: 0, done: {}, a: {} };
+    if (P.random && !S.vals) { const started = S.step > 0 || Object.keys(S.a || {}).length > 0;
+      S.vals = started ? { ...P.original } : Object.fromEntries(Object.entries(P.random).map(([k, r]) => [k, pick(r)])); saveAll(); }
+    if (S.vals) useValues(S.vals);
+    view = null; justDone = null;
+  }
 
   // ================= drawing helpers =================
   const arrowSVG = (x1, y1, x2, y2, col, w = 3.5, dash) => { const a = Math.atan2(y2 - y1, x2 - x1), h = 10;
@@ -217,7 +251,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
       <path d="M72 76 q-8 12 0 24 M64 72 q-11 16 0 32" fill="none" stroke="${css("--muted")}" stroke-width="1.5"/></g>
       <g transform="translate(${anim ? anim.handDx.toFixed(1) : 0} 0)">${handSVG(ink, skin)}</g>`;
     if (anim) {                                           // the moving cart's velocity arrow and the part of the motion
-      const L = anim.v / 0.75 * 56, x0 = 112 + anim.dx;
+      const L = anim.v / P.motion.v0 * 56, x0 = 112 + anim.dx;
       s += L > 3 ? arrowSVG(x0, 60, x0 + L, 60, css("--vel"), 4) + `<text x="${x0 + L / 2}" y="50" font-size="14" font-weight="700" text-anchor="middle" fill="${css("--vel")}">v</text>`
         : `<text x="${x0 - 8}" y="58" font-size="14" font-weight="700" fill="${css("--vel")}">v = 0</text>`;
       s += `<text x="8" y="18" font-size="12" font-weight="700" fill="${ink}">${esc(anim.label)}</text><text x="8" y="34" font-size="11" fill="${css("--muted")}">v = ${anim.v.toFixed(2)} m/s</text>`;
@@ -283,11 +317,11 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
       F("m", `${P.m.toFixed(2)} kg`), F("F<sub>g</sub>", done.given ? `mg = ${P.m.toFixed(2)} kg × ${P.g} N/kg = ${d.Fg.toFixed(2)} N` : ""),
       F("a<sub>x</sub>", done.kin ? `${fmt(d.ax)} m/s²` : done.given ? "?" : ""), F("a<sub>y</sub>", done.sum ? "0 m/s²" : ""),
       F("ΣF<sub>x</sub>", done.n2 ? `${fmt(d.sumFx)} N` : done.sum ? sumExpr(a.sx, xs) : ""), F("ΣF<sub>y</sub>", done.sum ? `${sumExpr(a.sy, ys)} = 0 N` : ""),
-      F("v<sub>0x</sub>", done.given ? `${P.motion.v0} m/s` : ""), F("v<sub>fx</sub>", done.given ? `${P.motion.vf} m/s` : ""),
-      F("Δv", done.kin ? `${P.motion.vf} − ${P.motion.v0} m/s = ${fmt(d.dv)} m/s` : ""), F("Δt", done.given ? `${P.motion.dt} s` : "")
+      F("v<sub>0x</sub>", done.given ? `${P.motion.v0.toFixed(2)} m/s` : ""), F("v<sub>fx</sub>", done.given ? `${P.motion.vf} m/s` : ""),
+      F("Δv", done.kin ? `${P.motion.vf} − ${P.motion.v0.toFixed(2)} m/s = ${fmt(d.dv)} m/s` : ""), F("Δt", done.given ? `${P.motion.dt.toFixed(3)} s` : "")
     ].join("");
     let calc = `<b style="font-family:inherit">Calculations (show all work):</b>`;
-    if (done.kin) calc += `<div class="ln">a<sub>x</sub> = Δv / Δt &nbsp;(v<sub>f</sub> = a<sub>x</sub>Δt + v<sub>0</sub>)</div><div class="ln">&nbsp;&nbsp;= ${fmt(d.dv)} (m/s) / ${P.motion.dt} (s) = ${fmt(d.ax)} (m/s²)</div>`;
+    if (done.kin) calc += `<div class="ln">a<sub>x</sub> = Δv / Δt &nbsp;(v<sub>f</sub> = a<sub>x</sub>Δt + v<sub>0</sub>)</div><div class="ln">&nbsp;&nbsp;= ${fmt(d.dv)} (m/s) / ${P.motion.dt.toFixed(3)} (s) = ${fmt(d.ax)} (m/s²)</div>`;
     if (done.n2) { const u = d.u;
       calc += `<div class="ln">ΣF<sub>x</sub> = ma<sub>x</sub> = ${P.m.toFixed(2)} (kg) × (${fmt(d.ax)} m/s²) = ${fmt(d.sumFx)} (N)</div>
         <div class="ln">ΣF<sub>x</sub> = ${sumExpr(a.sx, xs)} &nbsp;⇒&nbsp; F<sub>${u.type}</sub> = ${unknownExpr()}</div>
@@ -329,27 +363,21 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   function stepHTML(id) {
     const a = S.a, d = D();
     if (id === "given") return `<p>Record the values given in the problem, then find the force of gravity on the ${esc(P.systemLong)}.</p>
-      <div class="rows"><div class="row"><span class="m">m = ${P.m.toFixed(2)} kg</span><span class="m">v<sub>0x</sub> = ${P.motion.v0} m/s</span><span class="m">v<sub>fx</sub> = ${P.motion.vf} m/s</span><span class="m">Δt = ${P.motion.dt} s</span>
-        ${P.forces.filter(f => typeof f.value === "number").map(f => `<span class="m">F<sub>${f.type}</sub> = ${f.value} N</span>`).join("")}</div>
+      <div class="rows"><div class="row"><span class="m">m = ${P.m.toFixed(2)} kg</span><span class="m">v<sub>0x</sub> = ${P.motion.v0.toFixed(2)} m/s</span><span class="m">v<sub>fx</sub> = ${P.motion.vf} m/s</span><span class="m">Δt = ${P.motion.dt.toFixed(3)} s</span>
+        ${P.forces.filter(f => typeof f.value === "number").map(f => `<span class="m">F<sub>${f.type}</sub> = ${f.value.toFixed(2)} N</span>`).join("")}</div>
       <div class="row"><label class="m">F<sub>g</sub> = mg = <input type="text" class="num" id="iFg" value="${esc(a.Fg || "")}" inputmode="decimal"> N</label><span class="hint">(g = ${P.g} N/kg)</span></div>
       <div class="row"><span>What are you solving for?</span><select id="iUnk"><option value="">choose…</option>${P.forces.map((f, i) => `<option value="${i}" ${a.unk === String(i) ? "selected" : ""}>the ${f.type} force by the ${f.by}</option>`).join("")}<option value="a" ${a.unk === "a" ? "selected" : ""}>the acceleration</option></select></div></div>
       <button class="btn ghost" id="chk">Check</button><p class="fb ${a.gTried ? (S.done.given ? "ok" : "bad") : ""}">${a.gTried ? (S.done.given ? `Correct! F<sub>g</sub> = (${P.m.toFixed(2)} kg)(${P.g} N/kg) = ${d.Fg.toFixed(2)} N, and the unknown is ${esc(P.unknown.label)}.` : a.gMsg) : ""}</p>${nextBtn("given")}`;
     if (id === "pic") return `<p>Which way is the ${esc(P.systemLong)} moving at this moment (while the hand slows it down)? Your answer adds the velocity vector to the picture.</p>
       <div class="choices">${[["right", "→ To the right"], ["left", "← To the left"], ["none", "Not moving"]].map(([v, t]) => `<label class="${a.vel === v ? (v === P.motion.velocity ? "right" : "wrong") : ""}"><input type="radio" name="vel" value="${v}" ${a.vel === v ? "checked" : ""}> ${t}</label>`).join("")}</div>
-      <p class="fb ${a.vel ? (S.done.pic ? "ok" : "bad") : ""}">${a.vel ? (S.done.pic ? `Right: it’s still moving to the right at ${P.motion.v0} m/s when the hand starts slowing it.` : "Look at the problem again: which way is the cart traveling before it stops?") : ""}</p>${nextBtn("pic")}`;
-    if (id === "id") { const objs = [...Object.keys(P.interactions), ...P.distractors].sort((x, y) => x.localeCompare(y)), sel = a.id || {};
-      return `<p>The system is the <b>${esc(P.systemLong)}</b> (inside the dashed box). For each object, choose how it interacts <b>directly</b> with the ${esc(P.system)}, if at all.</p>
-        <div class="rows">${objs.map(o => `<div class="row"><span style="min-width:9em">${esc(o)} ↔ ${esc(P.system)}</span><select data-o="${esc(o)}" style="${a.idTried && sel[o] ? `border-color:${(P.interactions[o] || "none") === sel[o] ? "var(--ok)" : "var(--bad)"}` : ""}"><option value="">choose…</option>${ITYPES.map(t => `<option value="${t}" ${sel[o] === t ? "selected" : ""}>${t === "none" ? "no interaction" : t}</option>`).join("")}</select></div>`).join("")}</div>
-        <button class="btn ghost" id="chk">Check</button><p class="fb ${a.idTried ? (S.done.id ? "ok" : "bad") : ""}">${a.idTried ? (S.done.id ? "Correct! Each interaction becomes a force on your force diagram." : a.idMsg) : ""}</p>${nextBtn("id")}`; }
-    if (id === "fd") { const list = a.fd || (a.fd = []);
-      return `<p>Add each force on the ${esc(P.system)}: its type, the dealer, its direction and its value in newtons. Type <b>?</b> for the unknown force.</p>
-        <div class="rows" id="flist">${list.length ? list.map((f, i) => `<div class="row">F <select data-k="type" data-i="${i}" aria-label="Type"><option value="">type…</option>${FTYPES.map(t => `<option ${f.type === t ? "selected" : ""}>${t}</option>`).join("")}</select>
-          on ${esc(P.system)} by <select data-k="by" data-i="${i}" aria-label="Dealer"><option value="">dealer…</option>${[...Object.keys(P.interactions), ...P.distractors].sort().map(o => `<option ${f.by === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>
-          <select data-k="dir" data-i="${i}" aria-label="Direction"><option value="">direction…</option>${[["up", "↑ up"], ["down", "↓ down"], ["right", "→ right"], ["left", "← left"]].map(([v, t]) => `<option value="${v}" ${f.dir === v ? "selected" : ""}>${t}</option>`).join("")}</select>
-          = <input type="text" class="num" data-k="value" data-i="${i}" value="${esc(f.value || "")}" aria-label="Value in newtons"> N <button class="btn ghost" data-rm="${i}" style="padding:2px 10px" aria-label="Remove">×</button></div>`).join("") : `<p class="hint">No forces yet.</p>`}</div>
-        <div class="bar"><button class="btn ghost" id="add">+ Add a force</button><button class="btn ghost" id="chk">Check</button></div>
-        <p class="hint">Your diagram is drawn in the Force Diagram box above as you type. The unknown force is dashed.</p>
-        <p class="fb ${a.fdTried ? (S.done.fd ? "ok" : "bad") : ""}">${a.fdTried ? (S.done.fd ? "Correct! The vertical forces balance, and the hand’s push is the unknown." : a.fdMsg) : ""}</p>${nextBtn("fd")}`; }
+      <p class="fb ${a.vel ? (S.done.pic ? "ok" : "bad") : ""}">${a.vel ? (S.done.pic ? `Right: it’s still moving to the right at ${P.motion.v0.toFixed(2)} m/s when the hand starts slowing it.` : "Look at the problem again: which way is the cart traveling before it stops?") : ""}</p>${nextBtn("pic")}`;
+    if (id === "id") return `<p>The system is the <b>${esc(P.systemLong)}</b>. Add each object that interacts <b>directly</b> with it, then choose the type of each interaction.</p>
+        <div id="idb"></div>
+        <button class="btn ghost" id="chk">Check</button><p class="fb ${a.idTried ? (S.done.id ? "ok" : "bad") : ""}">${a.idTried ? (S.done.id ? "Correct! Each interaction becomes a force on your force diagram." : a.idMsg) : ""}</p>${nextBtn("id")}`;
+    if (id === "fd") return `<p>Add each force on the ${esc(P.system)}: choose its type and dealer, <b>drag from the dot</b> to draw its arrow (longer = bigger force), and enter its value in newtons. Type <b>?</b> for the unknown force.</p>
+        <div id="fdb"></div>
+        <button class="btn ghost" id="chk">Check</button>
+        <p class="fb ${a.fdTried ? (S.done.fd ? "ok" : "bad") : ""}">${a.fdTried ? (S.done.fd ? "Correct! Every force is there, with the right dealer, direction, value and relative size." : a.fdMsg) : ""}</p>${nextBtn("fd")}`;
     if (id === "sum") { const xs = a.fd.filter(f => f.dir === "left" || f.dir === "right"), ys = a.fd.filter(f => f.dir === "up" || f.dir === "down"); a.sx = a.sx || {}; a.sy = a.sy || {};
       const sel = (axis, i, f) => `<span class="row" style="border:0;padding:2px 0"><select data-ax="${axis}" data-i="${i}" aria-label="Sign"><option value="">±</option><option value="+" ${a[axis][i] === "+" ? "selected" : ""}>+</option><option value="-" ${a[axis][i] === "-" ? "selected" : ""}>−</option></select> <span class="m">${short(f)}</span></span>`;
       return `<p>Sum the forces in each direction. Choose <b>+</b> for forces pointing right or up and <b>−</b> for left or down.</p>
@@ -360,7 +388,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
     if (id === "kin") return `<p>Use the motion to find the acceleration. With v<sub>0</sub>, v<sub>f</sub> and Δt known, use <span class="m">v<sub>f</sub> = a<sub>x</sub>Δt + v<sub>0</sub></span>, so <span class="m">a<sub>x</sub> = Δv / Δt</span>.</p>
       <div class="rows"><div class="row"><label class="m">Δv = v<sub>f</sub> − v<sub>0</sub> = <input type="text" class="num" id="idv" value="${esc(a.dv || "")}" inputmode="decimal"> m/s</label></div>
         <div class="row"><label class="m">a<sub>x</sub> = Δv / Δt = <input type="text" class="num" id="iax" value="${esc(a.ax || "")}" inputmode="decimal"> m/s²</label><span class="hint">(2 decimal places)</span></div></div>
-      <button class="btn ghost" id="chk">Check</button><p class="fb ${a.kTried ? (S.done.kin ? "ok" : "bad") : ""}">${a.kTried ? (S.done.kin ? `Correct! a<sub>x</sub> = ${fmt(d.dv)} m/s ÷ ${P.motion.dt} s = ${fmt(d.ax)} m/s². Negative: it’s slowing down while moving right.` : a.kMsg) : ""}</p>${nextBtn("kin")}`;
+      <button class="btn ghost" id="chk">Check</button><p class="fb ${a.kTried ? (S.done.kin ? "ok" : "bad") : ""}">${a.kTried ? (S.done.kin ? `Correct! a<sub>x</sub> = ${fmt(d.dv)} m/s ÷ ${P.motion.dt.toFixed(3)} s = ${fmt(d.ax)} m/s². Negative: it’s slowing down while moving right.` : a.kMsg) : ""}</p>${nextBtn("kin")}`;
     if (id === "n2") { const xs = a.fd.filter(f => f.dir === "left" || f.dir === "right");
       const opts = rearrangeOptions();
       return `<p>Apply Newton’s 2nd Law in the x-direction, then solve your ΣF<sub>x</sub> equation for the unknown force.</p>
@@ -399,20 +427,15 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
       saveAll(); render(); });
     if (id === "pic") $("body").querySelectorAll("input[name=vel]").forEach(r => r.addEventListener("change", e => { a.vel = e.target.value; if (a.vel === P.motion.velocity) finish("pic"); else { S.done.pic = false; } saveAll(); render(); }));
     if (id === "id") {
-      $("body").querySelectorAll("[data-o]").forEach(sl => sl.addEventListener("change", e => { a.id = a.id || {}; a.id[e.target.dataset.o] = e.target.value; saveAll(); $("sID").innerHTML = idSVG(a.id); }));
-      $("chk").addEventListener("click", () => { a.idTried = true; const sel = a.id || {}, objs = [...Object.keys(P.interactions), ...P.distractors];
-        const miss = objs.filter(o => !sel[o]);
-        if (miss.length) a.idMsg = "Choose an answer for every object.";
-        else { const wrong = objs.filter(o => (P.interactions[o] || "none") !== sel[o]);
-          if (!wrong.length) { finish("id"); a.idMsg = ""; }
-          else { const w = wrong[0]; a.idMsg = P.interactions[w] ? `The ${esc(w)} does interact with the ${esc(P.system)}. Check the type: ${w === "Earth" ? "what pulls without touching?" : w === "air" ? "the fan pushes air backward, so the air pushes the cart forward." : "is it a push from a surface, or a push by a hand?"}` : `The ${esc(w)} ${w === "wheels" || w === "fan motor" ? (w.endsWith("s") ? "are" : "is") + " part of the cart (inside the system), so " + (w.endsWith("s") ? "they aren’t a separate object" : "it isn’t a separate object") + " pushing on it." : (w.endsWith("s") ? "don’t" : "doesn’t") + " touch the cart."}`; } }
+      a.idl = a.idl || (a.id ? Object.entries(a.id).filter(([o, t]) => t && t !== "none").map(([o, t]) => ({ obj: o, types: [t] })) : []);   // answers saved before this change carry over
+      idBuilder($("idb"), a.idl);
+      $("chk").addEventListener("click", () => { a.idTried = true; a.idMsg = checkID(a.idl);
+        if (!a.idMsg) { a.id = Object.fromEntries(a.idl.map(x => [x.obj, x.types[0]])); finish("id"); } else S.done.id = false;
         saveAll(); render(); });
     }
     if (id === "fd") {
-      $("add").addEventListener("click", () => { a.fd.push({ type: "", by: "", dir: "", value: "" }); saveAll(); render(); });
-      $("flist").addEventListener("click", e => { const b = e.target.closest("[data-rm]"); if (b) { a.fd.splice(+b.dataset.rm, 1); saveAll(); render(); } });
-      $("flist").addEventListener("change", e => { const el = e.target.closest("[data-k]"); if (!el || el.dataset.k === "value") return; a.fd[+el.dataset.i][el.dataset.k] = el.value; saveAll(); $("sFD").innerHTML = fdSVG(a.fd); });
-      $("flist").addEventListener("input", e => { const el = e.target.closest("[data-k=value]"); if (!el) return; a.fd[+el.dataset.i].value = el.value.trim(); saveAll(); $("sFD").innerHTML = fdSVG(a.fd); });
+      a.fd = (a.fd || []).map(f => f.len ? f : { ...f, ang: { right: 0, up: 90, left: 180, down: 270 }[f.dir] ?? 90, len: f.dir ? 6 : 0 });   // answers saved before this change carry over
+      forceBuilder($("fdb"), a.fd);
       $("chk").addEventListener("click", () => { a.fdTried = true; a.fdMsg = checkFD(); if (!a.fdMsg) finish("fd"); else S.done.fd = false; saveAll(); render(); });
     }
     if (id === "sum") {
@@ -429,8 +452,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
         saveAll(); render(); });
     }
     if (id === "kin") $("chk").addEventListener("click", () => { a.dv = $("idv").value; a.ax = $("iax").value; a.kTried = true;
-      if (!close(parse(a.dv), d.dv)) a.kMsg = `Δv = v<sub>f</sub> − v<sub>0</sub> = ${P.motion.vf} − ${P.motion.v0}. Watch the sign!`;
-      else if (!close(parse(a.ax), d.ax, 0.004, 0.006)) a.kMsg = `Divide Δv by Δt = ${P.motion.dt} s, and keep the sign.`;
+      if (!close(parse(a.dv), d.dv)) a.kMsg = `Δv = v<sub>f</sub> − v<sub>0</sub> = ${P.motion.vf} − ${P.motion.v0.toFixed(2)}. Watch the sign!`;
+      else if (!close(parse(a.ax), d.ax, 0.004, 0.006)) a.kMsg = `Divide Δv by Δt = ${P.motion.dt.toFixed(3)} s, and keep the sign.`;
       else { finish("kin"); a.kMsg = ""; }
       saveAll(); render(); });
     if (id === "n2") {
@@ -445,9 +468,153 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
     if (id === "graphs") $("body").querySelectorAll("input[name=gx], input[name=gv]").forEach(r => r.addEventListener("change", e => { a[e.target.name] = e.target.value; if (a.gx === "right" && a.gv === "dec") finish("graphs"); else S.done.graphs = false; saveAll(); render(); }));
     if (id === "done") { $("again").addEventListener("click", restart); if ($("nextp")) $("nextp").addEventListener("click", () => { const i = PROBLEMS.indexOf(P); choose(PROBLEMS[(i + 1) % PROBLEMS.length].id); }); }
   }
+  // ===== interaction diagram builder (as on the force diagram practice page) =====
+  const ICHOICES = [["gravitational", "gravitational"], ["normal", "normal (support)"], ["thrust", "thrust"], ["applied", "applied (push/pull)"], ["tension", "tension"], ["friction", "friction"], ["drag", "drag"]];
+  const allObjects = () => [...new Set([...Object.keys(P.interactions), ...P.distractors, "Earth"])].sort((x, y) => x === "Earth" ? -1 : y === "Earth" ? 1 : x.localeCompare(y));
+  function idBuilder(el, ans) {
+    el.innerHTML = `<div class="builder"><div><svg class="canvas" id="idsvg" viewBox="0 0 440 320" role="img" aria-label="Your interaction diagram"></svg></div>
+      <div><h3>Objects that interact with the ${esc(P.systemLong)}</h3><p class="hint" style="margin:0">Add each object, then choose its interaction type(s) with the ${esc(P.system)}. The dashed line is the system boundary.</p>
+        <div class="palette" id="pal"></div><div class="flist" id="ilist"></div></div></div>`;
+    const paint = () => {
+      $("pal").innerHTML = allObjects().map(o => `<button class="chip" data-o="${esc(o)}" ${ans.some(x => x.obj === o) ? "disabled" : ""}>+ ${esc(o)}</button>`).join("");
+      $("ilist").innerHTML = ans.length ? ans.map((x, i) => `<div class="irow"><div class="top"><span>${esc(x.obj)} ↔ ${esc(P.system)}</span><button class="link" data-rm="${i}" aria-label="Remove ${esc(x.obj)}">remove</button></div>
+        <div class="chips">${ICHOICES.map(([t, lab]) => `<button class="chip ${x.types.includes(t) ? "on" : ""}" data-i="${i}" data-t="${t}" aria-pressed="${x.types.includes(t)}">${lab}</button>`).join("")}</div></div>`).join("")
+        : `<p class="hint">No objects yet.</p>`;
+      drawIDB($("idsvg"), ans); $("sID").innerHTML = idSVG(Object.fromEntries(ans.map(x => [x.obj, x.types[0] || "?"])));
+    };
+    el.addEventListener("click", e => {
+      const b = e.target.closest("button"); if (!b) return;
+      if (b.dataset.o) ans.push({ obj: b.dataset.o, types: [] });
+      else if (b.dataset.rm != null) ans.splice(+b.dataset.rm, 1);
+      else if (b.dataset.t) { const x = ans[+b.dataset.i], t = b.dataset.t; x.types = x.types.includes(t) ? x.types.filter(y => y !== t) : [...x.types, t]; }
+      else return;
+      saveAll(); paint();
+    });
+    paint();
+  }
+  function drawIDB(svg, ans) {
+    const ink = css("--ink"), muted = css("--muted"), sysc = css("--sys"), panel = css("--panel"), cx = 220, cy = 160, R = 120;
+    let s = `<circle cx="${cx}" cy="${cy}" r="58" fill="none" stroke="${sysc}" stroke-width="2" stroke-dasharray="7 6"/>`;
+    const pos = ans.map((x, i) => { const ang = -Math.PI / 2 + (i + 0.5) * 2 * Math.PI / Math.max(ans.length, 1); return [cx + R * 1.35 * Math.cos(ang), cy + R * Math.sin(ang)]; });
+    ans.forEach((x, i) => { const [px, py] = pos[i], dx = px - cx, dy = py - cy, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+      const x1 = cx + ux * 40, y1 = cy + uy * 40, x2 = px - ux * 36, y2 = py - uy * 36;
+      s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${ink}" stroke-width="2" marker-start="url(#iah)" marker-end="url(#iah)"/>`;
+      const lab = x.types.join(", ");
+      if (lab) s += `<text x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2 - 6}" font-size="11" text-anchor="middle" fill="${muted}" paint-order="stroke" stroke="${css("--tint")}" stroke-width="4">${esc(lab)}</text>`; });
+    ans.forEach((x, i) => { const [px, py] = pos[i];
+      s += `<ellipse cx="${px}" cy="${py}" rx="44" ry="26" fill="${panel}" stroke="${ink}" stroke-width="1.5"/><text x="${px}" y="${py + 4}" font-size="12" text-anchor="middle" fill="${ink}">${esc(x.obj)}</text>`; });
+    s += `<ellipse cx="${cx}" cy="${cy}" rx="44" ry="28" fill="${panel}" stroke="${sysc}" stroke-width="2.5"/><text x="${cx}" y="${cy + 5}" font-size="13" font-weight="700" text-anchor="middle" fill="${sysc}">${esc(P.systemLong)}</text>`;
+    svg.innerHTML = `<defs><marker id="iah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="${ink}"/></marker></defs>` + s;
+  }
+  function checkID(ans) {
+    for (const [obj] of Object.entries(P.interactions)) if (!ans.some(x => x.obj === obj))
+      return `Something that interacts with the ${esc(P.system)} is missing. ${obj === "Earth" ? "Every object near Earth interacts with it." : "Look at what is touching or pushing on it."}`;
+    for (const x of ans) {
+      const want = P.interactions[x.obj];
+      if (!want) return P.distractors.includes(x.obj) && (x.obj === "wheels" || x.obj === "fan motor")
+        ? `The <b>${esc(x.obj)}</b> ${x.obj.endsWith("s") ? "are" : "is"} part of the cart, inside the system, so ${x.obj.endsWith("s") ? "they don’t" : "it doesn’t"} interact with it as an outside object.`
+        : `The <b>${esc(x.obj)}</b> doesn’t interact with the ${esc(P.system)} at this moment (no dealer, no force).`;
+      if (!x.types.length) return `Choose the type of interaction between the <b>${esc(x.obj)}</b> and the ${esc(P.system)}.`;
+      if (!x.types.includes(want)) return `The <b>${esc(x.obj)}</b> interacts with the ${esc(P.system)}, but check the type of interaction. ${x.obj === "air" ? "The fan pushes air backward, so the air pushes the cart forward." : x.obj === "Earth" ? "What pulls without touching?" : ""}`;
+      if (x.types.length > 1) return `The <b>${esc(x.obj)}</b> has only one interaction with the ${esc(P.system)} here.`;
+    }
+    return "";
+  }
+
+  // ===== force diagram builder (as on the force diagram practice page), plus a value for each force =====
+  const SNAP_A = 15, UNIT = 10, MAXL = 17, MINL = 2;
+  const angDir = a => ({ 0: "right", 90: "up", 180: "left", 270: "down" })[a] || "";
+  const colOf = t => (t && css("--f-" + t)) || css("--muted");
+  function forceBuilder(el, list) {
+    let sel = list.length ? 0 : -1;
+    const dealers = allObjects().slice().sort((x, y) => x.localeCompare(y));
+    el.innerHTML = `<div class="builder"><div><svg class="canvas" id="fsvg" viewBox="0 0 400 400" tabindex="0" role="img" aria-label="Force diagram. Select a force in the list, then drag from the dot, or use the arrow keys."></svg>
+        <p class="hint" style="margin:6px 0 0">Select a force, then drag on the grid to draw it from the dot. Arrow keys: ← → turn it, ↑ ↓ change its length.</p></div>
+      <div><h3>Forces on the ${esc(P.system)}</h3><div class="flist" id="flist"></div>
+        <div class="bar" style="margin-top:8px"><button class="btn ghost" id="addF">+ Add a force</button></div></div></div>`;
+    const svg = $("fsvg");
+    const paintList = () => {
+      $("flist").innerHTML = list.length ? list.map((f, i) => `<div class="frow ${i === sel ? "sel" : ""}" data-i="${i}">
+        <span class="sw" style="background:${colOf(f.type)}"></span>
+        <span class="lbl">F<select data-k="type" data-i="${i}" aria-label="Type of force"><option value="">type…</option>${FTYPES.map(t => `<option value="${t}" ${f.type === t ? "selected" : ""}>${t}</option>`).join("")}</select>
+          <span>on ${esc(P.system)}, by</span><select data-k="by" data-i="${i}" aria-label="Dealer (the object exerting the force)"><option value="">dealer…</option>${dealers.map(d => `<option ${f.by === d ? "selected" : ""}>${esc(d)}</option>`).join("")}</select>
+          <span>=</span><input type="text" class="num" data-k="value" data-i="${i}" value="${esc(f.value || "")}" aria-label="Value in newtons" style="width:7ch"><span>N</span>
+          ${f.len ? "" : `<span class="hint">· drag from the dot to draw it</span>`}</span>
+        <button class="x" data-rm="${i}" aria-label="Remove this force">×</button></div>`).join("") : `<p class="hint">No forces yet. Press “Add a force”, or drag from the dot.</p>`;
+    };
+    const draw = () => { svg.innerHTML = builderSVG(list, sel); list.forEach(f => { f.dir = f.len ? angDir(f.ang) : ""; }); $("sFD").innerHTML = fdSVG(list.filter(f => f.dir)); };
+    const paint = () => { paintList(); draw(); };
+    $("addF").addEventListener("click", () => { list.push({ type: "", by: "", ang: 90, len: 0, value: "" }); sel = list.length - 1; saveAll(); paint(); });
+    $("flist").addEventListener("click", e => {
+      if (e.target.closest("select, input")) return;
+      const rm = e.target.closest("[data-rm]"); if (rm) { list.splice(+rm.dataset.rm, 1); sel = Math.min(sel, list.length - 1); saveAll(); paint(); return; }
+      const row = e.target.closest(".frow"); if (row) { sel = +row.dataset.i; paint(); }
+    });
+    $("flist").addEventListener("change", e => { const c = e.target.closest("select"); if (!c) return; list[+c.dataset.i][c.dataset.k] = c.value; sel = +c.dataset.i; saveAll(); paint(); });
+    $("flist").addEventListener("input", e => { const c = e.target.closest("input[data-k=value]"); if (!c) return; list[+c.dataset.i].value = c.value.trim(); saveAll(); draw(); });
+    const pt = e => { const r = svg.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * 400 - 200, 200 - (e.clientY - r.top) / r.height * 400]; };
+    const setTip = (x, y) => {
+      if (sel < 0) return;
+      let ang = Math.atan2(y, x) * 180 / Math.PI; ang = ((Math.round(ang / SNAP_A) * SNAP_A) % 360 + 360) % 360;
+      const before = list.slice(0, sel).filter(f => f.len && f.ang === ang).reduce((t, f) => t + f.len, 0);   // tip-to-tail with earlier arrows
+      const r = ang * Math.PI / 180, along = (x * Math.cos(r) + y * Math.sin(r)) / UNIT;
+      list[sel].ang = ang; list[sel].len = Math.max(MINL, Math.min(MAXL, Math.round(along - before)));
+    };
+    let dragging = false;
+    svg.addEventListener("pointerdown", e => {
+      const [x, y] = pt(e); let best = -1, bd = 18; const st0 = bTailStarts(list);
+      list.forEach((f, i) => { if (!f.len) return; const r = f.ang * Math.PI / 180, d0 = (st0[i] + f.len) * UNIT; const d = Math.hypot(d0 * Math.cos(r) - x, d0 * Math.sin(r) - y); if (d < bd) { bd = d; best = i; } });
+      if (best >= 0) sel = best;
+      if (sel < 0) { list.push({ type: "", by: "", ang: 90, len: 0, value: "" }); sel = list.length - 1; }
+      dragging = true; svg.setPointerCapture(e.pointerId); setTip(x, y); paint(); e.preventDefault();
+    });
+    svg.addEventListener("pointermove", e => { if (!dragging) return; const [x, y] = pt(e); setTip(x, y); draw(); });
+    const end = () => { if (dragging) { dragging = false; saveAll(); paintList(); } };
+    svg.addEventListener("pointerup", end); svg.addEventListener("pointercancel", end);
+    svg.addEventListener("keydown", e => {
+      if (sel < 0) return; const f = list[sel]; let used = true;
+      if (e.key === "ArrowLeft") f.ang = (f.ang + SNAP_A) % 360; else if (e.key === "ArrowRight") f.ang = (f.ang - SNAP_A + 360) % 360;
+      else if (e.key === "ArrowUp") f.len = Math.min(MAXL, (f.len || MINL - 1) + 1); else if (e.key === "ArrowDown") f.len = Math.max(MINL, (f.len || MINL) - 1); else used = false;
+      if (used) { e.preventDefault(); if (!f.len) f.len = MINL; saveAll(); paint(); }
+    });
+    paint();
+  }
+  function bTailStarts(list) {
+    const out = [], used = {}, count = {}; out.stacked = [];
+    list.forEach(f => { if (f.len) count[f.ang] = (count[f.ang] || 0) + 1; });
+    list.forEach((f, i) => { if (!f.len) { out[i] = 0; return; } out[i] = used[f.ang] || 0; used[f.ang] = out[i] + f.len; out.stacked[i] = count[f.ang] > 1; });
+    return out;
+  }
+  function builderSVG(list, sel) {
+    const ink = css("--ink"), grid = css("--grid"), tint = css("--tint"), sys = css("--sys");
+    let s = "";
+    for (let i = 20; i < 400; i += 20) s += `<line x1="${i}" y1="0" x2="${i}" y2="400" stroke="${grid}"/><line x1="0" y1="${i}" x2="400" y2="${i}" stroke="${grid}"/>`;
+    s += `<rect x="168" y="168" width="64" height="64" rx="6" fill="none" stroke="${sys}" stroke-width="1.5" stroke-dasharray="6 5"/>`;
+    const st0 = bTailStarts(list);
+    list.forEach((f, i) => {
+      if (!f.len) return;
+      const L = f.len * UNIT, r = f.ang * Math.PI / 180, ca = Math.cos(r), sa = Math.sin(r), s0 = st0[i] * UNIT, stacked = st0.stacked[i];
+      const x0 = 200 + s0 * ca, y0 = 200 - s0 * sa, x2 = x0 + L * ca, y2 = y0 - L * sa, c = colOf(f.type), w = i === sel ? 5 : 3.5;
+      const hx = x0 + (L - 12) * ca, hy = y0 - (L - 12) * sa, px = -sa * 7, py = -ca * 7;
+      s += `<line x1="${x0}" y1="${y0}" x2="${hx}" y2="${hy}" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/><path d="M${x2} ${y2} L${hx + px} ${hy + py} L${hx - px} ${hy - py} Z" fill="${c}"/>`;
+      if (i === sel) s += `<circle cx="${x2}" cy="${y2}" r="9" fill="none" stroke="${c}" stroke-width="2"/>`;
+      const sub = `${f.type || "?"}, on ${P.system}, by ${f.by || "?"}`, wEst = 10 + sub.length * 5.6;
+      let lx, ly, anchor;
+      if (stacked) { const mx = (x0 + x2) / 2, my = (y0 + y2) / 2;
+        if (Math.abs(ca) <= 0.7) { anchor = "start"; lx = mx + 12; ly = my + 5; if (lx + wEst > 396) { anchor = "end"; lx = mx - 12; } }
+        else { anchor = "middle"; lx = Math.max(4 + wEst / 2, Math.min(396 - wEst / 2, mx)); ly = my - 12; } }
+      else if (Math.abs(ca) <= 0.7) { anchor = "middle"; lx = Math.max(4 + wEst / 2, Math.min(396 - wEst / 2, x2)); ly = sa > 0 ? y2 - 12 : y2 + 20; }
+      else { anchor = ca > 0 ? "start" : "end"; lx = x2 + 10 * ca; ly = y2 - 16;
+        if (ca > 0 && lx + wEst > 396) { anchor = "end"; lx = 396; } if (ca < 0 && lx - wEst < 4) { anchor = "start"; lx = 4; } }
+      s += `<text x="${lx}" y="${Math.max(14, Math.min(394, ly))}" font-size="12" font-weight="700" text-anchor="${anchor}" fill="${c}" paint-order="stroke" stroke="${tint}" stroke-width="4">F<tspan font-size="9.5" baseline-shift="sub">${esc(sub)}</tspan></text>`;
+    });
+    return s + `<circle cx="200" cy="200" r="6" fill="${ink}"/>`;
+  }
+
   function checkFD() {
-    const list = S.a.fd.filter(f => f.type || f.by || f.dir || f.value);
-    if (list.some(f => !f.type || !f.by || !f.dir || f.value === "")) return "Finish every force: type, dealer, direction and value (or ? for the unknown).";
+    const list = S.a.fd.filter(f => f.type || f.by || f.len || f.value);
+    if (list.some(f => !f.type || !f.by || !f.len || f.value === "")) return "Finish every force: choose its type and dealer, draw its arrow, and enter its value (or ? for the unknown).";
+    const angled = list.find(f => !f.dir); if (angled) return `Check the direction of F<sub>${angled.type}</sub> by the ${esc(angled.by)}: every force in this problem points straight left, right, up or down.`;
     const want = P.forces, used = new Set();
     for (const w of want) {
       const i = list.findIndex((f, j) => !used.has(j) && f.type === w.type && f.by === w.by);
@@ -458,32 +625,46 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
       else if (!close(parse(f.value), valOf(w))) return w.value === "Fg-balance" ? `The cart doesn’t move up or down, so F<sub>${w.type}</sub> balances F<sub>g</sub> = ${D().Fg.toFixed(2)} N.` : `Check the value of F<sub>${w.type}</sub> by the ${esc(w.by)}.`;
     }
     const extra = list.find((f, j) => !used.has(j));
+    if (!extra) {   // relative sizes along each axis, from the values (the unknown uses its solved value)
+      const val = f => f.value === "?" ? D().unknown : parse(f.value);
+      for (const axis of [["left", "right"], ["up", "down"]]) {
+        const fs = list.filter(f => axis.includes(f.dir));
+        for (let x = 0; x < fs.length; x++) for (let y = x + 1; y < fs.length; y++) {
+          const A = fs[x], B = fs[y]; if (A.dir === B.dir) continue;
+          const va = val(A), vb = val(B), big = Math.max(va, vb);
+          if (Math.abs(va - vb) <= 0.05 * big) { if (Math.abs(A.len - B.len) > Math.max(1, 0.12 * Math.max(A.len, B.len))) return `F<sub>${A.type}</sub> and F<sub>${B.type}</sub> should be the same length: they are equal in size.`; }
+          else { const [L, S2] = va > vb ? [A, B] : [B, A]; if (!(L.len > S2.len)) return `F<sub>${L.type}</sub> should be longer than F<sub>${S2.type}</sub>: it is the bigger force.`; }
+        }
+      }
+    }
     if (extra) return P.interactions[extra.by] ? `Extra force: there’s no ${extra.type} force by the ${esc(extra.by)}.` : `There’s no force on the ${esc(P.system)} by the ${esc(extra.by)}.`;
     return "";
   }
 
   // ================= problem selection =================
   function choose(id) { if (typeof motionAnim !== "undefined") motionAnim.stop(); P = PROBLEMS.find(p => p.id === id) || PROBLEMS[0]; $("psel").value = P.id; load(); render(); }
-  function restart() { ALL[P.id] = { step: 0, done: {}, a: {} }; saveAll(); load(); render(); }
+  function restart() { const vals = S && S.vals; ALL[P.id] = { step: 0, done: {}, a: {}, ...(vals ? { vals } : {}) }; saveAll(); load(); render(); }
   $("psel").innerHTML = PROBLEMS.map((p, i) => `<option value="${p.id}">${i + 1}. ${esc(p.title)}</option>`).join("") + `<option disabled>More problems coming soon…</option>`;
   $("psel").addEventListener("change", e => choose(e.target.value));
   $("restart").addEventListener("click", () => { if (confirm("Start this problem over? Your answers for it will be cleared.")) restart(); });
   const motionAnim = (() => {
     let raf = 0, t0 = 0, playing = false;
-    const K = 80, SLOW = 8;                                   // 80 px per metre; the hand's 0.176 s plays 8× slower
+    const SLOW = 8;                                           // the hand's stop plays 8× slower
+    // fit every student's numbers in the picture: the speed-up always covers 66 px, and a long speed-up plays faster (at most 3 s)
+    const scale = q => ({ K: 66 / q.x1, FAST: Math.max(1, q.t1 / 3) });
     function plan() { const th = P.forces.find(f => f.type === "thrust").value, a1 = th / P.m, v = P.motion.v0, t1 = v / a1, x1 = v * v / (2 * a1);
       const a2 = (P.motion.vf - v) / P.motion.dt, t2 = P.motion.dt, x2 = v * t2 + 0.5 * a2 * t2 * t2;
       return { a1, t1, x1, a2, t2, x2, rest: 0.6, hold: 1.0 }; }
     function frame(el) {                                      // el: elapsed real seconds
-      const q = plan(), contactDx = 22, startDx = contactDx - q.x1 * K;
+      const q = plan(), { K, FAST } = scale(q), contactDx = 22, startDx = contactDx - q.x1 * K;
       if (el < q.rest) return { dx: startDx, handDx: 0, v: 0, label: "At rest" };
       let t = el - q.rest;
-      if (t < q.t1) return { dx: startDx + 0.5 * q.a1 * t * t * K, handDx: 0, v: q.a1 * t, label: "Speeding up: the fan’s thrust" };
-      t -= q.t1; const tt = t / SLOW;
+      if (t < q.t1 / FAST) { const u = t * FAST; return { dx: startDx + 0.5 * q.a1 * u * u * K, handDx: 0, v: q.a1 * u, label: FAST > 1.05 ? `Speeding up: the fan’s thrust (sped up ×${FAST.toFixed(1)})` : "Speeding up: the fan’s thrust" }; }
+      t -= q.t1 / FAST; const tt = t / SLOW;
       if (tt < q.t2) { const x = P.motion.v0 * tt + 0.5 * q.a2 * tt * tt; return { dx: contactDx + x * K, handDx: x * K, v: P.motion.v0 + q.a2 * tt, label: "The hand slows it (slow motion ×8)" }; }
       return { dx: contactDx + q.x2 * K, handDx: q.x2 * K, v: 0, label: "Stopped" };
     }
-    const total = () => { const q = plan(); return q.rest + q.t1 + q.t2 * SLOW + q.hold; };
+    const total = () => { const q = plan(); return q.rest + q.t1 / scale(q).FAST + q.t2 * SLOW + q.hold; };
     function tick(now) { const el = (now - t0) / 1000; $("sPic").innerHTML = picSVG(null, frame(el));
       if (el < total()) raf = requestAnimationFrame(tick); else { playing = false; $("picplay").disabled = false; $("picnote").textContent = "Click again to replay from start"; renderSheet(); } }
     return {
