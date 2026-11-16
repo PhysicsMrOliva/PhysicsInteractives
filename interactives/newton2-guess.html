@@ -317,23 +317,23 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
     $("sFields").innerHTML = [
       F("m", `${P.m.toFixed(2)} kg`), F("F<sub>g</sub>", done.given ? `mg = ${P.m.toFixed(2)} kg × ${P.g} N/kg = ${d.Fg.toFixed(2)} N` : ""),
       F("a<sub>x</sub>", done.kin ? `${fmt(d.ax)} m/s²` : done.given ? "?" : ""), F("a<sub>y</sub>", done.sum ? "0 m/s²" : ""),
-      F("ΣF<sub>x</sub>", done.n2 ? `${fmt(d.sumFx)} N` : done.sum ? sumExpr(a.sx, xs) : ""), F("ΣF<sub>y</sub>", done.sum ? `${sumExpr(a.sy, ys)} = 0 N` : ""),
+      F("ΣF<sub>x</sub>", done.n2 ? `${fmt(d.sumFx)} N (|ΣF<sub>x</sub>| = ${Math.abs(d.sumFx).toFixed(2)} N, ${d.sumFx < 0 ? "left" : "right"})` : done.sum ? sumExpr(a.sx, xs) : ""), F("ΣF<sub>y</sub>", done.sum ? `${sumExpr(a.sy, ys)} = 0 N` : ""),
       F("v<sub>0x</sub>", done.given ? `${P.motion.v0.toFixed(2)} m/s` : ""), F("v<sub>fx</sub>", done.given ? `${P.motion.vf} m/s` : ""),
-      ...P.forces.filter(f => typeof f.value === "number").map(f => F(`F<sub>${f.type}</sub>`, done.given ? `${f.value.toFixed(2)} N` : "")),
+      ...P.forces.filter(f => typeof f.value === "number").map(f => F(`|F<sub>${f.type}</sub>|`, done.given ? `${f.value.toFixed(2)} N, ${f.dir}` : "")),
       F(`|F<sub>${d.u.type}</sub>|`, done.n2 ? `${d.unknown.toFixed(2)} N` : done.given ? "?" : ""),
       F("Δv", done.kin ? `${P.motion.vf} − ${P.motion.v0.toFixed(2)} m/s = ${fmt(d.dv)} m/s` : ""), F("Δt", done.given ? `${P.motion.dt.toFixed(3)} s` : "")
     ].join("");
     let calc = `<b style="font-family:inherit">Calculations (show all work):</b>`;
     if (done.kin) calc += `<div class="ln">a<sub>x</sub> = Δv / Δt &nbsp;(v<sub>f</sub> = a<sub>x</sub>Δt + v<sub>0</sub>)</div><div class="ln">&nbsp;&nbsp;= ${fmt(d.dv)} (m/s) / ${P.motion.dt.toFixed(3)} (s) = ${fmt(d.ax)} (m/s²)</div>`;
     if (done.n2) { const u = d.u;
-      calc += `<div class="ln">ΣF<sub>x</sub> = ma<sub>x</sub> = ${P.m.toFixed(2)} (kg) × (${fmt(d.ax)} m/s²) = ${fmt(d.sumFx)} (N)</div>
-        <div class="ln">ΣF<sub>x</sub> = ${sumExpr(a.sx, xs)} &nbsp;⇒&nbsp; F<sub>${u.type}</sub> = ${unknownExpr()}</div>
+      calc += `<div class="ln">|ΣF<sub>x</sub>| = |ma<sub>x</sub>| = ${P.m.toFixed(2)} (kg) × ${Math.abs(d.ax).toFixed(2)} (m/s²) = ${Math.abs(d.sumFx).toFixed(2)} (N), ${d.sumFx < 0 ? "left" : "right"} &nbsp;⇒&nbsp; ΣF<sub>x</sub> = ${fmt(d.sumFx)} N</div>
+        <div class="ln">ΣF<sub>x</sub> = ${sumExpr(a.sx, xs)} &nbsp;⇒&nbsp; |F<sub>${u.type}</sub>| = ${unknownExpr()}</div>
         <div class="ln">&nbsp;&nbsp;= ${unknownSub()} = <b>${d.unknown.toFixed(2)} N</b></div>`; }
     $("sCalc").innerHTML = calc;
     $("sGraphs").innerHTML = `<div class="hint" style="text-align:center;font-weight:700;text-decoration:underline">Position vs Time</div>${graphSVG("x", done.graphs ? a.gx : null)}
       <div class="hint" style="text-align:center;font-weight:700;text-decoration:underline;margin-top:4px">Velocity vs Time</div>${graphSVG("v", done.graphs ? a.gv : null)}`;
   }
-  const short = f => `F<sub>${f.type}</sub>`;
+  const short = f => `|F<sub>${f.type}</sub>|`;
   function sumExpr(signs, list) { if (!signs || !list || !list.length) return "?";
     return list.map((f, i) => `${i ? (signs[i] === "-" ? " − " : " + ") : (signs[i] === "-" ? "−" : "")}${short(f)}`).join(""); }
   // rearranged form of ΣFx = (signs)·forces for the unknown, using the student's own signs
@@ -379,7 +379,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
     const a = S.a, d = D();
     if (id === "given") return `<p>Record the values given in the problem.</p>
       <div class="rows"><div class="row"><span class="m">m = ${P.m.toFixed(2)} kg</span><span class="m">v<sub>0x</sub> = ${P.motion.v0.toFixed(2)} m/s</span><span class="m">v<sub>fx</sub> = ${P.motion.vf} m/s</span><span class="m">Δt = ${P.motion.dt.toFixed(3)} s</span>
-        ${P.forces.filter(f => typeof f.value === "number").map(f => `<span class="m">F<sub>${f.type}</sub> = ${f.value.toFixed(2)} N</span>`).join("")}</div>
+        ${P.forces.filter(f => typeof f.value === "number").map(f => `<span class="m">|F<sub>${f.type}</sub>| = ${f.value.toFixed(2)} N, direction: ${f.dir}</span>`).join("")}</div>
       <div class="row"><span>Every problem begins by reading the problem statement. Read/re-read the problem statement and identify the unknown quantity you are ultimately trying to solve for?</span><select id="iUnk"><option value="">choose…</option>${P.forces.map((f, i) => `<option value="${i}" ${a.unk === String(i) ? "selected" : ""}>the ${f.type} force by the ${f.by}</option>`).join("")}<option value="a" ${a.unk === "a" ? "selected" : ""}>the acceleration</option></select></div>
       <div class="row"><span><b>First step is to calculate the ${esc(P.systemLong)}’s weight.</b></span></div>
       <div class="row"><label class="m">F<sub>g</sub> = mg = <input type="text" class="num" id="iFg" value="${esc(a.Fg || "")}" inputmode="decimal"> N</label><span class="hint">(g = ${P.g} N/kg)</span></div></div>
@@ -408,8 +408,9 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
     if (id === "n2") { const xs = a.fd.filter(f => f.dir === "left" || f.dir === "right");
       const opts = rearrangeOptions();
       return `<p>Apply Newton’s 2nd Law in the x-direction, then solve your ΣF<sub>x</sub> equation for the unknown force.</p>
-        <div class="rows"><div class="row"><label class="m">ΣF<sub>x</sub> = ma<sub>x</sub> = <input type="text" class="num" id="isfx" value="${esc(a.sFx || "")}" inputmode="decimal"> N</label></div>
-          <div class="row"><span>Rearrange <span class="m">ΣF<sub>x</sub> = ${sumExpr(a.sx, xs)}</span>:</span></div>
+        <div class="rows"><div class="row"><label class="m">|ΣF<sub>x</sub>| = |ma<sub>x</sub>| = <input type="text" class="num" id="isfx" value="${esc(a.sFx || "")}" inputmode="decimal"> N</label>
+            <label>direction: <select id="isdir"><option value="">choose…</option>${["left", "right"].map(o => `<option ${a.sdir === o ? "selected" : ""}>${o}</option>`).join("")}</select></label></div>
+          <div class="row"><span>Rearrange <span class="m">ΣF<sub>x</sub> = ${sumExpr(a.sx, xs)}</span>:</span><span class="hint">Here ΣF<sub>x</sub> keeps its sign: right is positive and left is negative, so ΣF<sub>x</sub> = −|ΣF<sub>x</sub>| when the net force points left.</span></div>
           <div class="choices">${opts.map((o, i) => `<label class="${a.re != null && +a.re === i ? (o.ok ? "right" : "wrong") : ""}"><input type="radio" name="re" value="${i}" ${a.re != null && +a.re === i ? "checked" : ""}> <span class="m">${o.html}</span></label>`).join("")}</div>
           <div class="row"><span>Enter the <b>magnitude only</b>: |F<sub>${d.u.type}</sub>| is the size of the force, with no sign. Its direction (${d.u.dir}) is already shown by the arrow on your force diagram.</span></div>
           <div class="row"><label class="m">|F<sub>${d.u.type}</sub>| = <input type="text" class="num" id="iun" value="${esc(a.un || "")}" inputmode="decimal"> N</label></div></div>
@@ -477,9 +478,12 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       rec("kin", !a.kMsg);
       saveAll(); render(); });
     if (id === "n2") {
-      $("body").querySelectorAll("input[name=re]").forEach(r => r.addEventListener("change", e => { a.re = e.target.value; a.sFx = $("isfx").value; a.un = $("iun").value; saveAll(); render(); }));
-      $("chk").addEventListener("click", () => { a.sFx = $("isfx").value; a.un = $("iun").value; a.nTried = true; const opts = rearrangeOptions();
-        if (!close(parse(a.sFx), d.sumFx, 0.006, 0.011)) a.nMsg = `ΣF<sub>x</sub> = ma<sub>x</sub> = (${P.m.toFixed(2)} kg)(${fmt(d.ax)} m/s²). Keep the sign.`;
+      $("body").querySelectorAll("input[name=re]").forEach(r => r.addEventListener("change", e => { a.re = e.target.value; a.sFx = $("isfx").value; a.sdir = $("isdir").value; a.un = $("iun").value; saveAll(); render(); }));
+      $("chk").addEventListener("click", () => { a.sFx = $("isfx").value; a.sdir = $("isdir").value; a.un = $("iun").value; a.nTried = true; const opts = rearrangeOptions();
+        const wantDir = d.sumFx < 0 ? "left" : "right";
+        if (parse(a.sFx) < 0 && close(-parse(a.sFx), Math.abs(d.sumFx), 0.006, 0.011)) a.nMsg = "Enter the magnitude |ΣF<sub>x</sub>| without a sign, then choose its direction.";
+        else if (!close(parse(a.sFx), Math.abs(d.sumFx), 0.006, 0.011)) a.nMsg = `|ΣF<sub>x</sub>| = |ma<sub>x</sub>| = (${P.m.toFixed(2)} kg)(${Math.abs(d.ax).toFixed(2)} m/s²).`;
+        else if (a.sdir !== wantDir) a.nMsg = "Check the direction of ΣF<sub>x</sub>: the net force points the same way as the acceleration.";
         else if (a.re == null || !opts[+a.re].ok) a.nMsg = "Choose the correct rearrangement: isolate the unknown force, one step at a time.";
         else if (parse(a.un) < 0 && close(-parse(a.un), d.unknown, 0.01, 0.011)) a.nMsg = `Enter the magnitude only, without the negative sign: |F<sub>${d.u.type}</sub>| is the size of the force. The arrow on your force diagram shows its direction.`;
         else if (!close(parse(a.un), d.unknown, 0.01, 0.011)) a.nMsg = "Substitute into your rearranged equation. Careful with subtracting a negative ΣF<sub>x</sub>.";
@@ -693,7 +697,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       fd: (a.fd || []).filter(f => f.type).map(f => `F_${f.type}, on ${P.system}, by ${f.by || "?"}: ${f.dir || "angled"}, ${f.value || "?"} N`).join(";  ") || "-",
       sum: a.sx ? `Sum F_x = ${plain(sumExpr(a.sx, xs))};  Sum F_y = ${plain(sumExpr(a.sy, ys))};  a_y = ${a.ay || "-"};  Sum F_y = ${a.sFy || "-"} N` : "-",
       kin: `delta v = ${a.dv || "-"} m/s;  a_x = ${a.ax || "-"} m/s^2`,
-      n2: `Sum F_x = m a_x = ${a.sFx || "-"} N;  rearranged: ${a.re != null && a.fd ? plain((rearrangeOptions()[+a.re] || {}).html || "-") : "-"};  |F_${d.u.type}| = ${a.un || "-"} N`,
+      n2: `|Sum F_x| = |m a_x| = ${a.sFx || "-"} N, direction ${a.sdir || "-"};  rearranged: ${a.re != null && a.fd ? plain((rearrangeOptions()[+a.re] || {}).html || "-") : "-"};  |F_${d.u.type}| = ${a.un || "-"} N`,
       graphs: `x-t: ${({ right: "curving, leveling off", line: "straight line up", up: "curving upward", flat: "flat" })[a.gx] || "-"};  v-t: ${({ dec: "decreasing to zero", inc: "increasing", flat: "constant", negdec: "below zero, decreasing" })[a.gv] || "-"}`
     };
     text("Steps", 13, true, [31, 111, 180]);
