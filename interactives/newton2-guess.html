@@ -36,7 +36,17 @@ header { max-width: 1180px; margin: 0 auto; padding: 28px 20px 8px; }
 h1 { font-size: clamp(1.6rem, 3.4vw, 2.4rem); margin: 0 0 4px; letter-spacing: -0.01em; }
 header .back { display: inline-block; margin-bottom: 10px; color: var(--ink); font-weight: 700; }
 header p { margin: 0; color: var(--muted); max-width: 90ch; }
-main { max-width: 1180px; margin: 0 auto; padding: 12px 20px 48px; display: grid; gap: 14px; }
+main { max-width: 1400px; margin: 0 auto; padding: 12px 20px 48px; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 14px 18px; align-items: start; }
+main > section { grid-column: 2; }
+nav.side { grid-column: 1; grid-row: 1 / span 3; position: sticky; top: 12px; padding: 12px; }
+nav.side h3 { font-size: 1rem; margin: 0 0 8px 6px; }
+nav.side ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+nav.side button { width: 100%; text-align: left; font: inherit; border: 0; background: none; color: var(--muted); padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+nav.side button[aria-current="step"] { background: var(--tint); color: var(--ink); font-weight: 700; }
+nav.side button.done::before { content: "✓ "; color: var(--ok); font-weight: 700; }
+nav.side button.locked { opacity: 0.45; cursor: default; }
+nav.side button.locked::before { content: "🔒 "; }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; } main > section, nav.side { grid-column: 1; grid-row: auto; } nav.side { position: static; } }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
 h2 { margin: 0 0 6px; font-size: 1.3rem; } h3 { margin: 0 0 6px; font-size: 1.08rem; }
 .hint { color: var(--muted); font-size: 0.93rem; }
@@ -116,6 +126,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
   <p>Work through a force problem one step at a time: picture, interaction diagram, force diagram, summing the forces, kinematics and Newton’s 2nd Law (F<sub>net</sub> = ma). Your GUESS sheet fills in as you go. As usual, we will use <b>“right and up are positive.”</b></p>
 </header>
 <main>
+  <nav class="panel side" aria-label="Steps of this problem"><h3 id="navtitle">Steps</h3><ol id="stepnav"></ol></nav>
   <section class="panel">
     <div class="bar"><label for="psel" class="hint" style="font-weight:700">Problem</label><select id="psel" style="min-width:min(100%,420px)"></select>
       <button class="btn ghost" id="restart">Start this problem over</button><button class="btn ghost" id="pdfbtn">Download my work (PDF)</button><span class="hint" id="who"></span></div>
@@ -509,11 +520,17 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       STU = { name: n, period: pd }; try { localStorage.setItem(SKEY, JSON.stringify(STU)); } catch (e) {} render(); };
     $("startbtn").addEventListener("click", go1); ["nm", "pd"].forEach(i => $(i).addEventListener("keydown", e => { if (e.key === "Enter") go1(); }));
   }
+  function renderNav(i) {
+    $("navtitle").textContent = `${P.label} steps`;
+    $("stepnav").innerHTML = STEPS.map((st, k) => { const open = k <= S.step, cls = S.done[st.id] ? "done" : open ? "" : "locked";
+      return `<li><button data-k="${k}" class="${cls}" ${k === i ? 'aria-current="step"' : ""} ${open ? "" : 'disabled aria-disabled="true" title="Finish the earlier steps first"'}>${k + 1}. ${esc(st.title)}</button></li>`; }).join("");
+  }
   function render() {
     renderSheet();
     $("who").textContent = STU.name ? `${STU.name} · Period ${STU.period}` : "";
-    if (!STU.name || !STU.period) { renderStart(); return; }
+    if (!STU.name || !STU.period) { $("stepnav").innerHTML = ""; renderStart(); return; }
     const cur = S.step, i = view == null ? cur : view, st = STEPS[i], reviewing = view != null && view < cur && view !== justDone;
+    renderNav(i);
     let h = `<div class="stephead"><span class="n">Step ${i + 1} of ${STEPS.length}</span></div>`;
     if (reviewing) h += `<div class="review">Reviewing a finished step. Use Forward or “Back to current step” to continue.</div>`;
     h += `<h2>${(i === cur || i === justDone) && st.id !== "done" ? `<span class="hint" style="font-size:1rem">Next step:</span> ` : ""}${st.title}</h2>`;
@@ -904,6 +921,8 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
   const GROUPS = [["Example", p => p.label === "Example"], ["Complete Problems 1", p => p.label.startsWith("CP 1.")], ["Complete Problems 2", p => p.label.startsWith("CP 2.")], ["Complete Problems 3", p => p.label.startsWith("CP 3.")], ["Complete Problems 4", p => p.label.startsWith("CP 4.")]];
   $("psel").innerHTML = GROUPS.map(([g, test]) => `<optgroup label="${g}">${PROBLEMS.filter(test).map(p => `<option value="${p.id}">${esc(p.label)}: ${esc(p.title)}</option>`).join("")}</optgroup>`).join("");
   $("psel").addEventListener("change", e => choose(e.target.value));
+  $("stepnav").addEventListener("click", e => { const b = e.target.closest("button[data-k]"); if (!b || b.disabled) return; const k = +b.dataset.k;
+    justDone = null; view = k >= S.step ? null : k; render(); });
   $("restart").addEventListener("click", () => { if (confirm("Start this problem over? Your answers for it will be cleared.")) restart(); });
   const motionAnim = (() => {
     let raf = 0, t0 = 0, playing = false;
