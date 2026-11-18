@@ -114,6 +114,12 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
 .irow .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .irow .chip { padding: 2px 10px; font-size: 0.9rem; }
 .link { font: inherit; border: 0; background: none; color: var(--acc); cursor: pointer; text-decoration: underline; padding: 0; }
+.gt { border-collapse: collapse; margin: 6px 0; }
+.gt th, .gt td { padding: 5px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+.gt input.num { width: 9ch; }
+.gt input.ok { border-color: var(--ok); }
+.gt input.bad { border-color: var(--bad); }
+.gt td.fb { font-size: 0.92rem; }
 .review { background: var(--tint); border-left: 4px solid var(--acc); padding: 8px 12px; border-radius: 0 8px 8px 0; margin-bottom: 10px; }
 .done-hero { text-align: center; }
 .done-hero .big { font-size: 2.6rem; color: var(--ok); line-height: 1; }
@@ -209,7 +215,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       interactions: { Earth: ["gravitational"], track: ["normal"], air: ["thrust"], hand: ["applied"] }, distractors: [],
       forces: v => [{ type: "gravity", by: "Earth", dir: "down", value: "Fg" }, { type: "normal", by: "track", dir: "up", value: "Fg" }, { type: "thrust", by: "air", dir: "right", value: v.Fth }, { type: "applied", by: "hand", dir: "left", value: "?" }],
       givens: (v, s) => [`m = ${f2(v.m)} kg`, `v${sub("0x")} = ${f2(v.v0)} m/s`, `v${sub("fx")} = 0 m/s`, `Δt = ${v.dt.toFixed(3)} s`, `|F${sub("thrust")}| = ${f2(v.Fth)} N, direction: right`],
-      finals: ["F"], calc: [kinDV("x"), stepB("x", false)], graphs: { x: "incLevel", v: "posDec" },
+      kin: v => [["v0", v.v0], ["vf", 0, "Hidden given: it slows “to a stop”, so v<sub>f</sub> = 0."], ["a", null], ["dt", v.dt]], finals: ["F"], calc: [kinDV("x"), stepB("x", false)], graphs: { x: "incLevel", v: "posDec" },
       solve: v => { const g = 9.81, Fg = N2(v.m * g), dv = -v.v0, ax = N2(dv / v.dt), Sx = N2(v.m * ax);
         return { g, m: v.m, Fg, ax, ay: 0, Sx, Sy: 0, dv, dt: v.dt, v0: v.v0, vf: 0, unknown: N2(v.Fth - Sx), uType: "applied", uDir: "left" }; }
     },
@@ -221,7 +227,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       interactions: { Earth: ["gravitational"], air: ["drag"] }, distractors: ["parachute"],
       forces: v => [{ type: "gravity", by: "Earth", dir: "down", value: "Fg" }, { type: "drag", by: "air", dir: "up", value: v.D }],
       givens: v => [`m = ${f0(v.m)} kg`, `|F${sub("drag")}| = ${f0(v.D)} N, direction: up`],
-      finals: ["a", "fnet"], calc: [stepA("y", true)], graphs: { x: "decFaster", v: "negInc" },
+      kin: v => [["a", null]], finals: ["a", "fnet"], calc: [stepA("y", true)], graphs: { x: "decFaster", v: "negInc" },
       solve: v => { const Fg = N2(v.m * 9.81), Sy = N2(v.D - Fg); return { g: 9.81, m: v.m, Fg, ax: 0, ay: N2(Sy / v.m), Sx: 0, Sy }; } },
     { id: "cp1-2", label: "CP 1.2", title: "Skydiver as the parachute opens", g: 9.81, picture: "parachute", axis: "y", velocity: "down",
       system: "teacher", systemLong: "teacher (with parachute)",
@@ -230,7 +236,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       interactions: { Earth: ["gravitational"], air: ["drag"] }, distractors: [],
       forces: v => [{ type: "gravity", by: "Earth", dir: "down", value: "Fg" }, { type: "drag", by: "air", dir: "up", value: v.D }],
       givens: v => [`m = ${f0(v.m)} kg`, `|F${sub("drag")}| = ${f0(v.D)} N, direction: up`],
-      finals: ["a", "fnet"], calc: [stepA("y", true)], graphs: { x: "decLevel", v: "negDec" },
+      kin: v => [["a", null]], finals: ["a", "fnet"], calc: [stepA("y", true)], graphs: { x: "decLevel", v: "negDec" },
       solve: v => { const Fg = N2(v.m * 9.81), Sy = N2(v.D - Fg); return { g: 9.81, m: v.m, Fg, ax: 0, ay: N2(Sy / v.m), Sx: 0, Sy }; } },
     { id: "cp1-3", label: "CP 1.3", title: "Fan cart pushed by its fan", g: 9.81, picture: "fancart", axis: "x", velocity: "right",
       system: "cart", systemLong: "fan cart",
@@ -239,7 +245,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       interactions: { Earth: ["gravitational"], track: ["normal"], air: ["thrust"] }, distractors: [],
       forces: v => [{ type: "gravity", by: "Earth", dir: "down", value: "Fg" }, { type: "normal", by: "track", dir: "up", value: "Fg" }, { type: "thrust", by: "air", dir: "right", value: v.Fth }],
       givens: v => [`m = ${f2(v.m)} kg`, `|F${sub("thrust")}| = ${f2(v.Fth)} N, direction: right`],
-      finals: ["a", "fnet"], calc: [stepA("x", true)], graphs: { x: "incFaster", v: "posInc" },
+      kin: v => [["a", null]], finals: ["a", "fnet"], calc: [stepA("x", true)], graphs: { x: "incFaster", v: "posInc" },
       solve: v => { const Fg = N2(v.m * 9.81), Sx = N2(v.Fth); return { g: 9.81, m: v.m, Fg, ax: N2(Sx / v.m), ay: 0, Sx, Sy: 0 }; } },
     { id: "cp1-4", label: "CP 1.4", title: "Cannonball rising after launch", g: 9.81, picture: "cannonball", axis: "y", velocity: "up",
       system: "cannonball", systemLong: "cannonball",
@@ -248,7 +254,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       interactions: { Earth: ["gravitational"] }, distractors: ["cannon"],
       forces: v => [{ type: "gravity", by: "Earth", dir: "down", value: "Fg" }],
       givens: v => [`m = ${f1(v.m)} kg`],
-      finals: ["a", "fnet"], calc: [stepA("y", true)], graphs: { x: "incLevel", v: "posDec" },
+      kin: v => [["a", null]], finals: ["a", "fnet"], calc: [stepA("y", true)], graphs: { x: "incLevel", v: "posDec" },
       solve: v => { const Fg = N2(v.m * 9.81), Sy = -Fg; return { g: 9.81, m: v.m, Fg, ax: 0, ay: N2(Sy / v.m), Sx: 0, Sy }; } },
     // ---------- Complete Problems 2 (g = 9.81 N/kg) ----------
     { id: "cp2-1", label: "CP 2.1", title: "Bicyclist pedaling against drag", g: 9.81, picture: "bike", axis: "x", velocity: "right",
@@ -258,7 +264,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       interactions: { Earth: ["gravitational"], road: ["normal", "applied"], air: ["drag"] }, distractors: [],
       forces: v => [{ type: "gravity", by: "Earth", dir: "down", value: "Fg" }, { type: "normal", by: "road", dir: "up", value: "Fg" }, { type: "applied", by: "road", dir: "right", value: v.F }, { type: "drag", by: "air", dir: "left", value: v.D }],
       givens: v => [`m = ${f0(v.m)} kg`, `|F${sub("applied")}| = ${f0(v.F)} N, direction: right`, `|F${sub("drag")}| = ${f0(v.D)} N, direction: left`],
-      finals: ["a", "fnet"], calc: [stepA("x", true)], graphs: { x: "incFaster", v: "posInc" },
+      kin: v => [["a", null]], finals: ["a", "fnet"], calc: [stepA("x", true)], graphs: { x: "incFaster", v: "posInc" },
       solve: v => { const Fg = N2(v.m * 9.81), Sx = v.F - v.D; return { g: 9.81, m: v.m, Fg, ax: N2(Sx / v.m), ay: 0, Sx, Sy: 0 }; } },
     { id: "cp2-2", label: "CP 2.2", title: "Bicyclist coasting", g: 9.81, picture: "bike", axis: "x", velocity: "right",
       system: "bicyclist", systemLong: "bicyclist",
@@ -267,7 +273,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       interactions: { Earth: ["gravitational"], road: ["normal"], air: ["drag"] }, distractors: [],
       forces: v => [{ type: "gravity", by: "Earth", dir: "down", value: "Fg" }, { type: "normal", by: "road", dir: "up", value: "Fg" }, { type: "drag", by: "air", dir: "left", value: v.D }],
       givens: v => [`m = ${f0(v.m)} kg`, `|F${sub("drag")}| = ${f0(v.D)} N, direction: left`],
-      finals: ["a", "fnet"], calc: [stepA("x", true)], graphs: { x: "incLevel", v: "posDec" },
+      kin: v => [["a", null]], finals: ["a", "fnet"], calc: [stepA("x", true)], graphs: { x: "incLevel", v: "posDec" },
       solve: v => { const Fg = N2(v.m * 9.81), Sx = -v.D; return { g: 9.81, m: v.m, Fg, ax: N2(Sx / v.m), ay: 0, Sx, Sy: 0 }; } },
     { id: "cp2-3", label: "CP 2.3", title: "Model rocket during its flight", g: 9.81, picture: "rocket", axis: "y", velocity: "up",
       system: "rocket", systemLong: "model rocket",
@@ -276,7 +282,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       interactions: { Earth: ["gravitational"], "exhaust gases": ["thrust"], air: ["drag"] }, distractors: [],
       forces: v => [{ type: "gravity", by: "Earth", dir: "down", value: "Fg" }, { type: "thrust", by: "exhaust gases", dir: "up", value: v.Fth }, { type: "drag", by: "air", dir: "down", value: v.D }],
       givens: v => [`m = ${f2(v.m)} kg`, `|F${sub("thrust")}| = ${f2(v.Fth)} N, direction: up`, `|F${sub("drag")}| = ${f2(v.D)} N, direction: down`],
-      finals: ["a", "fnet"], calc: [stepA("y", true)], graphs: { x: "incFaster", v: "posInc" },
+      kin: v => [["a", null]], finals: ["a", "fnet"], calc: [stepA("y", true)], graphs: { x: "incFaster", v: "posInc" },
       solve: v => { const Fg = N2(v.m * 9.81), Sy = N2(v.Fth - Fg - v.D); return { g: 9.81, m: v.m, Fg, ax: 0, ay: N2(Sy / v.m), Sx: 0, Sy }; } },
     // ---------- Complete Problems 3 (g = 9.81 N/kg) ----------
     { id: "cp3-1", label: "CP 3.1", title: "Bicyclist speeding up against drag", g: 9.81, picture: "bike", axis: "x", velocity: "right",
@@ -286,7 +292,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       interactions: { Earth: ["gravitational"], road: ["normal", "applied"], air: ["drag"] }, distractors: [],
       forces: v => [{ type: "gravity", by: "Earth", dir: "down", value: "Fg" }, { type: "normal", by: "road", dir: "up", value: "Fg" }, { type: "applied", by: "road", dir: "right", value: "?" }, { type: "drag", by: "air", dir: "left", value: v.D }],
       givens: v => [`m = ${f0(v.m)} kg`, `speeding up at ${f1(v.a)} m/s² (moving right)`, `|F${sub("drag")}| = ${f0(v.D)} N, direction: left`],
-      finals: ["F"], calc: [stepB("x", true)], graphs: { x: "incFaster", v: "posInc" },
+      kin: v => [["a", v.a, "Speeding up while moving right: the acceleration points right (+)."]], finals: ["F"], calc: [stepB("x", true)], graphs: { x: "incFaster", v: "posInc" },
       solve: v => { const Fg = N2(v.m * 9.81), Sx = N2(v.m * v.a); return { g: 9.81, m: v.m, Fg, ax: v.a, ay: 0, Sx, Sy: 0, unknown: N2(Sx + v.D), uType: "applied", uDir: "right" }; } },
     { id: "cp3-2", label: "CP 3.2", title: "Model rocket speeding up at take-off", g: 9.81, picture: "rocket", axis: "y", velocity: "up",
       system: "rocket", systemLong: "model rocket",
@@ -295,7 +301,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       interactions: { Earth: ["gravitational"], "exhaust gases": ["thrust"], air: ["drag"] }, distractors: [],
       forces: v => [{ type: "gravity", by: "Earth", dir: "down", value: "Fg" }, { type: "thrust", by: "exhaust gases", dir: "up", value: "?" }, { type: "drag", by: "air", dir: "down", value: v.D }],
       givens: v => [`m = ${f2(v.m)} kg`, `speeding up at ${f1(v.a)} m/s² (moving up)`, `|F${sub("drag")}| = ${f2(v.D)} N, direction: down`],
-      finals: ["F"], calc: [stepB("y", true)], graphs: { x: "incFaster", v: "posInc" },
+      kin: v => [["a", v.a, "Speeding up while moving up: the acceleration points up (+)."]], finals: ["F"], calc: [stepB("y", true)], graphs: { x: "incFaster", v: "posInc" },
       solve: v => { const Fg = N2(v.m * 9.81), Sy = N2(v.m * v.a); return { g: 9.81, m: v.m, Fg, ax: 0, ay: v.a, Sx: 0, Sy, unknown: N2(Sy + Fg + v.D), uType: "thrust", uDir: "up" }; } },
     { id: "cp3-3", label: "CP 3.3", title: "Bicyclist at constant speed", g: 9.81, picture: "bike", axis: "x", velocity: "right",
       system: "bicyclist", systemLong: "bicyclist",
@@ -304,7 +310,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       interactions: { Earth: ["gravitational"], road: ["normal", "applied"], air: ["drag"] }, distractors: [],
       forces: v => [{ type: "gravity", by: "Earth", dir: "down", value: "Fg" }, { type: "normal", by: "road", dir: "up", value: "Fg" }, { type: "applied", by: "road", dir: "right", value: "?" }, { type: "drag", by: "air", dir: "left", value: v.D }],
       givens: v => [`m = ${f0(v.m)} kg`, "constant speed (moving right)", `|F${sub("drag")}| = ${f0(v.D)} N, direction: left`],
-      finals: ["F"], calc: [stepB("x", true)], graphs: { x: "incLine", v: "posConst" },
+      kin: v => [["a", 0, "Hidden given: “constant speed” means a = 0."]], finals: ["F"], calc: [stepB("x", true)], graphs: { x: "incLine", v: "posConst" },
       solve: v => { const Fg = N2(v.m * 9.81); return { g: 9.81, m: v.m, Fg, ax: 0, ay: 0, Sx: 0, Sy: 0, unknown: v.D, uType: "applied", uDir: "right" }; } },
     { id: "cp3-4", label: "CP 3.4", title: "Student on a scale in an elevator", g: 9.81, picture: "elevator", axis: "y", velocity: "down",
       system: "student", systemLong: "student", weightGiven: true,
@@ -313,7 +319,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       interactions: { Earth: ["gravitational"], scale: ["normal"] }, distractors: ["elevator floor"],
       forces: v => [{ type: "gravity", by: "Earth", dir: "down", value: "Fg" }, { type: "normal", by: "scale", dir: "up", value: "?" }],
       givens: v => [`|F${sub("g")}| = ${f0(v.W)} N (the student’s weight)`, `speed ${v.inc ? "increasing" : "decreasing"} at ${f1(v.a)} m/s² (moving down)`],
-      finals: ["F"], calc: [stepB("y", true)], graphs: v => v.inc ? { x: "decFaster", v: "negInc" } : { x: "decLevel", v: "negDec" },
+      kin: v => [["a", v.inc ? -v.a : v.a, v.inc ? "Moving down and speeding up: the acceleration points down (−)." : "Moving down and slowing down: the acceleration points up (+)."]], finals: ["F"], calc: [stepB("y", true)], graphs: v => v.inc ? { x: "decFaster", v: "negInc" } : { x: "decLevel", v: "negDec" },
       solve: v => { const m = N2(v.W / 9.81), ay = v.inc ? -v.a : v.a, Sy = N2(m * ay); return { g: 9.81, m, Fg: v.W, ax: 0, ay, Sx: 0, Sy, unknown: N2(Sy + v.W), uType: "normal", uDir: "up" }; } },
     // ---------- Complete Problems 4 (g = 9.81 N/kg) ----------
     { id: "cp4-1", label: "CP 4.1", title: "Bicyclist starting from rest", g: 9.81, picture: "bike", axis: "x", velocity: "right",
@@ -323,7 +329,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       interactions: { Earth: ["gravitational"], road: ["normal", "applied"], air: ["drag"] }, distractors: [],
       forces: v => [{ type: "gravity", by: "Earth", dir: "down", value: "Fg" }, { type: "normal", by: "road", dir: "up", value: "Fg" }, { type: "applied", by: "road", dir: "right", value: v.F }, { type: "drag", by: "air", dir: "left", value: v.D }],
       givens: v => [`m = ${f0(v.m)} kg`, `v${sub("0x")} = 0 m/s`, `Δt = ${f1(v.dt)} s`, `|F${sub("applied")}| = ${f0(v.F)} N, direction: right`, `|F${sub("drag")}| = ${f0(v.D)} N, direction: left`],
-      finals: ["a", "d", "vf"], calc: [stepA("x", false), kinFwd("x", ["d", "vf"])], graphs: { x: "incFaster", v: "zeroPos" },
+      kin: v => [["v0", 0, "Hidden given: “initially at rest” means v<sub>0</sub> = 0."], ["vf", null], ["a", null], ["dt", v.dt], ["d", null]], finals: ["a", "d", "vf"], calc: [stepA("x", false), kinFwd("x", ["d", "vf"])], graphs: { x: "incFaster", v: "zeroPos" },
       solve: v => { const Fg = N2(v.m * 9.81), Sx = v.F - v.D, ax = N2(Sx / v.m); return { g: 9.81, m: v.m, Fg, ax, ay: 0, Sx, Sy: 0, dt: v.dt, v0: 0, d: N2(0.5 * ax * v.dt * v.dt), vf: N2(ax * v.dt) }; } },
     { id: "cp4-2", label: "CP 4.2", title: "Model rocket taking off from rest", g: 9.81, picture: "rocket", axis: "y", velocity: "up",
       system: "rocket", systemLong: "model rocket",
@@ -332,7 +338,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       interactions: { Earth: ["gravitational"], "exhaust gases": ["thrust"], air: ["drag"] }, distractors: [],
       forces: v => [{ type: "gravity", by: "Earth", dir: "down", value: "Fg" }, { type: "thrust", by: "exhaust gases", dir: "up", value: "?" }, { type: "drag", by: "air", dir: "down", value: v.D }],
       givens: v => [`m = ${f2(v.m)} kg`, `v${sub("0y")} = 0 m/s`, `v${sub("fy")} = ${f0(v.vf)} m/s`, `Δt = ${f1(v.dt)} s`, `|F${sub("drag")}| = ${f2(v.D)} N, direction: down`],
-      finals: ["a", "F", "d"], calc: [kinDV("y"), stepB("y", false), kinFwd("y", ["d"])], graphs: { x: "incFaster", v: "zeroPos" },
+      kin: v => [["v0", 0, "Hidden given: “initially at rest” means v<sub>0</sub> = 0."], ["vf", v.vf], ["a", null], ["dt", v.dt], ["d", null]], finals: ["a", "F", "d"], calc: [kinDV("y"), stepB("y", false), kinFwd("y", ["d"])], graphs: { x: "incFaster", v: "zeroPos" },
       solve: v => { const Fg = N2(v.m * 9.81), ay = N2(v.vf / v.dt), Sy = N2(v.m * ay); return { g: 9.81, m: v.m, Fg, ax: 0, ay, Sx: 0, Sy, dv: v.vf, dt: v.dt, v0: 0, vf: v.vf, d: N2(0.5 * ay * v.dt * v.dt), unknown: N2(Sy + Fg + v.D), uType: "thrust", uDir: "up" }; } },
     { id: "cp4-3", label: "CP 4.3", title: "Ball dropped from a height", g: 9.81, picture: "ball", axis: "y", velocity: "down",
       system: "ball", systemLong: "ball",
@@ -341,7 +347,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       interactions: { Earth: ["gravitational"] }, distractors: ["student"],
       forces: v => [{ type: "gravity", by: "Earth", dir: "down", value: "Fg" }],
       givens: v => [`m = ${f1(v.m)} kg`, `height = ${f0(v.h)} m`, `v${sub("0y")} = 0 m/s (dropped)`],
-      finals: ["a", "dt", "vf"], calc: [stepA("y", false), kinFall()], graphs: { x: "decFaster", v: "zeroNeg" },
+      kin: v => [["v0", 0, "Hidden given: a dropped ball starts from rest, so v<sub>0</sub> = 0."], ["vf", null], ["a", null, "", -9.81], ["dt", null], ["d", -v.h, "It falls down, so Δy is negative: Δy = −(the height)."]], finals: ["a", "dt", "vf"], calc: [stepA("y", false), kinFall()], graphs: { x: "decFaster", v: "zeroNeg" },
       solve: v => { const Fg = N2(v.m * 9.81), Sy = -Fg, ay = N2(Sy / v.m), d = -v.h, dt = N2(Math.sqrt(2 * d / ay)); return { g: 9.81, m: v.m, Fg, ax: 0, ay, Sx: 0, Sy, v0: 0, d, dt, vf: N2(ay * dt) }; } }
   ];
 
@@ -553,14 +559,24 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
     return [["a", `the acceleration, a${sub(ax)}`], ["fnet", "the size of the net force, |F<sub>net</sub>|"], ...(u ? [["F", `the ${u.type} force by the ${u.by}`]] : [["F", "an unknown force"]]),
       ["d", `the displacement, Δ${ax}`], ["dt", "the time, Δt"], ["vf", `the final velocity, v${sub("f" + ax)}`]]; };
 
+  function givenRows() {
+    const ax = P.axis, rows = [];
+    if (P.weightGiven) { rows.push({ k: "Fg", label: "|F<sub>g</sub>|", unit: "N", val: SOL.Fg }); rows.push({ k: "m", label: "m", unit: "kg", val: null }); }
+    else rows.push({ k: "m", label: "m", unit: "kg", val: SOL.m });
+    P.forceList.forEach(f => { if (f.type === "gravity" || f.value === "Fg") return;
+      rows.push({ k: "F_" + f.type, label: `|F<sub>${f.type}</sub>|`, unit: "N", val: f.value === "?" ? null : f.value }); });
+    const LAB = { v0: [`v<sub>0${ax}</sub>`, "m/s"], vf: [`v<sub>f${ax}</sub>`, "m/s"], a: [`a<sub>${ax}</sub>`, "m/s²"], dt: ["Δt", "s"], d: [`Δ${ax}`, "m"] };
+    (P.kin ? P.kin(V) : []).forEach(([k, val, hint, also]) => rows.push({ k, label: LAB[k][0], unit: LAB[k][1], val, hint, also }));
+    return rows;
+  }
   function stepHTML(id) {
     const a = S.a, s = SOL, ax = P.axis, other = ax === "x" ? "y" : "x";
-    if (id === "given") { const fin = a.fin || [];
-      return `<p>Record the values given in the problem.</p>
-      <div class="rows"><div class="row">${P.givens(V, s).map(t => `<span class="m">${t}</span>`).join("")}</div>
-      <div class="row" style="display:block"><span>Every problem begins by reading the problem statement. Read/re-read the problem statement and identify the unknown quantities you are ultimately trying to solve for. <span class="hint">(Check all that apply.)</span></span>
-        <div class="choices" style="margin-top:6px">${UNK().map(([k, t]) => `<label><input type="checkbox" name="fin" value="${k}" ${fin.includes(k) ? "checked" : ""}> <span>${t}</span></label>`).join("")}</div></div>
-      <div class="row"><span><b>First step is to calculate the ${esc(P.systemLong)}’s ${P.weightGiven ? "mass" : "weight"}.</b></span></div>
+    if (id === "given") { const gv = a.gv || {}, rows = givenRows();
+      return `<p>Every problem begins by reading the problem statement. Read/re-read it, then type each value it gives you (including hidden givens) and <b>?</b> for each unknown. Use a negative sign for ${P.axis === "x" ? "left" : "down"} (right and up are positive). Forces are entered as magnitudes.</p>
+      <table class="gt"><thead><tr><th>Quantity</th><th>Value</th><th>Units</th><th></th></tr></thead><tbody>${rows.map(r => { const st = (a.gfb || {})[r.k];
+        return `<tr><td class="m">${r.label}</td><td><input type="text" class="num ${st ? (st === "ok" ? "ok" : "bad") : ""}" data-g="${r.k}" value="${esc(gv[r.k] || "")}" autocomplete="off" spellcheck="false" aria-label="${r.label.replace(/<[^>]+>/g, "")}"></td><td>${r.unit}</td><td class="fb ${st === "ok" ? "ok" : ""}">${st ? (st === "ok" ? "✓" : st) : ""}</td></tr>`; }).join("")}</tbody></table>
+      <p class="hint">Tip: values may be written in the problem, or hidden in words like “from rest” or “constant speed”.</p>
+      <div class="rows"><div class="row"><span><b>First step is to calculate the ${esc(P.systemLong)}’s ${P.weightGiven ? "mass" : "weight"}.</b></span></div>
       <div class="row">${P.weightGiven ? `<label class="m">m = F<sub>g</sub> / g = <input type="text" class="num" id="iFg" value="${esc(a.Fg || "")}" inputmode="decimal"> kg</label>`
         : `<label class="m">F<sub>g</sub> = mg = <input type="text" class="num" id="iFg" value="${esc(a.Fg || "")}" inputmode="decimal"> N</label>`}<span class="hint">(g = ${P.g} N/kg)</span></div></div>
       <button class="btn ghost" id="chk">Check</button>${fbP(a.gTried, S.done.given, `Correct! ${P.weightGiven ? `m = ${nf(s.Fg)} N ÷ ${P.g} N/kg = ${nf(s.m)} kg` : `F<sub>g</sub> = (${nf(s.m)} kg)(${P.g} N/kg) = ${nf(s.Fg)} N`}.`, a.gMsg)}${nextBtn("given")}`; }
@@ -613,9 +629,16 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
     const a = S.a, s = SOL, go = () => { justDone = null; view = null; render(); window.scrollTo({ top: $("stage").getBoundingClientRect().top + scrollY - 12, behavior: "smooth" }); };
     if ($("go")) $("go").addEventListener("click", go);
     if (id === "given") $("chk").addEventListener("click", () => {
-      a.Fg = $("iFg").value; a.fin = [...$("body").querySelectorAll("input[name=fin]:checked")].map(x => x.value); a.gTried = true;
-      const want = [...P.finals].sort().join(","), got = [...a.fin].sort().join(",");
-      if (got !== want) a.gMsg = a.fin.length ? "Read the problem statement again: which quantities does it ask you to find? Check all of them, and only those." : "Choose the unknown quantities you are solving for.";
+      a.Fg = $("iFg").value; a.gv = a.gv || {}; a.gfb = {}; a.gTried = true; let bad = 0;
+      $("body").querySelectorAll("[data-g]").forEach(x => { a.gv[x.dataset.g] = x.value.trim(); });
+      givenRows().forEach(r => { const raw = (a.gv[r.k] || "").trim(), n = parse(raw); let msg = "ok";
+        if (r.val == null) { if (raw === "?" || (r.also != null && isFinite(n) && close(n, r.also, 0.015, 0.02))) msg = "ok";
+          else msg = raw === "" ? "Is this given or unknown? Unknowns get a ?." : "This isn’t given in the problem: mark it ?."; }
+        else if (raw === "?") msg = r.hint || "This one is given in the problem.";
+        else if (raw === "" || !isFinite(n)) msg = "Enter the given value.";
+        else if (!close(n, r.val, 0.015, 0.02)) msg = Math.abs(r.val) > 0.02 && close(-n, r.val, 0.015, 0.02) ? (r.k.startsWith("F_") || r.k === "Fg" || r.k === "m" ? "Forces and mass are magnitudes: no negative sign." : "Check the sign (up and right are positive).") : (r.hint || "Check this value in the problem.");
+        a.gfb[r.k] = msg; if (msg !== "ok") bad++; });
+      if (bad) a.gMsg = `Fix the highlighted ${bad === 1 ? "row" : "rows"} and check again.`;
       else if (!close(parse(a.Fg), P.weightGiven ? s.m : s.Fg)) a.gMsg = P.weightGiven ? `Check m: use m = F<sub>g</sub> / g with g = ${P.g} N/kg.` : `Check F<sub>g</sub>: use F<sub>g</sub> = mg with g = ${P.g} N/kg.`;
       else { finish("given"); a.gMsg = ""; }
       rec("given", !a.gMsg); saveAll(); render(); });
@@ -865,7 +888,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
     const xs = (a.fd || []).filter(f => f.dir === "left" || f.dir === "right"), ys = (a.fd || []).filter(f => f.dir === "up" || f.dir === "down");
     const UN = Object.fromEntries(UNK());
     const ans = {
-      given: `Unknowns chosen: ${(a.fin || []).map(k => UN[k]).join(", ") || "-"};  ${P.weightGiven ? "m" : "F_g"} = ${a.Fg || "-"} ${P.weightGiven ? "kg" : "N"}`,
+      given: `${givenRows().map(r => `${plain(r.label)} = ${(a.gv || {})[r.k] || "-"}`).join(";  ")};  ${P.weightGiven ? "m" : "F_g"} = ${a.Fg || "-"} ${P.weightGiven ? "kg" : "N"}`,
       pic: `Velocity direction: ${a.vel || "-"}`,
       id: (a.idl || []).map(x => `${x.obj}: ${x.types.join(", ") || "?"}`).join(";  ") || "-",
       fd: (a.fd || []).filter(f => f.type).map(f => `F_${f.type}, on ${P.system}, by ${f.by || "?"}: ${f.dir || "angled"}, ${f.value || "?"} N`).join(";  ") || "-",
