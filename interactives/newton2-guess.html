@@ -161,7 +161,19 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-  const parse = s => Number(String(s).trim().replace(/−/g, "-").replace(",", ".").replace(/\s*(m\/s²|m\/s2|m\/s|n|s|kg)$/i, ""));
+  // a number, or a simple calculation (+ − × ÷ and parentheses), with any units at the end ignored
+  const parse = s => {
+    let t = String(s == null ? "" : s).trim().replace(/[−–]/g, "-").replace(/[×·]/g, "*").replace(/÷/g, "/").replace(/,/g, ".")
+      .replace(/\s*(m\/s²|m\/s\^2|m\/s2|m\/s|n|s|kg|m)\s*$/i, "").trim();
+    if (!t || !/^[0-9.+\-*/()\s]+$/.test(t)) return NaN;
+    let i = 0; const sp = () => { while (t[i] === " ") i++; };
+    const num = () => { sp(); if (t[i] === "(") { i++; const v = expr(); sp(); if (t[i] !== ")") throw 0; i++; return v; }
+      if (t[i] === "-") { i++; return -num(); } if (t[i] === "+") { i++; return num(); }
+      const m = /^(\d+\.?\d*|\.\d+)/.exec(t.slice(i)); if (!m) throw 0; i += m[0].length; return parseFloat(m[0]); };
+    const term = () => { let v = num(); for (;;) { sp(); if (t[i] === "*") { i++; v *= num(); } else if (t[i] === "/") { i++; v /= num(); } else return v; } };
+    const expr = () => { let v = term(); for (;;) { sp(); if (t[i] === "+") { i++; v += term(); } else if (t[i] === "-") { i++; v -= term(); } else return v; } };
+    try { const v = expr(); sp(); return i === t.length && isFinite(v) ? v : NaN; } catch (e) { return NaN; }
+  };
   const fmt = (v, d = 2) => (v < 0 ? "−" : "") + Math.abs(v).toFixed(d);
   const sig3 = v => { const t = Number(v.toPrecision(3)); return (t < 0 ? "−" : "") + Math.abs(t).toString(); };
   const close = (a, b, rel = 0.012, abs = 0.011) => isFinite(a) && Math.abs(a - b) <= Math.max(abs, Math.abs(b) * rel);
@@ -374,7 +386,9 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
   }
   const valOf = f => f.value === "Fg" ? SOL.Fg : f.value === "?" ? SOL.unknown : f.value;
   const unkForce = () => P.forceList.find(f => f.value === "?");
-  const nf = x => fmt(x, 2);
+  const nf = x => { x = Number(x); if (!isFinite(x)) return String(x); if (x === 0) return "0";
+    const r = Number(x.toPrecision(3)), d = Math.max(0, 2 - Math.floor(Math.log10(Math.abs(r))));
+    return (r < 0 ? "−" : "") + Math.abs(r).toFixed(d); };
 
   // the picture for problems with a worksheet picture: the picture plus the student's velocity vector
   function imgPicSVG(vel) {
@@ -467,7 +481,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
       const d = { up: [0, -1], down: [0, 1], right: [1, 0], left: [-1, 0] }[f.dir]; if (!d) return;
       const x2 = cx + d[0] * L, y2 = cy + d[1] * L; s += arrowSVG(cx, cy, x2, y2, col, 3.5, unk);
       const lab = `F<tspan baseline-shift="sub" font-size="8">${esc(f.type || "?")}, on ${esc(P.system)}, by ${esc(f.by || "?")}</tspan>`;
-      const val = unk ? (opts.solved != null ? `= ? = ${opts.solved.toFixed(2)} N` : "= ?") : `= ${esc(String(f.value).replace("-", "−"))} N`;
+      const val = unk ? (opts.solved != null ? `= ? = ${nf(opts.solved)} N` : "= ?") : `= ${esc(String(f.value).replace("-", "−"))} N`;
       if (f.dir === "up") s += `<text x="${cx + 8}" y="${y2 + 4}" font-size="11" font-weight="700" fill="${col}">${lab}<tspan x="${cx + 14}" dy="15">${val}</tspan></text>`;
       if (f.dir === "down") s += `<text x="${cx + 8}" y="${y2 - 10}" font-size="11" font-weight="700" fill="${col}">${lab}<tspan x="${cx + 14}" dy="15">${val}</tspan></text>`;
       if (f.dir === "right") s += `<text x="${Math.min(x2 + 4, 186)}" y="${cy - 22}" font-size="11" font-weight="700" fill="${col}">${lab}<tspan x="${Math.min(x2 + 10, 192)}" dy="15">${val}</tspan></text>`;
@@ -475,7 +489,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
     });
     if (opts.net != null) { const ay = opts.netAxis === "y";
       s += (Math.abs(opts.net) < 0.005 ? "" : ay ? arrowSVG(16, opts.net < 0 ? 22 : 62, 16, opts.net < 0 ? 62 : 22, ink, 2.5) : arrowSVG(opts.net < 0 ? 58 : 10, 26, opts.net < 0 ? 10 : 58, 26, ink, 2.5))
-        + `<text x="${ay ? 26 : 10}" y="${ay ? 46 : 16}" font-size="11" font-weight="700" fill="${ink}">ΣF<tspan baseline-shift="sub" font-size="8">${ay ? "y" : "x"}</tspan> = ${fmt(opts.net)} N</text>`; }
+        + `<text x="${ay ? 26 : 10}" y="${ay ? 46 : 16}" font-size="11" font-weight="700" fill="${ink}">ΣF<tspan baseline-shift="sub" font-size="8">${ay ? "y" : "x"}</tspan> = ${nf(opts.net)} N</text>`; }
     return s + `<circle cx="${cx}" cy="${cy}" r="6" fill="${ink}"/></svg>`;
   }
   // ================= the sheet =================
@@ -596,7 +610,7 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
         <button class="btn ghost" id="chk">Check</button>${fbP(a.sTried, S.done.sum, `Correct! ΣF<sub>x</sub> = ${sumExpr(a.sx, onAxis(a.fd, "x"))} and ΣF<sub>y</sub> = ${sumExpr(a.sy, onAxis(a.fd, "y"))}.`, a.sMsg)}${nextBtn("sum")}`; }
     const c = P.calc.find(c => c.id === id);
     if (c) { const st = (a.c = a.c || {})[id] = (a.c || {})[id] || {};
-      return `<p>${c.intro}</p><div class="rows">${c.fields.map((f, n) => f.rearrange
+      return `<p>${c.intro}</p><p class="hint">Type a number, or the calculation itself (for example −0.75 / 0.176).</p><div class="rows">${c.fields.map((f, n) => f.rearrange
           ? `<div class="row"><span>Rearrange <span class="m">ΣF${sub(ax)} = ${sumExpr(a["s" + ax], onAxis(a.fd, ax))}</span> for the unknown force:</span><span class="hint">ΣF${sub(ax)} keeps its sign here (${ax === "x" ? "left" : "down"} is negative).</span></div>
              <div class="choices">${rearrangeOptions().map((o, i) => `<label class="${st.re != null && +st.re === i ? (o.ok ? "right" : "wrong") : ""}"><input type="radio" name="re" value="${i}" ${st.re != null && +st.re === i ? "checked" : ""}> <span class="m">${o.html}</span></label>`).join("")}</div>`
           : `${f.mag ? `<div class="row"><span>Enter the <b>magnitude only</b>: ${fieldLabel(f).replace(" =", "")} is the size of the force, with no sign. Its direction (${s.uDir}) is shown by the arrow on your force diagram.</span></div>` : ""}
