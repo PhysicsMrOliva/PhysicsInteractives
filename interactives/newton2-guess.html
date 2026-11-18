@@ -888,29 +888,15 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
     if (!window.jspdf) { window.print(); return; }
     const plain = x => String(x == null ? "" : x).replace(/<sub>(.*?)<\/sub>/g, "_$1").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
       .replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/[–—]/g, "-").replace(/−/g, "-").replace(/Σ/g, "Sum ").replace(/Δ/g, " delta ").replace(/  +/g, " ").replace(/⇒/g, "=>").replace(/×/g, "x").replace(/²/g, "^2").replace(/[^\x00-\xff]/g, "");
-    const a = S.a, d = SOL, doc = new window.jspdf.jsPDF({ unit: "pt", format: "letter" }), PW = 612, Mg = 50, TW = PW - 2 * Mg; let y = Mg;
-    const need = h => { if (y + h > 792 - Mg) { doc.addPage(); y = Mg; } };
-    const text = (t, size = 10.5, bold = false, color = [20, 30, 35], x = Mg) => { doc.setFont("helvetica", bold ? "bold" : "normal"); doc.setFontSize(size); doc.setTextColor(...color);
-      doc.splitTextToSize(plain(t), TW - (x - Mg)).forEach(l => { need(size * 1.4); doc.text(l, x, y + size); y += size * 1.4; }); };
-    const okc = b => b ? [26, 127, 55] : [180, 35, 24];
-    const done = STEPS.filter(st => st.id !== "done" && S.done[st.id]).length, total = STEPS.length - 1;
-    text("Newton's 2nd Law: GUESS problem solving", 17, true);
-    text(`Name: ${STU.name || ""}     Period: ${STU.period || ""}     Downloaded: ${new Date().toLocaleString()}`, 10.5);
-    text(`Problem: ${P.label}, ${P.title}${S.restarts ? `     (started over ${S.restarts} time${S.restarts > 1 ? "s" : ""})` : ""}`, 10.5);
-    text(P.text, 10, false, [60, 70, 75]);
-    text(`Steps complete: ${done} of ${total}`, 11, true, okc(done === total)); y += 4;
-    const xs = (a.fd || []).filter(f => f.dir === "left" || f.dir === "right"), ys = (a.fd || []).filter(f => f.dir === "up" || f.dir === "down");
-    const UN = Object.fromEntries(UNK());
-    const ans = {
-      given: `${givenRows().map(r => `${plain(r.label)} = ${(a.gv || {})[r.k] || "-"}`).join(";  ")};  ${P.weightGiven ? "m" : "F_g"} = ${a.Fg || "-"} ${P.weightGiven ? "kg" : "N"}`,
-      pic: `Velocity direction: ${a.vel || "-"}`,
-      id: (a.idl || []).map(x => `${x.obj}: ${x.types.join(", ") || "?"}`).join(";  ") || "-",
-      fd: (a.fd || []).filter(f => f.type).map(f => `F_${f.type}, on ${P.system}, by ${f.by || "?"}: ${f.dir || "angled"}, ${f.value || "?"} N`).join(";  ") || "-",
-      sum: a.sx ? `Sum F_x = ${plain(sumExpr(a.sx, onAxis(a.fd, "x")))};  Sum F_y = ${plain(sumExpr(a.sy, onAxis(a.fd, "y")))};  a = ${a.ao || "-"} and Sum F = ${a.so || "-"} N in the other direction` : "-",
-      graphs: `x-t: ${GNAMES[a.gx] || "-"};  v-t: ${GNAMES[a.gv] || "-"}`
-    };
-    P.calc.forEach(c => { const st = (a.c || {})[c.id] || {};
-      ans[c.id] = c.fields.map(f => f.rearrange ? `rearranged: ${st.re != null ? plain((rearrangeOptions()[+st.re] || {}).html || "-") : "-"}` : `${plain(fieldLabel(f))} ${st[f.k] || "-"} ${plain(f.unit)}`).join(";  "); });
+    const a = S.a, d = SOL, doc = new window.jspdf.jsPDF({ unit: "pt", format: "letter" }), PW = 612, PH = 792, Mg = 40, TW = PW - 2 * Mg; let y = Mg;
+    const text = (t, size = 10.5, bold = false, color = [20, 30, 35]) => { doc.setFont("helvetica", bold ? "bold" : "normal"); doc.setFontSize(size); doc.setTextColor(...color);
+      doc.splitTextToSize(plain(t), TW).forEach(l => { doc.text(l, Mg, y + size); y += size * 1.35; }); };
+    // one page: who and when, the problem, then the GUESS sheet
+    const now = new Date();
+    text("Newton's 2nd Law: GUESS problem solving", 16, true);
+    text(`Name: ${STU.name || ""}     Period: ${STU.period || ""}     Date: ${now.toLocaleDateString()}     Time: ${now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`, 10.5);
+    y += 2; text(`${P.label}: ${P.title}`, 11, true);
+    text(P.text, 10, false, [40, 50, 55]); y += 8;
     // the GUESS sheet exactly as it looks on the page, captured in light colours (the Play button left out)
     const de = document.documentElement, prev = de.getAttribute("data-theme"); de.setAttribute("data-theme", "light");
     if (motionAnim.playing) motionAnim.stop();
@@ -918,36 +904,28 @@ svg.canvas { width: 100%; height: auto; display: block; background: var(--tint);
     let shot = null;
     try { if (window.html2canvas) { const c = await window.html2canvas(document.querySelector(".sheet"), { scale: 2, backgroundColor: "#ffffff", logging: false, ignoreElements: el => el.id === "picbar" });
       shot = { src: c.toDataURL("image/png"), w: c.width, h: c.height }; } } catch (e) { shot = null; }
-    if (prev) de.setAttribute("data-theme", prev); else de.removeAttribute("data-theme");
-    renderSheet();
-    if (shot) {
-      const h = TW * shot.h / shot.w; need(h + 24); y += 6; text("GUESS sheet", 13, true, [31, 111, 180]);
-      doc.addImage(shot.src, "PNG", Mg, y, TW, h); y += h + 6;
-    } else {   // no capture available: the separate drawings and the calculations, as before
-      de.setAttribute("data-theme", "light");
+    const room = PH - Mg - y;
+    if (shot) {   // as large as fits the rest of the page, never cut off
+      let w = TW, h = TW * shot.h / shot.w; if (h > room) { h = room; w = h * shot.w / shot.h; }
+      doc.addImage(shot.src, "PNG", Mg + (TW - w) / 2, y, w, h);
+    } else {      // no capture available: the sheet's drawings and calculations, kept to this page
       const pics = await Promise.all([
         svgPNG(picSVG(S.done.pic ? a.vel : null), 300, 190),
         S.done.id ? svgPNG(idSVG(a.id), 300, 200) : null,
-        S.done.fd ? svgPNG(fdSVG(a.fd, { net: S.done.n2 ? d.sumFx : null, solved: S.done.n2 ? d.unknown : null }), 300, 215) : null,
+        S.done.fd ? svgPNG(fdSVG(a.fd, { net: doneWith("sum") ? d["S" + P.axis] : null, netAxis: P.axis, solved: doneWith("un") ? d.unknown : null }), 300, 215) : null,
         S.done.graphs ? svgPNG(graphSVG("x", a.gx), 140, 80) : null, S.done.graphs ? svgPNG(graphSVG("v", a.gv), 140, 80) : null]);
-      if (prev) de.setAttribute("data-theme", prev); else de.removeAttribute("data-theme");
-      need(200); y += 6; text("GUESS sheet", 13, true, [31, 111, 180]);
-      const cw = (TW - 20) / 3; [["System picture", pics[0], 190], ["Interaction diagram", pics[1], 200], ["Force diagram", pics[2], 215]].forEach(([lab, im, h], i) => {
-        const x = Mg + i * (cw + 10); doc.setFontSize(9); doc.setTextColor(90, 100, 105); doc.text(lab, x, y + 9);
+      const cw = (TW - 20) / 3; [["System picture", pics[0], 190], ["Interaction diagram", pics[1], 200], ["Force diagram", pics[2], 215]].forEach(([lab, im, h], n) => {
+        const x = Mg + n * (cw + 10); doc.setFontSize(9); doc.setTextColor(90, 100, 105); doc.text(lab, x, y + 9);
         if (im) doc.addImage(im, "PNG", x, y + 14, cw, cw * h / 300); else doc.text("(not done yet)", x, y + 30); });
       y += 14 + cw * 215 / 300 + 10;
-      if (pics[3]) { need(110); doc.setFontSize(9); doc.text("Position vs time", Mg, y + 9); doc.text("Velocity vs time", Mg + 200, y + 9);
+      if (pics[3]) { doc.setFontSize(9); doc.text("Position vs time", Mg, y + 9); doc.text("Velocity vs time", Mg + 200, y + 9);
         doc.addImage(pics[3], "PNG", Mg, y + 14, 168, 96); doc.addImage(pics[4], "PNG", Mg + 200, y + 14, 168, 96); y += 118; }
-      y += 6; text("Calculations", 13, true, [31, 111, 180]);
-      $("sCalc").innerText.split("\n").slice(1).filter(l => l.trim()).forEach(l => text(l, 10, false, [20, 30, 35], Mg + 14));
+      const lines = [...$("sFields").querySelectorAll(".f")].map(e => e.innerText).concat($("sCalc").innerText.split("\n").slice(1)).filter(l => l.trim());
+      doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(20, 30, 35);
+      for (const l of lines) { if (y + 13 > PH - Mg) break; doc.text(plain(l), Mg, y + 10); y += 12.5; }
     }
-    y += 8;
-    text("Steps", 13, true, [31, 111, 180]);
-    STEPS.filter(st => st.id !== "done").forEach((st, i) => {
-      const tries = (S.tries || {})[st.id] || 0, first = (S.first || {})[st.id];
-      need(40); text(`${i + 1}. ${st.title}: ${S.done[st.id] ? "complete" : "not complete"}${tries ? ` · ${first ? "correct on the first try" : "not correct on the first try"} · ${tries} ${tries === 1 ? "try" : "tries"}` : ""}`, 10.5, true, S.done[st.id] ? okc(true) : [120, 120, 120]);
-      text(ans[st.id], 10, false, [20, 30, 35], Mg + 14);
-    });
+    if (prev) de.setAttribute("data-theme", prev); else de.removeAttribute("data-theme");
+    renderSheet();
     doc.save(`Newtons-2nd-Law-GUESS-${plain(STU.name || "student").replace(/[^A-Za-z0-9]+/g, "-")}-P${plain(STU.period || "").replace(/[^A-Za-z0-9]+/g, "")}.pdf`);
   }
   $("pdfbtn").addEventListener("click", () => { if (!STU.name) return; makePDF(); });
